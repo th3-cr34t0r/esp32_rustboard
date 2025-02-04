@@ -285,16 +285,16 @@ pub async fn scan_grid(
     let mut matrix = PinMatrix::new();
 
     /* local ble status variable */
-    let mut ble_status_local: BleStatus = BleStatus::NotConnected;
+    let mut ble_status_local: BleStatus = BleStatus::Connected;
 
     loop {
         /* check if sleep conditions are met */
         matrix.sleep_mode_if_conditions_met();
 
         /* check and store the ble status, then release the lock */
-        if let Some(ble_status) = ble_status.try_lock() {
-            ble_status_local = *ble_status;
-        }
+        // if let Some(ble_status) = ble_status.try_lock() {
+        //     ble_status_local = *ble_status;
+        // }
 
         /* if a connection is established, run the key matrix */
         match ble_status_local {

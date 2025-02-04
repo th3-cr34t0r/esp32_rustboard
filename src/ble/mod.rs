@@ -161,25 +161,7 @@ impl BleKeyboard {
         //Client initialization
         let mut client = device.new_client();
 
-        block_on(async {
-            match client
-                .connect(
-                    &BLEAddress::from_str(
-                        "other esp32's address",
-                        esp32_nimble::BLEAddressType::Public,
-                    )
-                    .unwrap(),
-                )
-                .await
-            {
-                Ok(res) => {
-                    log::info!("Successfilly connected! - {:?}", res)
-                }
-                Err(err) => {
-                    log::info!("{err}")
-                }
-            }
-        });
+        block_on(async {});
 
         Self {
             server,
@@ -326,6 +308,28 @@ pub async fn ble_send_keys(
     /* construct ble */
     let mut ble_keyboard = BleKeyboard::new();
 
+    #[cfg(feature = "left-side")]
+    #[cfg(feature = "connect-right-half")]
+    // Try to connect to the other keyboard half
+    match ble_keyboard
+        .client
+        .connect(
+            &BLEAddress::from_str(
+                "other esp32's address",
+                esp32_nimble::BLEAddressType::Public,
+            )
+            .unwrap(),
+        )
+        .await
+    {
+        Ok(res) => {
+            log::info!("Successfilly connected! - {:?}", res)
+        }
+        Err(err) => {
+            log::info!("{err}")
+        }
+    }
+
     /* initialize layers */
     let mut layers = Layers::new();
 
@@ -345,9 +349,9 @@ pub async fn ble_send_keys(
     loop {
         if ble_keyboard.connected() {
             /* check and store the ble status, then release the lock */
-            if let Some(mut ble_status) = ble_status.try_lock() {
-                *ble_status = BleStatus::Connected;
-            }
+            // if let Some(mut ble_status) = ble_status.try_lock() {
+            //     *ble_status = BleStatus::Connected;
+            // }
 
             /* check if power save has been set */
             if power_save_flag {
@@ -415,9 +419,9 @@ pub async fn ble_send_keys(
             log::info!("Keyboard not connected!");
 
             /* check and store the ble status, then release the lock */
-            if let Some(mut ble_status) = ble_status.try_lock() {
-                *ble_status = BleStatus::NotConnected;
-            }
+            // if let Some(mut ble_status) = ble_status.try_lock() {
+            //     *ble_status = BleStatus::NotConnected;
+            // }
 
             /* check the power save flag */
             if !power_save_flag {
