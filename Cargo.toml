@@ -21,6 +21,7 @@ opt-level = "z"
 default = ["embassy", "esp-idf-svc/native"]
 left-side = []
 right-side = []
+connect-right-half = []
 async-scan = [] # Not working properly
 debug = []
 dvorak = []
