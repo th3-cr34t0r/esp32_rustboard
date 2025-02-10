@@ -345,13 +345,22 @@ pub async fn ble_send_keys(
     /* flag to set the power mode of the esp */
     let mut power_save_flag: bool = true;
 
+    let mut ble_status_prev: BleStatus = BleStatus::NotConnected;
+
     /* Run the main loop */
     loop {
         if ble_keyboard.connected() {
             /* check and store the ble status, then release the lock */
-            // if let Some(mut ble_status) = ble_status.try_lock() {
-            //     *ble_status = BleStatus::Connected;
-            // }
+            match ble_status_prev {
+                BleStatus::NotConnected => {
+                    ble_status_prev = BleStatus::Connected;
+
+                    if let Some(mut ble_status) = ble_status.try_lock() {
+                        *ble_status = BleStatus::Connected;
+                    }
+                }
+                BleStatus::Connected => {}
+            }
 
             /* check if power save has been set */
             if power_save_flag {
@@ -418,10 +427,16 @@ pub async fn ble_send_keys(
             /* debug log */
             log::info!("Keyboard not connected!");
 
-            /* check and store the ble status, then release the lock */
-            // if let Some(mut ble_status) = ble_status.try_lock() {
-            //     *ble_status = BleStatus::NotConnected;
-            // }
+            /* check and store the ble status */
+            match ble_status_prev {
+                BleStatus::NotConnected => {}
+                BleStatus::Connected => {
+                    ble_status_prev = BleStatus::NotConnected;
+
+                    /* lock the mutex and set the new value */
+                    *ble_status.lock() = BleStatus::NotConnected;
+                }
+            }
 
             /* check the power save flag */
             if !power_save_flag {
