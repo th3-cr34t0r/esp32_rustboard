@@ -7,8 +7,9 @@ use esp_idf_svc::hal::gpio::*;
 use esp_idf_svc::hal::peripherals::Peripherals;
 
 use esp_idf_sys::{
-    self as _, esp_bt_controller_disable, gpio_int_type_t_GPIO_INTR_HIGH_LEVEL,
-    gpio_num_t_GPIO_NUM_10, gpio_num_t_GPIO_NUM_20, gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
+    self as _, esp_bt_controller_disable, esp_bt_controller_enable, esp_bt_mode_t_ESP_BT_MODE_BLE,
+    gpio_int_type_t_GPIO_INTR_HIGH_LEVEL, gpio_num_t_GPIO_NUM_10, gpio_num_t_GPIO_NUM_20,
+    gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
 };
 
 use heapless::FnvIndexMap;
@@ -132,7 +133,7 @@ impl PinMatrix<'_> {
         /* enter sleep mode */
         unsafe {
             /* disable bt before entering sleep */
-            esp_bt_controller_disable();
+            // esp_bt_controller_disable();
 
             esp_idf_sys::esp_sleep_enable_gpio_switch(false);
 
@@ -147,8 +148,8 @@ impl PinMatrix<'_> {
             #[cfg(feature = "debug")]
             log::info!("Woke up...");
 
-            /* restart the cpu, so we have faster ble connection after sleep */
             esp_idf_sys::esp_restart();
+            // esp_bt_controller_enable(esp_bt_mode_t_ESP_BT_MODE_BLE);
         }
     }
 
@@ -285,16 +286,26 @@ pub async fn scan_grid(
     let mut matrix = PinMatrix::new();
 
     /* local ble status variable */
-    let mut ble_status_local: BleStatus = BleStatus::Connected;
+    let mut ble_status_local: BleStatus = BleStatus::NotConnected;
+    let mut ble_status_last_timestamp: Instant = Instant::now();
+
+    let mut current_timestamp: Instant;
 
     loop {
         /* check if sleep conditions are met */
         matrix.sleep_mode_if_conditions_met();
 
         /* check and store the ble status, then release the lock */
-        // if let Some(ble_status) = ble_status.try_lock() {
-        //     ble_status_local = *ble_status;
-        // }
+        current_timestamp = Instant::now();
+        if current_timestamp >= ble_status_last_timestamp + BLE_STATUS_DEBOUNCE_DELAY {
+            if let Some(ble_status) = ble_status.try_lock() {
+                ble_status_local = *ble_status;
+                ble_status_last_timestamp = current_timestamp;
+
+                #[cfg(feature = "debug")]
+                log::info!("Entered ble status check");
+            }
+        }
 
         /* if a connection is established, run the key matrix */
         match ble_status_local {
@@ -309,8 +320,6 @@ pub async fn scan_grid(
                 /* wait till there is a connection */
                 /* sleep for 100ms */
                 delay_ms(100).await;
-
-                matrix.enter_sleep_delay = Instant::now() + SLEEP_DELAY_NOT_CONNECTED;
             }
         }
     }
