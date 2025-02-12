@@ -7,9 +7,8 @@ use esp_idf_svc::hal::gpio::*;
 use esp_idf_svc::hal::peripherals::Peripherals;
 
 use esp_idf_sys::{
-    self as _, esp_bt_controller_disable, esp_bt_controller_enable, esp_bt_mode_t_ESP_BT_MODE_BLE,
-    gpio_int_type_t_GPIO_INTR_HIGH_LEVEL, gpio_num_t_GPIO_NUM_10, gpio_num_t_GPIO_NUM_20,
-    gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
+    self as _, gpio_int_type_t_GPIO_INTR_HIGH_LEVEL, gpio_num_t_GPIO_NUM_10,
+    gpio_num_t_GPIO_NUM_20, gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
 };
 
 use heapless::FnvIndexMap;

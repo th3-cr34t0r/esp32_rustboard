@@ -11,7 +11,7 @@ use esp_idf_hal::task::block_on;
 use heapless::FnvIndexMap;
 use spin::Mutex;
 
-use crate::ble::ble_send_keys;
+use crate::ble::server::ble_send_recieve;
 use crate::config::config::*;
 use crate::debounce::*;
 use crate::matrix::{scan_grid, Key};
@@ -32,7 +32,7 @@ fn main() -> anyhow::Result<()> {
     /* run the tasks concurrently */
     block_on(async {
         select3(
-            ble_send_keys(&keys_pressed, &ble_status),
+            ble_send_recieve(&keys_pressed, &ble_status),
             scan_grid(&keys_pressed, &ble_status),
             calculate_debounce(&keys_pressed),
         )
