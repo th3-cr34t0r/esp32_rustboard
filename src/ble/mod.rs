@@ -9,10 +9,12 @@ use crate::delay::*;
 use crate::matrix::Key;
 
 use alloc::sync::Arc;
+use embassy_futures::block_on;
 use esp32_nimble::{
     enums::*, hid::*, utilities::mutex::Mutex, BLEAdvertisementData, BLECharacteristic, BLEDevice,
     BLEHIDDevice, BLEServer,
 };
+use esp32_nimble::{BLEAddress, BLEClient};
 use esp_idf_sys::{
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_ADV, esp_ble_power_type_t_ESP_BLE_PWR_TYPE_DEFAULT,
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_SCAN,
@@ -99,6 +101,7 @@ struct KeyReport {
 
 pub struct BleKeyboard {
     server: &'static mut BLEServer,
+    client: BLEClient,
     input_keyboard: Arc<Mutex<BLECharacteristic>>,
     output_keyboard: Arc<Mutex<BLECharacteristic>>,
     input_media_keys: Arc<Mutex<BLECharacteristic>>,
@@ -121,6 +124,7 @@ impl BleKeyboard {
             .resolve_rpa();
 
         let server = device.get_server();
+
         let mut hid = BLEHIDDevice::new(server);
 
         let input_keyboard = hid.input_report(KEYBOARD_ID);
@@ -154,8 +158,14 @@ impl BleKeyboard {
             .unwrap();
         ble_advertising.lock().start().unwrap();
 
+        //Client initialization
+        let mut client = device.new_client();
+
+        block_on(async {});
+
         Self {
             server,
+            client,
             input_keyboard,
             output_keyboard,
             input_media_keys,
@@ -298,6 +308,28 @@ pub async fn ble_send_keys(
     /* construct ble */
     let mut ble_keyboard = BleKeyboard::new();
 
+    #[cfg(feature = "left-side")]
+    #[cfg(feature = "connect-right-half")]
+    // Try to connect to the other keyboard half
+    match ble_keyboard
+        .client
+        .connect(
+            &BLEAddress::from_str(
+                "other esp32's address",
+                esp32_nimble::BLEAddressType::Public,
+            )
+            .unwrap(),
+        )
+        .await
+    {
+        Ok(res) => {
+            log::info!("Successfilly connected! - {:?}", res)
+        }
+        Err(err) => {
+            log::info!("{err}")
+        }
+    }
+
     /* initialize layers */
     let mut layers = Layers::new();
 
@@ -313,12 +345,21 @@ pub async fn ble_send_keys(
     /* flag to set the power mode of the esp */
     let mut power_save_flag: bool = true;
 
+    let mut ble_status_prev: BleStatus = BleStatus::NotConnected;
+
     /* Run the main loop */
     loop {
         if ble_keyboard.connected() {
             /* check and store the ble status, then release the lock */
-            if let Some(mut ble_status) = ble_status.try_lock() {
-                *ble_status = BleStatus::Connected;
+            match ble_status_prev {
+                BleStatus::NotConnected => {
+                    ble_status_prev = BleStatus::Connected;
+
+                    if let Some(mut ble_status) = ble_status.try_lock() {
+                        *ble_status = BleStatus::Connected;
+                    }
+                }
+                BleStatus::Connected => {}
             }
 
             /* check if power save has been set */
@@ -380,15 +421,21 @@ pub async fn ble_send_keys(
                 }
             }
             /* there must be a delay so the WDT in not triggered */
-            delay_ms(1).await;
+            delay_ms(5).await;
         } else {
             #[cfg(feature = "debug")]
             /* debug log */
             log::info!("Keyboard not connected!");
 
-            /* check and store the ble status, then release the lock */
-            if let Some(mut ble_status) = ble_status.try_lock() {
-                *ble_status = BleStatus::NotConnected;
+            /* check and store the ble status */
+            match ble_status_prev {
+                BleStatus::NotConnected => {}
+                BleStatus::Connected => {
+                    ble_status_prev = BleStatus::NotConnected;
+
+                    /* lock the mutex and set the new value */
+                    *ble_status.lock() = BleStatus::NotConnected;
+                }
             }
 
             /* check the power save flag */

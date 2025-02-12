@@ -189,7 +189,7 @@ pub enum HidKeys {
     MacroModul = 0xC9,
     MacroCaret = 0xD0,
     MacroAmpersand = 0xD1,
-    MacroStar = 0xD2,
+    MacroAsterix = 0xD2,
 }
 
 pub enum KeyType {
@@ -213,7 +213,7 @@ impl KeyType {
             | HidKeys::MacroModul
             | HidKeys::MacroCaret
             | HidKeys::MacroAmpersand
-            | HidKeys::MacroStar => KeyType::Macro,
+            | HidKeys::MacroAsterix => KeyType::Macro,
 
             HidKeys::LayerKey => KeyType::Layer,
 
@@ -303,7 +303,7 @@ impl HidKeys {
                 vec.push(HidKeys::Num7).unwrap();
                 vec
             }
-            HidKeys::MacroStar => {
+            HidKeys::MacroAsterix => {
                 vec.push(HidKeys::ModifierShift).unwrap();
                 vec.push(HidKeys::Num8).unwrap();
                 vec

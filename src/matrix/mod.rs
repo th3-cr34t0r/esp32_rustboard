@@ -6,14 +6,17 @@ use embassy_time::Instant;
 use esp_idf_svc::hal::gpio::*;
 use esp_idf_svc::hal::peripherals::Peripherals;
 
-#[cfg(feature = "sleep-mode")]
 use esp_idf_sys::{
-    self as _, esp_bt_controller_disable, gpio_int_type_t_GPIO_INTR_HIGH_LEVEL,
-    gpio_num_t_GPIO_NUM_10, gpio_num_t_GPIO_NUM_20, gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
+    self as _, esp_bt_controller_disable, esp_bt_controller_enable, esp_bt_mode_t_ESP_BT_MODE_BLE,
+    gpio_int_type_t_GPIO_INTR_HIGH_LEVEL, gpio_num_t_GPIO_NUM_10, gpio_num_t_GPIO_NUM_20,
+    gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
 };
 
 use heapless::FnvIndexMap;
 use spin::Mutex;
+
+#[cfg(feature = "async-scan")]
+use embassy_futures::select::{select, Either};
 
 #[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
 pub struct Key {
@@ -29,7 +32,6 @@ impl Key {
 pub struct PinMatrix<'a> {
     pub rows: [PinDriver<'a, AnyIOPin, Output>; ROWS],
     pub cols: [PinDriver<'a, AnyIOPin, Input>; COLS],
-    #[cfg(feature = "sleep-mode")]
     pub enter_sleep_delay: Instant,
 }
 
@@ -37,53 +39,62 @@ impl PinMatrix<'_> {
     pub fn new() -> PinMatrix<'static> {
         let peripherals = Peripherals::take().expect("Not able to init peripherals.");
 
+        let rows = [
+            PinDriver::output(peripherals.pins.gpio0.downgrade())
+                .expect("Not able to set port as output."),
+            PinDriver::output(peripherals.pins.gpio1.downgrade())
+                .expect("Not able to set port as output."),
+            PinDriver::output(peripherals.pins.gpio2.downgrade())
+                .expect("Not able to set port as output."),
+            PinDriver::output(peripherals.pins.gpio3.downgrade())
+                .expect("Not able to set port as output."),
+        ];
+
+        let mut cols = [
+            PinDriver::input(peripherals.pins.gpio21.downgrade())
+                .expect("Not able to set port as input."),
+            PinDriver::input(peripherals.pins.gpio20.downgrade())
+                .expect("Not able to set port as input."),
+            PinDriver::input(peripherals.pins.gpio10.downgrade())
+                .expect("Not able to set port as input."),
+            PinDriver::input(peripherals.pins.gpio7.downgrade())
+                .expect("Not able to set port as input."),
+            PinDriver::input(peripherals.pins.gpio6.downgrade())
+                .expect("Not able to set port as input."),
+            PinDriver::input(peripherals.pins.gpio5.downgrade())
+                .expect("Not able to set port as input."),
+        ];
+
+        /* set input ports to proper pull and interrupt type */
+
+        for col in cols.iter_mut() {
+            col.set_pull(Pull::Down).ok();
+            col.set_interrupt_type(InterruptType::AnyEdge).ok();
+        }
+
         PinMatrix {
-            rows: [
-                PinDriver::output(peripherals.pins.gpio0.downgrade())
-                    .expect("Not able to set port as output."),
-                PinDriver::output(peripherals.pins.gpio1.downgrade())
-                    .expect("Not able to set port as output."),
-                PinDriver::output(peripherals.pins.gpio2.downgrade())
-                    .expect("Not able to set port as output."),
-                PinDriver::output(peripherals.pins.gpio3.downgrade())
-                    .expect("Not able to set port as output."),
-            ],
-            cols: [
-                PinDriver::input(peripherals.pins.gpio21.downgrade())
-                    .expect("Not able to set port as input."),
-                PinDriver::input(peripherals.pins.gpio20.downgrade())
-                    .expect("Not able to set port as input."),
-                PinDriver::input(peripherals.pins.gpio10.downgrade())
-                    .expect("Not able to set port as input."),
-                PinDriver::input(peripherals.pins.gpio7.downgrade())
-                    .expect("Not able to set port as input."),
-                PinDriver::input(peripherals.pins.gpio6.downgrade())
-                    .expect("Not able to set port as input."),
-                PinDriver::input(peripherals.pins.gpio5.downgrade())
-                    .expect("Not able to set port as input."),
-            ],
-            #[cfg(feature = "sleep-mode")]
-            enter_sleep_delay: Instant::now() + SLEEP_DELAY_INIT,
+            rows,
+            cols,
+            enter_sleep_delay: Instant::now() + SLEEP_DELAY_NOT_CONNECTED,
         }
     }
 
-    fn set_cols_interrupt(&mut self) {
+    /// This function checks if the conditions for entering sleep mode are met
+    fn sleep_mode_if_conditions_met(&mut self) {
+        /* in case sleep is due */
+        if Instant::now() >= self.enter_sleep_delay {
+            self.enter_light_sleep_mode();
+        }
+    }
+
+    /// Enables interrupt on pins for wakeup
+    fn set_col_enable_sleep_interrupts(&mut self) {
         for col in self.cols.iter_mut() {
-            col.set_pull(Pull::Down).unwrap();
-            col.set_interrupt_type(InterruptType::AnyEdge)
-                .expect("Not able to set interrupt type.");
+            col.enable_interrupt().ok();
         }
     }
 
-    #[cfg(feature = "sleep-mode")]
-    fn set_light_sleep_enable_interrupts(&mut self) {
-        for col in self.cols.iter_mut() {
-            col.enable_interrupt()
-                .expect("Not able to enable interrput.")
-        }
-    }
-
-    #[cfg(feature = "sleep-mode")]
+    /// Only used for setting gpios to listen for interrup, so the processor is woken
     fn set_light_sleep_gpio_wakeup_enable(&mut self) {
         unsafe {
             /* set gpios that can wake up the chip */
@@ -106,21 +117,23 @@ impl PinMatrix<'_> {
         }
     }
 
-    #[cfg(feature = "sleep-mode")]
+    /// Enter light sleep mode
+    /// This function sets the home row to high,
+    /// and sets the configured gpio to listen for interrupt (key press) in order to wake up the processor
     fn enter_light_sleep_mode(&mut self) {
         /* enable interrupts */
-        self.set_light_sleep_enable_interrupts();
-
-        /* set the home row to high */
-        self.rows[1].set_high().unwrap();
+        self.set_col_enable_sleep_interrupts();
 
         /* set gpio wakeup enable interrup */
         self.set_light_sleep_gpio_wakeup_enable();
 
+        /* set the home row to high */
+        self.rows[1].set_high().unwrap();
+
         /* enter sleep mode */
         unsafe {
             /* disable bt before entering sleep */
-            esp_bt_controller_disable();
+            // esp_bt_controller_disable();
 
             esp_idf_sys::esp_sleep_enable_gpio_switch(false);
 
@@ -135,12 +148,101 @@ impl PinMatrix<'_> {
             #[cfg(feature = "debug")]
             log::info!("Woke up...");
 
-            /* restart the cpu, so we have faster ble connection after sleep */
             esp_idf_sys::esp_restart();
+            // esp_bt_controller_enable(esp_bt_mode_t_ESP_BT_MODE_BLE);
+        }
+    }
+
+    /// This is the standard scan mode
+    /// Each row is set to high, then each col is checked if it is high or not
+    #[cfg(not(feature = "async-scan"))]
+    async fn standard_scan(
+        &mut self,
+        keys_pressed: &Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
+    ) {
+        /* initialize counts */
+        let mut count = Key::new(0, 0);
+
+        /* check rows and cols */
+        for row in self.rows.iter_mut() {
+            /* set row to high */
+            row.set_high().unwrap();
+
+            /* delay so pin can propagate */
+            delay_us(100).await;
+
+            /* check if a col is high */
+            for col in self.cols.iter() {
+                /* check if a col is set to high (key pressed) */
+                if col.is_high() {
+                    /* store the key */
+                    match store_key(keys_pressed, &count) {
+                        Some(()) => {
+                            self.enter_sleep_delay = Instant::now() + SLEEP_DELAY;
+                        }
+                        None => { /* do nothing */ }
+                    }
+                }
+                /* increment col */
+                count.col += 1;
+            }
+            /* set row to low */
+            row.set_low().unwrap();
+
+            /* increment row */
+            count.row += 1;
+
+            /* reset col count */
+            count.col = 0;
+        }
+
+        /* reset row count */
+        count.row = 0;
+    }
+
+    /// This is an experimental async way of detecting if a key is pressed
+    /// Currently, does not work properly
+    #[cfg(feature = "async-scan")]
+    async fn async_scan(
+        &mut self,
+        keys_pressed: &Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
+    ) {
+        let mut count = Key::new(0, 0);
+
+        self.set_col_enable_interrupts();
+
+        for row in self.rows.iter_mut() {
+            row.set_high().ok();
+
+            delay_us(1).await;
+
+            for col in self.cols.iter_mut() {
+                match select(col.wait_for_high(), delay_us(50)).await {
+                    Either::First(Ok(_)) => match store_key(keys_pressed, &count) {
+                        Some(()) => {
+                            self.enter_sleep_delay = Instant::now() + SLEEP_DELAY;
+                        }
+                        None => { /* do nothing */ }
+                    },
+                    Either::First(Err(_)) => { /* do nothing */ }
+                    Either::Second(()) => { /* in case the delay is up, continue to the next col */
+                    }
+                }
+
+                /* intrement col count */
+                count.col += 1;
+            }
+
+            /* reset col count */
+            count.col = 0;
+
+            /* intrement row count */
+            count.row += 1;
         }
     }
 }
 
+/// The main function for stornig the registered key in to the shared pressed keys hashmap
 fn store_key(
     keys_pressed: &Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
     key: &Key,
@@ -175,6 +277,7 @@ fn store_key(
     }
 }
 
+/// The main matrix scan function
 pub async fn scan_grid(
     keys_pressed: &Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
     ble_status: &Mutex<BleStatus>,
@@ -182,68 +285,36 @@ pub async fn scan_grid(
     /* construct the matrix */
     let mut matrix = PinMatrix::new();
 
-    /* initialize interrupt */
-    matrix.set_cols_interrupt();
-
-    /* initialize counts */
-    let mut count = Key::new(0, 0);
-
     /* local ble status variable */
     let mut ble_status_local: BleStatus = BleStatus::NotConnected;
+    let mut ble_status_last_timestamp: Instant = Instant::now();
+
+    let mut current_timestamp: Instant;
 
     loop {
-        #[cfg(feature = "sleep-mode")]
-        if Instant::now() >= matrix.enter_sleep_delay {
-            matrix.enter_light_sleep_mode();
-        }
+        /* check if sleep conditions are met */
+        matrix.sleep_mode_if_conditions_met();
 
         /* check and store the ble status, then release the lock */
-        if let Some(ble_status) = ble_status.try_lock() {
-            ble_status_local = *ble_status;
+        current_timestamp = Instant::now();
+        if current_timestamp >= ble_status_last_timestamp + BLE_STATUS_DEBOUNCE_DELAY {
+            if let Some(ble_status) = ble_status.try_lock() {
+                ble_status_local = *ble_status;
+                ble_status_last_timestamp = current_timestamp;
+
+                #[cfg(feature = "debug")]
+                log::info!("Entered ble status check");
+            }
         }
 
         /* if a connection is established, run the key matrix */
         match ble_status_local {
             BleStatus::Connected => {
-                /* check rows and cols */
-                for row in matrix.rows.iter_mut() {
-                    /* set row to high */
-                    row.set_high().unwrap();
+                #[cfg(not(feature = "async-scan"))]
+                matrix.standard_scan(keys_pressed).await;
 
-                    /* delay so pin can propagate */
-                    delay_us(100).await;
-
-                    /* check if a col is high */
-                    for col in matrix.cols.iter() {
-                        /* check if a col is set to high (key pressed) */
-                        if col.is_high() {
-                            /* store the key */
-                            #[cfg(feature = "sleep-mode")]
-                            match store_key(keys_pressed, &count) {
-                                Some(()) => {
-                                    matrix.enter_sleep_delay = Instant::now() + SLEEP_DELAY;
-                                }
-                                None => { /* do nothing */ }
-                            }
-
-                            #[cfg(not(feature = "sleep-mode"))]
-                            store_key(keys_pressed, &count).unwrap();
-                        }
-                        /* increment col */
-                        count.col += 1;
-                    }
-                    /* set row to low */
-                    row.set_low().unwrap();
-
-                    /* increment row */
-                    count.row += 1;
-
-                    /* reset col count */
-                    count.col = 0;
-                }
-
-                /* reset row count */
-                count.row = 0;
+                #[cfg(feature = "async-scan")]
+                matrix.async_scan(keys_pressed).await;
             }
             BleStatus::NotConnected => {
                 /* wait till there is a connection */

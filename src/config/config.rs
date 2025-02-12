@@ -15,8 +15,9 @@ use esp_idf_sys::{
 pub const ROWS: usize = 4;
 pub const COLS: usize = 6;
 pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(50);
+pub const BLE_STATUS_DEBOUNCE_DELAY: Duration = Duration::from_millis(500); /* 0.5 sec */
 pub const SLEEP_DELAY: Duration = Duration::from_millis(300000); /* 5 minutes */
-pub const SLEEP_DELAY_INIT: Duration = Duration::from_millis(60000); /* 1 minute */
+pub const SLEEP_DELAY_NOT_CONNECTED: Duration = Duration::from_millis(60000); /* 1 minute */
 pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 16;
 pub const LAYER_INDEXMAP_SIZE: usize = 32;
 pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
