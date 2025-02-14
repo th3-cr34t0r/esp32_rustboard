@@ -5,13 +5,12 @@ to flash: espflash flash ./target/riscv32imc-esp-espidf/release/esp32_rustboard 
 
 use anyhow;
 use ble::BleStatus;
-use embassy_futures::select::select3;
 use esp32_rustboard::*;
 use esp_idf_hal::task::block_on;
 use heapless::FnvIndexMap;
 use spin::Mutex;
 
-use crate::ble::server::ble_send_recieve;
+use crate::ble::master::ble_rx_tx;
 use crate::config::config::*;
 use crate::debounce::*;
 use crate::matrix::{scan_grid, Key};
@@ -29,15 +28,27 @@ fn main() -> anyhow::Result<()> {
     /* ble connection information shared variable */
     let ble_status: Mutex<BleStatus> = Mutex::new(BleStatus::NotConnected);
 
-    /* run the tasks concurrently */
-    block_on(async {
-        select3(
-            ble_send_recieve(&keys_pressed, &ble_status),
-            scan_grid(&keys_pressed, &ble_status),
-            calculate_debounce(&keys_pressed),
-        )
-        .await;
-    });
+    #[cfg(feature = "master")]
+    {
+        use embassy_futures::select::select3;
+        /* run the tasks concurrently */
+        block_on(async {
+            select3(
+                ble_rx_tx(&keys_pressed, &ble_status),
+                scan_grid(&keys_pressed, &ble_status),
+                calculate_debounce(&keys_pressed),
+            )
+            .await;
+        });
+    }
 
+    #[cfg(feature = "slave")]
+    {
+        use embassy_futures::select::select;
+
+        block_on(async {
+            select(ble_tx(), scan_grid(&keys_pressed, &ble_status)).await;
+        });
+    }
     Ok(())
 }
