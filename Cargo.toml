@@ -19,8 +19,8 @@ opt-level = "z"
 
 [features]
 default = ["embassy", "esp-idf-svc/native"]
-server = [] # master
-client = [] # slave
+master = [] # left half of the keyboard
+slave = [] # right half of the keyboard
 async-scan = [] # Not working properly
 debug = []
 dvorak = []
