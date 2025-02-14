@@ -7,13 +7,12 @@ use esp32_nimble::BLEClient;
 use esp32_nimble::{hid::*, utilities::mutex::Mutex, BLECharacteristic, BLEServer};
 use zerocopy::{Immutable, IntoBytes};
 
-#[cfg(feature = "client")]
-pub mod client;
+#[cfg(feature = "master")]
+pub mod master;
 
-mod ble_send_keys;
+#[cfg(feature = "slave")]
+pub mod slave;
 
-#[cfg(feature = "server")]
-pub mod server;
 const KEYBOARD_ID: u8 = 0x01;
 const MEDIA_KEYS_ID: u8 = 0x02;
 
