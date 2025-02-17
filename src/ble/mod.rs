@@ -89,7 +89,7 @@ struct KeyReport {
     keys: [u8; 6],
 }
 
-pub struct BleKeyboard {
+pub struct BleKeyboardMaster {
     server: &'static mut BLEServer,
     client: BLEClient,
     input_keyboard: Arc<Mutex<BLECharacteristic>>,
@@ -97,7 +97,9 @@ pub struct BleKeyboard {
     input_media_keys: Arc<Mutex<BLECharacteristic>>,
     key_report: KeyReport,
 }
-
+pub struct BleKeyboardSlave {
+    server: &'static mut BLEServer,
+}
 #[derive(Clone, Copy, Debug)]
 pub enum BleStatus {
     Connected,
