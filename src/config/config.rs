@@ -21,6 +21,7 @@ pub const SLEEP_DELAY_NOT_CONNECTED: Duration = Duration::from_millis(60000); /*
 pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 16;
 pub const LAYER_INDEXMAP_SIZE: usize = 32;
 pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
+pub const BLE_SLAVE_UUID: &str = "06984d74-0fdb-491e-9c4c-c25603a9bc34";
 
 pub enum EspPowerLevel {
     Negative24,
