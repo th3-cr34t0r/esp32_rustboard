@@ -5,7 +5,7 @@ use crate::debounce::{Debounce, KEY_PRESSED, KEY_RELEASED};
 use crate::delay::*;
 use crate::matrix::Key;
 
-use super::{BleKeyboard, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID};
+use super::{BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID};
 use embassy_futures::select::select;
 use esp32_nimble::{enums::*, BLEAddress, BLEAdvertisementData, BLEDevice, BLEHIDDevice};
 use esp_idf_sys::{
@@ -16,7 +16,7 @@ use heapless::{FnvIndexMap, Vec};
 use spin::Mutex as spinMutex;
 use zerocopy::IntoBytes;
 
-impl BleKeyboard {
+impl BleKeyboardMaster {
     pub fn new() -> Self {
         let device = BLEDevice::take();
         device
