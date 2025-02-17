@@ -72,3 +72,12 @@ impl BleKeyboardSlave {
         }
     }
 }
+
+pub async fn ble_tx(ble_status: &spinMutex<BleStatus>) {
+    let ble_keyboard_slave: BleKeyboardSlave = BleKeyboardSlave::new();
+
+    loop {
+        if ble_keyboard_slave.connected() {}
+        delay_ms(1);
+    }
+}

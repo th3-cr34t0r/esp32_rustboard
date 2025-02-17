@@ -105,7 +105,7 @@ impl BleKeyboardMaster {
 // This is the function that recieves information from the client
 // about the keys pressed on the other half of the keyboard
 async fn ble_client_recieve(
-    ble_keyboard: &spinMutex<BleKeyboard>,
+    ble_keyboard: &spinMutex<BleKeyboardMaster>,
     keys_pressed: &spinMutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
 ) {
     loop {
@@ -143,7 +143,11 @@ async fn ble_client_recieve(
     }
 }
 
-pub fn send_keys(ble_keyboard: &mut BleKeyboard, valid_key: &HidKeys, layer_state: &mut Layer) {
+pub fn send_keys(
+    ble_keyboard: &mut BleKeyboardMaster,
+    valid_key: &HidKeys,
+    layer_state: &mut Layer,
+) {
     /* get the key type */
     match KeyType::check_type(valid_key) {
         KeyType::Macro => {
@@ -191,7 +195,7 @@ pub fn send_keys(ble_keyboard: &mut BleKeyboard, valid_key: &HidKeys, layer_stat
     }
 }
 
-fn remove_keys(ble_keyboard: &mut BleKeyboard, valid_key: &HidKeys, layer_state: &mut Layer) {
+fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_state: &mut Layer) {
     /* get the key type */
     match KeyType::check_type(valid_key) {
         KeyType::Macro => {
@@ -237,7 +241,7 @@ fn remove_keys(ble_keyboard: &mut BleKeyboard, valid_key: &HidKeys, layer_state:
 }
 
 pub async fn ble_send_keys(
-    ble_keyboard: &spinMutex<BleKeyboard>,
+    ble_keyboard: &spinMutex<BleKeyboardMaster>,
     keys_pressed: &spinMutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
     ble_status: &spinMutex<BleStatus>,
 ) -> ! {
@@ -370,7 +374,7 @@ pub async fn ble_rx_tx(
     ble_status: &spinMutex<BleStatus>,
 ) {
     /* construct ble */
-    let ble_keyboard: spinMutex<BleKeyboard> = spinMutex::new(BleKeyboard::new());
+    let ble_keyboard: spinMutex<BleKeyboardMaster> = spinMutex::new(BleKeyboardMaster::new());
 
     select(
         ble_client_recieve(&ble_keyboard, keys_pressed),
