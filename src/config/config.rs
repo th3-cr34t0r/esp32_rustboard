@@ -14,6 +14,13 @@ use esp_idf_sys::{
 /* USER CONFIGURABLE PARAMETERS */
 pub const ROWS: usize = 4;
 pub const COLS: usize = 6;
+
+#[cfg(feature = "master")]
+pub const COL_INIT: i8 = 0;
+
+#[cfg(feature = "slave")]
+pub const COL_INIT: i8 = 6;
+
 pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(50);
 pub const BLE_STATUS_DEBOUNCE_DELAY: Duration = Duration::from_millis(500); /* 0.5 sec */
 pub const SLEEP_DELAY: Duration = Duration::from_millis(300000); /* 5 minutes */
