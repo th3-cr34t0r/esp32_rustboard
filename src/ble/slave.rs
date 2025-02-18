@@ -1,25 +1,19 @@
-use crate::ble::BleStatus;
-use crate::config::enums::{HidKeys, HidModifiers, KeyType};
-use crate::config::{config::*, layers::*};
-use crate::debounce::{Debounce, KEY_PRESSED, KEY_RELEASED};
-use crate::delay::*;
+use crate::config::config::*;
 use crate::matrix::Key;
 
-use super::{BleKeyboardSlave, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID};
-use embassy_futures::select::select;
-use esp32_nimble::utilities::BleUuid;
-use esp32_nimble::{enums::*, BLEAddress, BLEAdvertisementData, BLEDevice, BLEHIDDevice};
+use super::BleKeyboardSlave;
+use esp32_nimble::{
+    enums::*, utilities::BleUuid, uuid128, BLEAdvertisementData, BLEDevice, NimbleProperties,
+};
 use esp_idf_sys::{
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_ADV, esp_ble_power_type_t_ESP_BLE_PWR_TYPE_DEFAULT,
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_SCAN,
 };
-use heapless::{FnvIndexMap, Vec};
-use spin::Mutex as spinMutex;
-use zerocopy::IntoBytes;
 
 impl BleKeyboardSlave {
     pub fn new() -> Self {
         let device = BLEDevice::take();
+
         device
             .security()
             .set_auth(AuthReq::all())
@@ -27,6 +21,15 @@ impl BleKeyboardSlave {
             .resolve_rpa();
 
         let server = device.get_server();
+
+        let service = server.create_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"));
+
+        let characteristic = service.lock().create_characteristic(
+            uuid128!(BLE_SLAVE_UUID),
+            NimbleProperties::READ | NimbleProperties::NOTIFY,
+        );
+
+        characteristic.lock().set_value(b"Init value");
 
         let ble_advertising = device.get_advertising();
 
@@ -36,7 +39,6 @@ impl BleKeyboardSlave {
             .set_data(
                 BLEAdvertisementData::new()
                     .name("rustboard-slave")
-                    .appearance(0x03C1)
                     .add_service_uuid(
                         BleUuid::from_uuid128_string(BLE_SLAVE_UUID)
                             .ok()
@@ -47,7 +49,13 @@ impl BleKeyboardSlave {
 
         ble_advertising.lock().start().unwrap();
 
-        Self { server }
+        #[cfg(feature = "debug")]
+        server.ble_gatts_show_local();
+
+        Self {
+            server,
+            characteristic,
+        }
     }
 
     pub fn connected(&self) -> bool {
@@ -71,13 +79,13 @@ impl BleKeyboardSlave {
             );
         }
     }
-}
 
-pub async fn ble_tx(ble_status: &spinMutex<BleStatus>) {
-    let ble_keyboard_slave: BleKeyboardSlave = BleKeyboardSlave::new();
-
-    loop {
-        if ble_keyboard_slave.connected() {}
-        delay_ms(1);
+    pub async fn ble_tx(&mut self, key: &Key) {
+        if self.connected() {
+            self.characteristic
+                .lock()
+                .set_value(format!("{} {}", key.row, key.col).as_bytes())
+                .notify();
+        }
     }
 }
