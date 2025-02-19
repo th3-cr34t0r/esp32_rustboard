@@ -6,8 +6,9 @@ use crate::delay::*;
 use crate::matrix::Key;
 
 use super::{BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID};
+use bstr::ByteSlice;
 use embassy_futures::select::select;
-use esp32_nimble::{enums::*, BLEAddress, BLEAdvertisementData, BLEDevice, BLEHIDDevice};
+use esp32_nimble::{enums::*, uuid128, BLEAdvertisementData, BLEDevice, BLEHIDDevice, BLEScan};
 use esp_idf_sys::{
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_ADV, esp_ble_power_type_t_ESP_BLE_PWR_TYPE_DEFAULT,
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_SCAN,
@@ -17,8 +18,9 @@ use spin::Mutex as spinMutex;
 use zerocopy::IntoBytes;
 
 impl BleKeyboardMaster {
-    pub fn new() -> Self {
+    pub async fn new() -> Self {
         let device = BLEDevice::take();
+
         device
             .security()
             .set_auth(AuthReq::all())
@@ -42,6 +44,7 @@ impl BleKeyboardMaster {
         hid.set_battery_level(100);
 
         let ble_advertising = device.get_advertising();
+
         ble_advertising
             .lock()
             .scan_response(false)
@@ -52,14 +55,12 @@ impl BleKeyboardMaster {
                     .add_service_uuid(hid.hid_service().lock().uuid()),
             )
             .unwrap();
+
         ble_advertising.lock().start().unwrap();
 
-        //Client initialization
-        let client = device.new_client();
-
         Self {
+            device,
             server,
-            client,
             input_keyboard,
             output_keyboard,
             input_media_keys,
@@ -108,38 +109,55 @@ async fn ble_client_recieve(
     ble_keyboard: &spinMutex<BleKeyboardMaster>,
     keys_pressed: &spinMutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
 ) {
-    loop {
-        if let Some(mut ble_keyboard) = ble_keyboard.try_lock() {
-            // Try to connect to the right keyboard half
-            match ble_keyboard
-                .client
-                .connect(
-                    // client mac address
-                    &BLEAddress::from_str(
-                        "ec:da:3b:bd:d6:d4",
-                        esp32_nimble::BLEAddressType::Public,
-                    )
-                    .unwrap(),
-                )
-                .await
-            {
-                Ok(res) => {
-                    log::info!("Successfilly connected! - {:?}", res)
-                }
-                Err(err) => {
-                    log::info!("{err}")
+    let mut ble_slave_scan = BLEScan::new();
+
+    let slave_device = ble_slave_scan
+        .active_scan(true)
+        .interval(10)
+        .window(9)
+        .start(&ble_keyboard.lock().device, 10000, |device, data| {
+            if let Some(name) = data.name() {
+                if name.contains_str("rustboard-slave") {
+                    return Some(*device);
                 }
             }
+            None
+        })
+        .await
+        .ok();
 
-            // Rest of the logic for handling the input.
-            // The server shall recieve coordinates from the client,
-            // representing the keys pressed form the layout selected.
-            //
-            // The coordinates shall be placed in the keys_pressed hashmap.
+    let slave_device = slave_device.unwrap_or(None);
 
-            // Here needs to be the fetch logic.
-            delay_ms(1).await;
-        }
+    let mut client = ble_keyboard.lock().device.new_client();
+
+    client.on_connect(|client| {
+        client.update_conn_params(1, 10, 0, 60).unwrap();
+    });
+
+    client.connect(&slave_device.unwrap().addr()).await.unwrap();
+
+    let client_service = client
+        .get_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"))
+        .await
+        .unwrap();
+
+    let uuid = uuid128!(BLE_SLAVE_UUID);
+
+    let slave_characteristic = client_service.get_characteristic(uuid).await.unwrap();
+
+    loop {
+        let data = slave_characteristic.read_value().await.unwrap();
+
+        log::info!("{}", core::str::from_utf8(&data).unwrap());
+
+        // Rest of the logic for handling the input.
+        // The server shall recieve coordinates from the client,
+        // representing the keys pressed form the layout selected.
+        //
+        // The coordinates shall be placed in the keys_pressed hashmap.
+
+        // Here needs to be the fetch logic.
+        delay_ms(1).await;
     }
 }
 
@@ -374,7 +392,7 @@ pub async fn ble_rx_tx(
     ble_status: &spinMutex<BleStatus>,
 ) {
     /* construct ble */
-    let ble_keyboard: spinMutex<BleKeyboardMaster> = spinMutex::new(BleKeyboardMaster::new());
+    let ble_keyboard: spinMutex<BleKeyboardMaster> = spinMutex::new(BleKeyboardMaster::new().await);
 
     select(
         ble_client_recieve(&ble_keyboard, keys_pressed),
