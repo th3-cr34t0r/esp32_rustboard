@@ -1,7 +1,7 @@
 [package]
 name = "esp32_rustboard"
 version = "0.2.2"
-authors = ["65787978"]
+authors = ["th3-cr34t0r"]
 edition = "2021"
 resolver = "2"
 rust-version = "1.77"
@@ -44,6 +44,7 @@ embassy-futures = "0.1.1"
 spin = "0.9.8"
 heapless = "0.8.0"
 zerocopy = { version = "0.8.14", features = ["derive"] }
+bstr = "1.11.3"
 
 [build-dependencies]
 anyhow = "1"
