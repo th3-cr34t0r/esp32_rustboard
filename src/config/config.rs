@@ -16,10 +16,10 @@ pub const ROWS: usize = 4;
 pub const COLS: usize = 6;
 
 #[cfg(feature = "master")]
-pub const COL_INIT: i8 = 0;
+pub const COL_INIT: u8 = 0;
 
 #[cfg(feature = "slave")]
-pub const COL_INIT: i8 = 6;
+pub const COL_INIT: u8 = 6;
 
 pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(50);
 pub const BLE_STATUS_DEBOUNCE_DELAY: Duration = Duration::from_millis(500); /* 0.5 sec */
@@ -29,6 +29,7 @@ pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 16;
 pub const LAYER_INDEXMAP_SIZE: usize = 32;
 pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
 pub const BLE_SLAVE_UUID: &str = "06984d74-0fdb-491e-9c4c-c25603a9bc34";
+pub const BIT_MASK: u8 = 4;
 
 pub enum EspPowerLevel {
     Negative24,
