@@ -161,17 +161,13 @@ async fn ble_client_recieve(
     }
 }
 
-pub fn send_keys(
-    ble_keyboard: &mut BleKeyboardMaster,
-    valid_key: &HidKeys,
-    layer_state: &mut Layer,
-) {
+fn add_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_state: &mut Layer) {
     /* get the key type */
     match KeyType::check_type(valid_key) {
         KeyType::Macro => {
             let macro_valid_keys = HidKeys::get_macro_sequence(valid_key);
             for valid_key in macro_valid_keys.iter() {
-                send_keys(ble_keyboard, valid_key, layer_state);
+                add_keys(ble_keyboard, valid_key, layer_state);
             }
         }
         KeyType::Layer => {
@@ -317,7 +313,7 @@ pub async fn ble_send_keys(
                                     if let Some(valid_key) =
                                         layers.get(&key.row, &key.col, &layer_state)
                                     {
-                                        send_keys(&mut ble_keyboard, valid_key, &mut layer_state);
+                                        add_keys(&mut ble_keyboard, valid_key, &mut layer_state);
                                     }
                                 }
                                 /* check if the key is calculated for debounce */
@@ -354,8 +350,6 @@ pub async fn ble_send_keys(
                         }
                     }
                 }
-                /* there must be a delay so the WDT in not triggered */
-                delay_ms(5).await;
             } else {
                 #[cfg(feature = "debug")]
                 /* debug log */
@@ -382,6 +376,8 @@ pub async fn ble_send_keys(
                 delay_ms(100).await;
             }
         }
+        /* there must be a delay so the WDT in not triggered */
+        delay_ms(5).await;
     }
 }
 
@@ -391,7 +387,7 @@ pub async fn ble_rx_tx(
     keys_pressed: &spinMutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
     ble_status: &spinMutex<BleStatus>,
 ) {
-    /* construct ble */
+    /* construct ble master */
     let ble_keyboard: spinMutex<BleKeyboardMaster> = spinMutex::new(BleKeyboardMaster::new().await);
 
     select(

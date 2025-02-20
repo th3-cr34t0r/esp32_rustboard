@@ -100,6 +100,7 @@ pub struct BleKeyboardMaster {
 pub struct BleKeyboardSlave {
     server: &'static mut BLEServer,
     characteristic: Arc<Mutex<BLECharacteristic>>,
+    keys: [u8; 6],
 }
 #[derive(Clone, Copy, Debug)]
 pub enum BleStatus {
