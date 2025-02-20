@@ -9,33 +9,19 @@ use esp_idf_sys::{
     gpio_num_t_GPIO_NUM_20, gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
 };
 
-#[cfg(feature = "master")]
-mod master_specific {
-    pub use crate::ble::BleStatus;
-    pub use crate::debounce::{Debounce, KEY_PRESSED};
-    pub use heapless::FnvIndexMap;
-    pub use spin::Mutex;
-}
-
-#[cfg(feature = "master")]
-use master_specific::*;
-
-#[cfg(feature = "slave")]
-mod slave_specific {
-    pub use crate::ble::BleKeyboardSlave;
-}
-
-#[cfg(feature = "slave")]
-use slave_specific::*;
+pub use crate::ble::BleStatus;
+pub use crate::debounce::{Debounce, KEY_PRESSED};
+pub use heapless::FnvIndexMap;
+pub use spin::Mutex;
 
 #[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
 pub struct Key {
-    pub row: i8,
-    pub col: i8,
+    pub row: u8,
+    pub col: u8,
 }
 
 impl Key {
-    fn new(row: i8, col: i8) -> Key {
+    fn new(row: u8, col: u8) -> Key {
         Key { row, col }
     }
 }
@@ -167,15 +153,10 @@ impl PinMatrix<'_> {
     /// Each row is set to high, then each col is checked if it is high or not
     async fn standard_scan(
         &mut self,
-        #[cfg(feature = "master")] keys_pressed: &Mutex<
-            FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>,
-        >,
+        keys_pressed: &Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
     ) {
         /* initialize counts */
         let mut count = Key::new(0, COL_INIT);
-
-        #[cfg(feature = "slave")]
-        let mut ble_keyboard_slave: BleKeyboardSlave = BleKeyboardSlave::new();
 
         /* check rows and cols */
         for row in self.rows.iter_mut() {
@@ -189,20 +170,12 @@ impl PinMatrix<'_> {
             for col in self.cols.iter() {
                 /* check if a col is set to high (key pressed) */
                 if col.is_high() {
-                    #[cfg(feature = "master")]
                     /* store the key */
                     match store_key(keys_pressed, &count) {
                         Some(()) => {
                             self.enter_sleep_delay = Instant::now() + SLEEP_DELAY;
                         }
                         None => { /* do nothing */ }
-                    }
-
-                    #[cfg(feature = "slave")]
-                    {
-                        ble_keyboard_slave.ble_tx(&count).await;
-
-                        self.enter_sleep_delay = Instant::now() + SLEEP_DELAY;
                     }
                 }
                 /* increment col */
@@ -223,11 +196,10 @@ impl PinMatrix<'_> {
     }
 }
 
-#[cfg(feature = "master")]
 /// The main function for stornig the registered key in to the shared pressed keys hashmap
 fn store_key(
     keys_pressed: &Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
-    key: &Key,
+    count: &Key,
 ) -> Option<()> {
     /* lock the hashmap */
     if let Some(mut keys_pressed) = keys_pressed.try_lock() {
@@ -238,8 +210,8 @@ fn store_key(
         keys_pressed
             .insert(
                 Key {
-                    row: key.row,
-                    col: key.col,
+                    row: count.row,
+                    col: count.col,
                 },
                 Debounce {
                     key_pressed_time: Instant::now(),
@@ -249,7 +221,7 @@ fn store_key(
             .expect("Error setting new key in the hashmap");
 
         #[cfg(feature = "debug")]
-        log::info!("Pressed keys stored! X:{}, Y:{}", key.row, key.col);
+        log::info!("Pressed keys stored! X:{}, Y:{}", count.row, count.col);
 
         /* return true to reset the sleep delay */
         Some(())
@@ -259,9 +231,8 @@ fn store_key(
     }
 }
 
-#[cfg(feature = "master")]
 /// The main matrix scan function
-pub async fn scan_grid_master(
+pub async fn scan_grid(
     keys_pressed: &Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
     ble_status: &Mutex<BleStatus>,
 ) -> ! {
@@ -300,22 +271,6 @@ pub async fn scan_grid_master(
                 /* sleep for 100ms */
                 delay_ms(100).await;
             }
-        }
-    }
-}
-
-#[cfg(feature = "slave")]
-pub async fn scan_grid_slave() {
-    let ble_keybard_slave: BleKeyboardSlave = BleKeyboardSlave::new();
-
-    let mut matrix = PinMatrix::new();
-
-    loop {
-        /* check if sleep conditions are met */
-        matrix.sleep_mode_if_conditions_met();
-
-        if ble_keybard_slave.connected() {
-            matrix.standard_scan().await;
         }
     }
 }
