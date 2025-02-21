@@ -3,10 +3,10 @@ use crate::config::enums::{HidKeys, HidModifiers, KeyType};
 use crate::config::{config::*, layers::*};
 use crate::debounce::{Debounce, KEY_PRESSED, KEY_RELEASED};
 use crate::delay::*;
-use crate::matrix::Key;
+use crate::matrix::{store_key, Key};
 
 use super::{BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID};
-use bstr::ByteSlice;
+use bstr::{ByteSlice, ByteVec};
 use embassy_futures::select::select;
 use esp32_nimble::{enums::*, uuid128, BLEAdvertisementData, BLEDevice, BLEHIDDevice, BLEScan};
 use esp_idf_sys::{
@@ -58,9 +58,46 @@ impl BleKeyboardMaster {
 
         ble_advertising.lock().start().unwrap();
 
+        // connecting to the slave device
+        let mut ble_slave_scan = BLEScan::new();
+
+        let slave_device = ble_slave_scan
+            .active_scan(true)
+            .interval(100)
+            .window(99)
+            .start(&device, 10000, |device, data| {
+                if let Some(name) = data.name() {
+                    if name.contains_str("rustboard-slave") {
+                        return Some(*device);
+                    }
+                }
+                None
+            })
+            .await
+            .ok();
+
+        let slave_device = slave_device.unwrap_or(None);
+
+        let mut client = device.new_client();
+
+        client.on_connect(|client| {
+            client.update_conn_params(5, 10, 0, 60).unwrap();
+        });
+
+        client.connect(&slave_device.unwrap().addr()).await.unwrap();
+
+        let client_service = client
+            .get_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"))
+            .await
+            .unwrap();
+
+        let uuid = uuid128!(BLE_SLAVE_UUID);
+
+        let slave_characteristic = client_service.get_characteristic(uuid).await.unwrap();
+
         Self {
-            device,
             server,
+            slave_characteristic,
             input_keyboard,
             output_keyboard,
             input_media_keys,
@@ -109,54 +146,28 @@ async fn ble_client_recieve(
     ble_keyboard: &spinMutex<BleKeyboardMaster>,
     keys_pressed: &spinMutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
 ) {
-    let mut ble_slave_scan = BLEScan::new();
-
-    let slave_device = ble_slave_scan
-        .active_scan(true)
-        .interval(10)
-        .window(9)
-        .start(&ble_keyboard.lock().device, 10000, |device, data| {
-            if let Some(name) = data.name() {
-                if name.contains_str("rustboard-slave") {
-                    return Some(*device);
-                }
-            }
-            None
-        })
-        .await
-        .ok();
-
-    let slave_device = slave_device.unwrap_or(None);
-
-    let mut client = ble_keyboard.lock().device.new_client();
-
-    client.on_connect(|client| {
-        client.update_conn_params(1, 10, 0, 60).unwrap();
-    });
-
-    client.connect(&slave_device.unwrap().addr()).await.unwrap();
-
-    let client_service = client
-        .get_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"))
-        .await
-        .unwrap();
-
-    let uuid = uuid128!(BLE_SLAVE_UUID);
-
-    let slave_characteristic = client_service.get_characteristic(uuid).await.unwrap();
+    let mut restored_key_count: Key = Key::new(0, 0);
 
     loop {
-        let data = slave_characteristic.read_value().await.unwrap();
+        if let Some(ble_keyboard) = ble_keyboard.try_lock() {
+            while let Some(key) = ble_keyboard
+                .slave_characteristic
+                .read_value()
+                .await
+                .unwrap()
+                .pop_byte()
+            {
+                if key != 0 {
+                    restored_key_count.col = key & 0xFF;
+                    restored_key_count.row = (key >> BIT_MASK) & 0xFF;
 
-        log::info!("{}", core::str::from_utf8(&data).unwrap());
+                    store_key(&keys_pressed, &restored_key_count);
 
-        // Rest of the logic for handling the input.
-        // The server shall recieve coordinates from the client,
-        // representing the keys pressed form the layout selected.
-        //
-        // The coordinates shall be placed in the keys_pressed hashmap.
-
-        // Here needs to be the fetch logic.
+                    #[cfg(feature = "debug")]
+                    log::info!("Recieved value from slave: {:?}", restored_key_count);
+                }
+            }
+        }
         delay_ms(1).await;
     }
 }

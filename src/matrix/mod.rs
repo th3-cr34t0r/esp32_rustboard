@@ -21,7 +21,7 @@ pub struct Key {
 }
 
 impl Key {
-    fn new(row: u8, col: u8) -> Key {
+    pub fn new(row: u8, col: u8) -> Key {
         Key { row, col }
     }
 }
@@ -171,12 +171,10 @@ impl PinMatrix<'_> {
                 /* check if a col is set to high (key pressed) */
                 if col.is_high() {
                     /* store the key */
-                    match store_key(keys_pressed, &count) {
-                        Some(()) => {
-                            self.enter_sleep_delay = Instant::now() + SLEEP_DELAY;
-                        }
-                        None => { /* do nothing */ }
-                    }
+                    store_key(keys_pressed, &count);
+
+                    // reset the sleep delay on key press
+                    self.enter_sleep_delay = Instant::now() + SLEEP_DELAY;
                 }
                 /* increment col */
                 count.col += 1;
@@ -197,16 +195,20 @@ impl PinMatrix<'_> {
 }
 
 /// The main function for stornig the registered key in to the shared pressed keys hashmap
-fn store_key(
+pub fn store_key(
     keys_pressed: &Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
     count: &Key,
-) -> Option<()> {
+) {
     /* lock the hashmap */
     if let Some(mut keys_pressed) = keys_pressed.try_lock() {
         /* Inserts a key-value pair into the map.
-         * If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
-         * If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
-         */
+        * If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
+        * If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
+
+        */
+        #[cfg(feature = "debug")]
+        log::info!("Pressed keys stored! X:{}, Y:{}", count.row, count.col);
+
         keys_pressed
             .insert(
                 Key {
@@ -218,16 +220,7 @@ fn store_key(
                     key_state: KEY_PRESSED,
                 },
             )
-            .expect("Error setting new key in the hashmap");
-
-        #[cfg(feature = "debug")]
-        log::info!("Pressed keys stored! X:{}, Y:{}", count.row, count.col);
-
-        /* return true to reset the sleep delay */
-        Some(())
-    } else {
-        /* else return false */
-        None
+            .unwrap();
     }
 }
 

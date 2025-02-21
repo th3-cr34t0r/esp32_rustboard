@@ -92,6 +92,8 @@ impl BleKeyboardSlave {
             .lock()
             .set_value(&self.keys.as_bytes())
             .notify();
+
+        delay_ms(1).await;
     }
 }
 fn add_keys(ble_keyboard_slave: &mut BleKeyboardSlave, key: &Key) {
@@ -99,6 +101,7 @@ fn add_keys(ble_keyboard_slave: &mut BleKeyboardSlave, key: &Key) {
     //
     // row: 0 - 3; col: 0 - 11
     //
+    // Example:
     // row(2):    0000 0010 << 4bits
     // col(11):   0000 1011
     //
@@ -204,7 +207,7 @@ pub async fn ble_tx(
                     log::info!("ble_keyboard_slave.keys: {:?}", ble_keyboard_slave.keys);
 
                     /* sent the new report */
-                    ble_keyboard_slave.send_report();
+                    ble_keyboard_slave.send_report().await;
 
                     /* remove the sent keys and empty the vec */
                     while let Some(key) = pressed_keys_to_remove.pop() {
@@ -238,6 +241,6 @@ pub async fn ble_tx(
             delay_ms(100).await;
         }
         /* there must be a delay so the WDT in not triggered */
-        delay_ms(2).await;
+        delay_ms(1).await;
     }
 }

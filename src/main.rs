@@ -13,7 +13,7 @@ use crate::matrix::Key;
 use ble::BleStatus;
 use embassy_futures::select::select3;
 use heapless::FnvIndexMap;
-use matrix::scan_grid_master;
+use matrix::scan_grid;
 use spin::Mutex;
 
 fn main() -> anyhow::Result<()> {
@@ -37,7 +37,7 @@ fn main() -> anyhow::Result<()> {
         block_on(async {
             select3(
                 ble_rx_tx(&keys_pressed, &ble_status),
-                scan_grid_master(&keys_pressed, &ble_status),
+                scan_grid(&keys_pressed, &ble_status),
                 calculate_debounce(&keys_pressed),
             )
             .await;
@@ -52,7 +52,7 @@ fn main() -> anyhow::Result<()> {
         block_on(async {
             select3(
                 ble_tx(&keys_pressed, &ble_status),
-                scan_grid(&keys_presed, &ble_status),
+                scan_grid(&keys_pressed, &ble_status),
                 calculate_debounce(&keys_pressed),
             )
             .await;
