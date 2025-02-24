@@ -7,9 +7,11 @@ use anyhow;
 use esp32_rustboard::*;
 use esp_idf_hal::task::block_on;
 
+extern crate alloc;
 use crate::config::config::*;
 use crate::debounce::*;
 use crate::matrix::Key;
+use alloc::sync::Arc;
 use ble::BleStatus;
 use embassy_futures::select::select3;
 use heapless::FnvIndexMap;
@@ -23,11 +25,11 @@ fn main() -> anyhow::Result<()> {
     esp_idf_svc::log::EspLogger::initialize_default();
 
     /* initialize keys pressed hashmap */
-    let keys_pressed: Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>> =
-        Mutex::new(FnvIndexMap::new());
+    let keys_pressed: Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>> =
+        Arc::new(Mutex::new(FnvIndexMap::new()));
 
     /* ble connection information shared variable */
-    let ble_status: Mutex<BleStatus> = Mutex::new(BleStatus::NotConnected);
+    let ble_status: Arc<Mutex<BleStatus>> = Arc::new(Mutex::new(BleStatus::Connected));
 
     #[cfg(feature = "master")]
     {

@@ -14,6 +14,9 @@ pub use crate::debounce::{Debounce, KEY_PRESSED};
 pub use heapless::FnvIndexMap;
 pub use spin::Mutex;
 
+extern crate alloc;
+use alloc::sync::Arc;
+
 #[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
 pub struct Key {
     pub row: u8,
@@ -153,7 +156,7 @@ impl PinMatrix<'_> {
     /// Each row is set to high, then each col is checked if it is high or not
     async fn standard_scan(
         &mut self,
-        keys_pressed: &Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
+        keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
     ) {
         /* initialize counts */
         let mut count = Key::new(0, COL_INIT);
@@ -196,19 +199,18 @@ impl PinMatrix<'_> {
 
 /// The main function for stornig the registered key in to the shared pressed keys hashmap
 pub fn store_key(
-    keys_pressed: &Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
+    keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
     count: &Key,
 ) {
-    /* lock the hashmap */
+    /* Inserts a key-value pair into the map.
+    * If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
+    * If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
+
+    */
+    #[cfg(feature = "debug")]
+    log::info!("Pressed keys stored! X:{}, Y:{}", count.row, count.col);
+
     if let Some(mut keys_pressed) = keys_pressed.try_lock() {
-        /* Inserts a key-value pair into the map.
-        * If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
-        * If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
-
-        */
-        #[cfg(feature = "debug")]
-        log::info!("Pressed keys stored! X:{}, Y:{}", count.row, count.col);
-
         keys_pressed
             .insert(
                 Key {
@@ -226,8 +228,8 @@ pub fn store_key(
 
 /// The main matrix scan function
 pub async fn scan_grid(
-    keys_pressed: &Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
-    ble_status: &Mutex<BleStatus>,
+    keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
+    ble_status: &Arc<Mutex<BleStatus>>,
 ) -> ! {
     /* construct the matrix */
     let mut matrix = PinMatrix::new();
@@ -260,7 +262,6 @@ pub async fn scan_grid(
                 matrix.standard_scan(keys_pressed).await;
             }
             BleStatus::NotConnected => {
-                /* wait till there is a connection */
                 /* sleep for 100ms */
                 delay_ms(100).await;
             }

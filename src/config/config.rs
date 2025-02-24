@@ -1,4 +1,6 @@
 use embassy_time::Duration;
+use esp32_nimble::utilities::BleUuid;
+use esp32_nimble::uuid128;
 
 use esp_idf_sys::{
     esp_power_level_t_ESP_PWR_LVL_N0, esp_power_level_t_ESP_PWR_LVL_N12,
@@ -28,7 +30,7 @@ pub const SLEEP_DELAY_NOT_CONNECTED: Duration = Duration::from_millis(60000); /*
 pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 16;
 pub const LAYER_INDEXMAP_SIZE: usize = 64;
 pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
-pub const BLE_SLAVE_UUID: &str = "06984d74-0fdb-491e-9c4c-c25603a9bc34";
+pub const BLE_SLAVE_UUID: BleUuid = uuid128!("06984d74-0fdb-491e-9c4c-c25603a9bc34");
 pub const BIT_MASK: u8 = 4;
 
 pub enum EspPowerLevel {

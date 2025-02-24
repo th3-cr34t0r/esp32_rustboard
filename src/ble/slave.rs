@@ -30,12 +30,9 @@ impl BleKeyboardSlave {
 
         let service = server.create_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"));
 
-        let characteristic = service.lock().create_characteristic(
-            uuid128!(BLE_SLAVE_UUID),
-            NimbleProperties::READ | NimbleProperties::NOTIFY,
-        );
-
-        characteristic.lock().set_value(b"Init value");
+        let characteristic = service
+            .lock()
+            .create_characteristic(BLE_SLAVE_UUID, NimbleProperties::READ);
 
         let ble_advertising = device.get_advertising();
 
@@ -45,11 +42,8 @@ impl BleKeyboardSlave {
             .set_data(
                 BLEAdvertisementData::new()
                     .name("rustboard-slave")
-                    .add_service_uuid(
-                        BleUuid::from_uuid128_string(BLE_SLAVE_UUID)
-                            .ok()
-                            .expect("Invalid SLAVE UUID"),
-                    ),
+                    .appearance(0x03C1)
+                    .add_service_uuid(BLE_SLAVE_UUID),
             )
             .unwrap();
 
@@ -116,7 +110,7 @@ fn add_keys(ble_keyboard_slave: &mut BleKeyboardSlave, key: &Key) {
         match ble_keyboard_slave.keys.iter().position(|&value| value == 0) {
             Some(index) => {
                 /* add the new key to that position */
-                ble_keyboard_slave.keys[index] = combined_key
+                ble_keyboard_slave.keys[index] = combined_key;
             }
             None => { /* there is no free key slot available */ }
         }
@@ -215,9 +209,11 @@ pub async fn ble_tx(
                     }
                 }
             }
+            /* there must be a delay so the WDT in not triggered */
+            delay_ms(1).await;
         } else {
-            #[cfg(feature = "debug")]
             /* debug log */
+            #[cfg(feature = "debug")]
             log::info!("Keyboard not connected!");
 
             /* check and store the ble status */
@@ -230,7 +226,6 @@ pub async fn ble_tx(
                     *ble_status.lock() = BleStatus::NotConnected;
                 }
             }
-
             /* check the power save flag */
             if !power_save_flag {
                 /* if false, set to true */
@@ -240,7 +235,5 @@ pub async fn ble_tx(
             /* sleep for 100ms */
             delay_ms(100).await;
         }
-        /* there must be a delay so the WDT in not triggered */
-        delay_ms(1).await;
     }
 }
