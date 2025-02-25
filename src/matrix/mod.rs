@@ -159,7 +159,9 @@ impl PinMatrix<'_> {
         keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
     ) {
         /* initialize counts */
-        let mut count = Key::new(0, COL_INIT);
+        let mut pressed_keys_buffer: [Key; 6] = [Key::new(255, 255); 6];
+
+        let mut count: Key = Key::new(0, COL_INIT);
 
         /* check rows and cols */
         for row in self.rows.iter_mut() {
@@ -173,9 +175,18 @@ impl PinMatrix<'_> {
             for col in self.cols.iter() {
                 /* check if a col is set to high (key pressed) */
                 if col.is_high() {
-                    /* store the key */
-                    store_key(keys_pressed, &count);
-
+                    /* store the key in the buffer */
+                    match pressed_keys_buffer
+                        .iter()
+                        .position(|&element| element == Key::new(255, 255))
+                    {
+                        Some(index) => {
+                            pressed_keys_buffer[index] = count;
+                        }
+                        None => {
+                            // do nothing
+                        }
+                    }
                     // reset the sleep delay on key press
                     self.enter_sleep_delay = Instant::now() + SLEEP_DELAY;
                 }
@@ -194,35 +205,47 @@ impl PinMatrix<'_> {
 
         /* reset row count */
         count.row = 0;
+
+        store_key(keys_pressed, &mut pressed_keys_buffer);
     }
 }
 
 /// The main function for stornig the registered key in to the shared pressed keys hashmap
 pub fn store_key(
     keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
-    count: &Key,
+    pressed_keys_array: &mut [Key; 6],
 ) {
     /* Inserts a key-value pair into the map.
     * If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
     * If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
 
     */
-    #[cfg(feature = "debug")]
-    log::info!("Pressed keys stored! X:{}, Y:{}", count.row, count.col);
 
     if let Some(mut keys_pressed) = keys_pressed.try_lock() {
-        keys_pressed
-            .insert(
-                Key {
-                    row: count.row,
-                    col: count.col,
-                },
-                Debounce {
-                    key_pressed_time: Instant::now(),
-                    key_state: KEY_PRESSED,
-                },
-            )
-            .unwrap();
+        pressed_keys_array.iter_mut().for_each(|element| {
+            if *element != Key::new(255, 255) {
+                keys_pressed
+                    .insert(
+                        Key {
+                            row: element.row,
+                            col: element.col,
+                        },
+                        Debounce {
+                            key_pressed_time: Instant::now(),
+                            key_state: KEY_PRESSED,
+                        },
+                    )
+                    .unwrap();
+            }
+
+            *element = Key::new(255, 255);
+        });
+        #[cfg(feature = "debug")]
+        {
+            if !keys_pressed.is_empty() {
+                log::info!("Pressed keys stored! {:?}", keys_pressed);
+            }
+        }
     }
 }
 
