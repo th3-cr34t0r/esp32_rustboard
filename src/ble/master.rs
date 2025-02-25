@@ -229,7 +229,7 @@ pub async fn ble_rx(
 
     // let remote_characteristic = service.get_characteristic(BLE_SLAVE_UUID).await.unwrap();
 
-    let mut restored_key_count: Key = Key::new(0, 0);
+    let mut restored_key_count: [Key; 6] = [Key::new(255, 255); 6];
 
     loop {
         if let Some(mut ble_keyboard) = ble_keyboard.try_lock() {
@@ -246,16 +246,34 @@ pub async fn ble_rx(
 
             data.iter().for_each(|key| {
                 if *key != 0 {
-                    restored_key_count.row = (key >> BIT_MASK) & 0xFF;
-                    restored_key_count.col = key & ((1 << BIT_MASK) - 1);
+                    match restored_key_count
+                        .iter()
+                        .position(|&element| element == Key::new(255, 255))
+                    {
+                        Some(index) => {
+                            let mut recovered_key: Key = Key::new(255, 255);
 
-                    #[cfg(feature = "debug")]
-                    log::info!("Recieved value from slave: {:?}", restored_key_count);
-
-                    store_key(&keys_pressed, &restored_key_count);
+                            recovered_key.row = (key >> BIT_MASK) & 0xFF;
+                            recovered_key.col = key & ((1 << BIT_MASK) - 1);
+                            restored_key_count[index] = recovered_key;
+                        }
+                        None => { // do nothing
+                        }
+                    }
                 }
             });
         }
+
+        if !restored_key_count.starts_with(&[Key::new(255, 255)]) {
+            #[cfg(feature = "debug")]
+            log::info!(
+                "Recieved from slave - restored_key_count: {:?}",
+                restored_key_count
+            );
+
+            store_key(&keys_pressed, &mut restored_key_count);
+        }
+
         delay_ms(1).await;
     }
 }
@@ -286,8 +304,8 @@ pub async fn ble_tx(
     loop {
         if let Some(mut ble_keyboard) = ble_keyboard.try_lock() {
             if ble_keyboard.connected() {
-                #[cfg(feature = "debug")]
-                log::info!("Keyboard connected!");
+                // #[cfg(feature = "debug")]
+                // log::info!("Keyboard connected!");
 
                 /* check and store the ble status, then release the lock */
                 match ble_status_prev {
