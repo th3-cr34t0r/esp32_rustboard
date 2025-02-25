@@ -4,7 +4,9 @@ use crate::matrix::Key;
 use crate::{config::config::*, debounce::Debounce};
 
 use super::{BleKeyboardSlave, BleStatus};
-use esp32_nimble::{enums::*, uuid128, BLEAdvertisementData, BLEDevice, NimbleProperties};
+use esp32_nimble::{
+    enums::*, uuid128, BLEAddress, BLEAdvertisementData, BLEConnDesc, BLEDevice, NimbleProperties,
+};
 use esp_idf_sys::{
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_ADV, esp_ble_power_type_t_ESP_BLE_PWR_TYPE_DEFAULT,
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_SCAN,
@@ -28,9 +30,10 @@ impl BleKeyboardSlave {
 
         let service = server.create_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"));
 
-        let characteristic = service
-            .lock()
-            .create_characteristic(BLE_SLAVE_UUID, NimbleProperties::READ);
+        let characteristic = service.lock().create_characteristic(
+            BLE_SLAVE_UUID,
+            NimbleProperties::READ | NimbleProperties::NOTIFY,
+        );
 
         let ble_advertising = device.get_advertising();
 
@@ -79,6 +82,17 @@ impl BleKeyboardSlave {
             .lock()
             .set_value(&self.keys.as_bytes())
             .notify();
+        // .on_read(|value, bleconn_desc| {
+        //     if bleconn_desc.address()
+        //         == BLEAddress::from_str(
+        //             "EC:DA:3B:BD:D7:B6",
+        //             esp32_nimble::BLEAddressType::Public,
+        //         )
+        //         .unwrap()
+        //     {
+        //         value.clear();
+        //     }
+        // });
 
         delay_ms(1).await;
     }
