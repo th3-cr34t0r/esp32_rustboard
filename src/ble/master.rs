@@ -1,5 +1,6 @@
 extern crate alloc;
 use alloc::sync::Arc;
+use embassy_time::Instant;
 
 use crate::ble::BleStatus;
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
@@ -9,11 +10,7 @@ use crate::delay::*;
 use crate::matrix::{store_key, Key};
 
 use super::{BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID};
-use bstr::{ByteSlice, ByteVec};
-use embassy_futures::select::select;
-use esp32_nimble::{
-    enums::*, uuid128, BLEAddress, BLEAdvertisementData, BLEDevice, BLEHIDDevice, BLEScan,
-};
+use esp32_nimble::{enums::*, uuid128, BLEAddress, BLEAdvertisementData, BLEDevice, BLEHIDDevice};
 use esp_idf_sys::{
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_ADV, esp_ble_power_type_t_ESP_BLE_PWR_TYPE_DEFAULT,
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_SCAN,
@@ -65,10 +62,21 @@ impl BleKeyboardMaster {
         ble_advertising.lock().start().unwrap();
 
         // connecting to the slave device
-        let client = device.new_client();
+        let mut client = device.new_client();
+
+        client
+            .connect(
+                &BLEAddress::from_str("EC:DA:3B:BD:D6:D6", esp32_nimble::BLEAddressType::Public)
+                    .expect("No slave device found"),
+            )
+            .await
+            .unwrap();
+
+        client.on_connect(|client| {
+            client.update_conn_params(5, 10, 0, 60).unwrap();
+        });
 
         Self {
-            device,
             server,
             client,
             input_keyboard,
@@ -111,20 +119,6 @@ impl BleKeyboardMaster {
             );
         }
     }
-
-    async fn connect_slave_device(&mut self) {
-        self.client
-            .connect(
-                &BLEAddress::from_str("EC:DA:3B:BD:D6:D6", esp32_nimble::BLEAddressType::Public)
-                    .expect("No slave device found"),
-            )
-            .await
-            .unwrap();
-
-        self.client.on_connect(|client| {
-            client.update_conn_params(5, 10, 0, 60).unwrap();
-        });
-    }
 }
 
 // This is the function that recieves information from the client
@@ -133,33 +127,6 @@ async fn ble_client_recieve(
     ble_keyboard: &mut BleKeyboardMaster,
     keys_pressed: &Arc<spinMutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
 ) {
-    // let mut ble_slave_scan = BLEScan::new();
-
-    // let slave_device = ble_slave_scan
-    //     .active_scan(true)
-    //     .interval(1000)
-    //     .window(99)
-    //     .start(&ble_keyboard.lock().device, 10000, |device, data| {
-    //         if let Some(name) = data.name() {
-    //             #[cfg(feature = "debug")]
-    //             log::info!("Device names: {:?}", name);
-
-    //             if name.contains_str("rustboard") {
-    //                 return Some(*device);
-    //             }
-    //         }
-    //         None
-    //     })
-    //     .await
-    //     .unwrap();
-
-    // ble_keyboard
-    //     .lock()
-    //     .client
-    //     .connect(&slave_device.expect("No slave device found!").addr())
-    //     .await
-    //     .unwrap();
-
     let mut restored_key_count: Key = Key::new(0, 0);
 
     // while let Some(key) = ble_keyboard
@@ -216,35 +183,44 @@ async fn ble_client_recieve(
     //     .await
     //     .unwrap();
 
-    let data = ble_keyboard
+    let start_measurement = Instant::now();
+
+    let remote_characteristic = ble_keyboard
         .client
         .get_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"))
         .await
         .unwrap()
         .get_characteristic(BLE_SLAVE_UUID)
         .await
-        .unwrap()
-        .read_value()
-        .await
         .unwrap();
 
-    data.iter().for_each(|key| {
-        if *key != 0 {
-            restored_key_count.row = (key >> BIT_MASK) & 0xFF;
-            restored_key_count.col = key & ((1 << BIT_MASK) - 1);
+    log::info!(
+        "Remote Characteristic time taken: {}",
+        start_measurement.elapsed().as_micros()
+    );
 
-            #[cfg(feature = "debug")]
-            log::info!("Recieved value from slave: {:?}", restored_key_count);
+    let data = remote_characteristic.read_value().await.unwrap();
 
-            store_key(&keys_pressed, &restored_key_count);
-        }
-    });
-    // {
-    //     #[cfg(feature = "debug")]
-    //     log::info!("Recieved value from slave: {:?}", key);
+    let start_measurement = Instant::now();
 
-    // }
-    // delay_ms(5).await;
+    if data.is_empty() {
+        data.iter().for_each(|key| {
+            if *key != 0 {
+                restored_key_count.row = (key >> BIT_MASK) & 0xFF;
+                restored_key_count.col = key & ((1 << BIT_MASK) - 1);
+
+                #[cfg(feature = "debug")]
+                log::info!("Recieved value from slave: {:?}", restored_key_count);
+
+                store_key(&keys_pressed, &restored_key_count);
+            }
+        });
+    }
+
+    log::info!(
+        "Data Iter time taken: {}",
+        start_measurement.elapsed().as_micros()
+    );
 }
 
 fn add_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_state: &mut Layer) {
@@ -364,17 +340,12 @@ pub async fn ble_rx_tx(
 
     let mut ble_status_prev: BleStatus = BleStatus::NotConnected;
 
-    let mut ble_slave_connected: bool = false;
-
     /* Run the main loop */
     loop {
-        if ble_keyboard.connected() {
-            // try to connect to slave device
-            if !ble_slave_connected {
-                ble_keyboard.connect_slave_device().await;
-                ble_slave_connected = true;
-            }
+        // ble_client_recieve
+        ble_client_recieve(&mut ble_keyboard, &keys_pressed).await;
 
+        if ble_keyboard.connected() {
             #[cfg(feature = "debug")]
             log::info!("Keyboard connected!");
 
@@ -448,11 +419,9 @@ pub async fn ble_rx_tx(
                     }
                 }
             }
-            // ble_client_recieve
-            ble_client_recieve(&mut ble_keyboard, &keys_pressed).await;
 
             /* there must be a delay so the WDT in not triggered */
-            delay_ms(5).await;
+            delay_ms(1).await;
         } else {
             /* debug log */
             #[cfg(feature = "debug")]

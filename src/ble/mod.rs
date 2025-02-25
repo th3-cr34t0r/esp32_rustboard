@@ -3,8 +3,8 @@
 extern crate alloc;
 
 use alloc::sync::Arc;
+use esp32_nimble::BLEClient;
 use esp32_nimble::{hid::*, utilities::mutex::Mutex, BLECharacteristic, BLEServer};
-use esp32_nimble::{BLEAdvertisedDevice, BLEClient, BLEDevice};
 use zerocopy::{Immutable, IntoBytes};
 
 #[cfg(feature = "master")]
@@ -90,7 +90,6 @@ struct KeyReport {
 }
 
 pub struct BleKeyboardMaster {
-    device: &'static mut BLEDevice,
     server: &'static mut BLEServer,
     client: BLEClient,
     input_keyboard: Arc<Mutex<BLECharacteristic>>,

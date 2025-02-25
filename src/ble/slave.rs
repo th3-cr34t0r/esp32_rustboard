@@ -4,9 +4,7 @@ use crate::matrix::Key;
 use crate::{config::config::*, debounce::Debounce};
 
 use super::{BleKeyboardSlave, BleStatus};
-use esp32_nimble::{
-    enums::*, utilities::BleUuid, uuid128, BLEAdvertisementData, BLEDevice, NimbleProperties,
-};
+use esp32_nimble::{enums::*, uuid128, BLEAdvertisementData, BLEDevice, NimbleProperties};
 use esp_idf_sys::{
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_ADV, esp_ble_power_type_t_ESP_BLE_PWR_TYPE_DEFAULT,
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_SCAN,
@@ -39,12 +37,7 @@ impl BleKeyboardSlave {
         ble_advertising
             .lock()
             .scan_response(false)
-            .set_data(
-                BLEAdvertisementData::new()
-                    .name("rustboard-slave")
-                    .appearance(0x03C1)
-                    .add_service_uuid(BLE_SLAVE_UUID),
-            )
+            .set_data(BLEAdvertisementData::new().add_service_uuid(BLE_SLAVE_UUID))
             .unwrap();
 
         ble_advertising.lock().start().unwrap();
