@@ -189,8 +189,8 @@ pub async fn ble_tx(
                         }
                     }
 
-                    #[cfg(feature = "debug")]
                     /* debug log */
+                    #[cfg(feature = "debug")]
                     log::info!("ble_keyboard_slave.keys: {:?}", ble_keyboard_slave.keys);
 
                     /* sent the new report */
