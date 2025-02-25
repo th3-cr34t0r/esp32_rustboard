@@ -1,6 +1,6 @@
 extern crate alloc;
+
 use alloc::sync::Arc;
-use embassy_time::Instant;
 
 use crate::ble::BleStatus;
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
@@ -73,7 +73,7 @@ impl BleKeyboardMaster {
             .unwrap();
 
         client.on_connect(|client| {
-            client.update_conn_params(5, 10, 0, 60).unwrap();
+            client.update_conn_params(5, 10, 0, 200).unwrap();
         });
 
         Self {
@@ -119,108 +119,6 @@ impl BleKeyboardMaster {
             );
         }
     }
-}
-
-// This is the function that recieves information from the client
-// about the keys pressed on the other half of the keyboard
-async fn ble_client_recieve(
-    ble_keyboard: &mut BleKeyboardMaster,
-    keys_pressed: &Arc<spinMutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
-) {
-    let mut restored_key_count: Key = Key::new(0, 0);
-
-    // while let Some(key) = ble_keyboard
-    //     .lock()
-    //     .client
-    //     .get_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"))
-    //     .await
-    //     .unwrap()
-    //     .get_characteristic(uuid)
-    //     .await
-    //     .unwrap()
-    //     .read_value()
-    //     .await
-    //     .unwrap()
-    //     .pop_byte()
-    // {
-    //     #[cfg(feature = "debug")]
-    //     log::info!("Recieved value from slave: {:?}", key);
-
-    //     if key != 0 {
-    //         restored_key_count.col = key & 0xFF;
-    //         restored_key_count.row = (key >> BIT_MASK) & 0xFF;
-
-    //         store_key(&keys_pressed, &restored_key_count);
-
-    //         #[cfg(feature = "debug")]
-    //         log::info!("Recieved value from slave: {:?}", restored_key_count);
-    //     }
-    // }
-    //
-
-    // ble_keyboard
-    //     .client
-    //     .get_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"))
-    //     .await
-    //     .unwrap()
-    //     .get_characteristic(BLE_SLAVE_UUID)
-    //     .await
-    //     .unwrap()
-    //     .on_notify(|keys| {
-    //         log::info!("Recieved value: {:?}", keys);
-
-    //         // if key != 0 {
-    //         //     restored_key_count.col = key & 0xFF;
-    //         //     restored_key_count.row = (key >> BIT_MASK) & 0xFF;
-
-    //         //     store_key(&keys_pressed, &restored_key_count);
-
-    //         //     #[cfg(feature = "debug")]
-    //         //     log::info!("Recieved value from slave: {:?}", restored_key_count);
-    //         // }
-    //     })
-    //     .subscribe_notify(false)
-    //     .await
-    //     .unwrap();
-
-    let start_measurement = Instant::now();
-
-    let remote_characteristic = ble_keyboard
-        .client
-        .get_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"))
-        .await
-        .unwrap()
-        .get_characteristic(BLE_SLAVE_UUID)
-        .await
-        .unwrap();
-
-    log::info!(
-        "Remote Characteristic time taken: {}",
-        start_measurement.elapsed().as_micros()
-    );
-
-    let data = remote_characteristic.read_value().await.unwrap();
-
-    let start_measurement = Instant::now();
-
-    if data.is_empty() {
-        data.iter().for_each(|key| {
-            if *key != 0 {
-                restored_key_count.row = (key >> BIT_MASK) & 0xFF;
-                restored_key_count.col = key & ((1 << BIT_MASK) - 1);
-
-                #[cfg(feature = "debug")]
-                log::info!("Recieved value from slave: {:?}", restored_key_count);
-
-                store_key(&keys_pressed, &restored_key_count);
-            }
-        });
-    }
-
-    log::info!(
-        "Data Iter time taken: {}",
-        start_measurement.elapsed().as_micros()
-    );
 }
 
 fn add_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_state: &mut Layer) {
@@ -316,13 +214,57 @@ fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_
     }
 }
 
-pub async fn ble_rx_tx(
+// This is the function that recieves information from the client
+// about the keys pressed on the other half of the keyboard
+pub async fn ble_rx(
+    ble_keyboard: &Arc<spinMutex<BleKeyboardMaster>>,
     keys_pressed: &Arc<spinMutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
-    ble_status: &Arc<spinMutex<BleStatus>>,
-) -> ! {
-    /* construct ble master */
-    let mut ble_keyboard: BleKeyboardMaster = BleKeyboardMaster::new().await;
+) {
+    // let service = ble_keyboard
+    //     .lock()
+    //     .client
+    //     .get_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"))
+    //     .await
+    //     .unwrap();
 
+    // let remote_characteristic = service.get_characteristic(BLE_SLAVE_UUID).await.unwrap();
+
+    let mut restored_key_count: Key = Key::new(0, 0);
+
+    loop {
+        if let Some(mut ble_keyboard) = ble_keyboard.try_lock() {
+            let remote_characteristic = ble_keyboard
+                .client
+                .get_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"))
+                .await
+                .unwrap()
+                .get_characteristic(BLE_SLAVE_UUID)
+                .await
+                .unwrap();
+
+            let data = remote_characteristic.read_value().await.unwrap_or_default();
+
+            data.iter().for_each(|key| {
+                if *key != 0 {
+                    restored_key_count.row = (key >> BIT_MASK) & 0xFF;
+                    restored_key_count.col = key & ((1 << BIT_MASK) - 1);
+
+                    #[cfg(feature = "debug")]
+                    log::info!("Recieved value from slave: {:?}", restored_key_count);
+
+                    store_key(&keys_pressed, &restored_key_count);
+                }
+            });
+        }
+        delay_ms(1).await;
+    }
+}
+
+pub async fn ble_tx(
+    ble_keyboard: &Arc<spinMutex<BleKeyboardMaster>>,
+    ble_status: &Arc<spinMutex<BleStatus>>,
+    keys_pressed: &Arc<spinMutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
+) -> ! {
     /* initialize layers */
     let mut layers = Layers::new();
 
@@ -342,112 +284,110 @@ pub async fn ble_rx_tx(
 
     /* Run the main loop */
     loop {
-        // ble_client_recieve
-        ble_client_recieve(&mut ble_keyboard, &keys_pressed).await;
+        if let Some(mut ble_keyboard) = ble_keyboard.try_lock() {
+            if ble_keyboard.connected() {
+                #[cfg(feature = "debug")]
+                log::info!("Keyboard connected!");
 
-        if ble_keyboard.connected() {
-            #[cfg(feature = "debug")]
-            log::info!("Keyboard connected!");
+                /* check and store the ble status, then release the lock */
+                match ble_status_prev {
+                    BleStatus::NotConnected => {
+                        ble_status_prev = BleStatus::Connected;
 
-            /* check and store the ble status, then release the lock */
-            match ble_status_prev {
-                BleStatus::NotConnected => {
-                    ble_status_prev = BleStatus::Connected;
-
-                    if let Some(mut ble_status) = ble_status.try_lock() {
-                        *ble_status = BleStatus::Connected;
-                    }
-                }
-                BleStatus::Connected => {}
-            }
-
-            /* check if power save has been set */
-            if power_save_flag {
-                /* set ble power to lowest possible */
-                ble_keyboard.set_ble_power_save();
-                /* set flag to false */
-                power_save_flag = false;
-            }
-
-            /* try to lock the hashmap */
-            if let Some(mut keys_pressed) = keys_pressed.try_lock() {
-                /* check if there are pressed keys */
-                if !keys_pressed.is_empty() {
-                    /* iter trough the pressed keys */
-                    for (key, debounce) in keys_pressed.iter_mut() {
-                        /*check the key debounce state */
-                        match debounce.key_state {
-                            KEY_PRESSED => {
-                                /* get the pressed key */
-                                if let Some(valid_key) =
-                                    layers.get(&key.row, &key.col, &layer_state)
-                                {
-                                    add_keys(&mut ble_keyboard, valid_key, &mut layer_state);
-                                }
-                            }
-                            /* check if the key is calculated for debounce */
-                            KEY_RELEASED => {
-                                /* get the mapped key from the hashmap */
-                                if let Some(valid_key) =
-                                    layers.get(&key.row, &key.col, &layer_state)
-                                {
-                                    remove_keys(&mut ble_keyboard, valid_key, &mut layer_state);
-                                }
-                                /* if key has been debounced, add it to be removed */
-                                pressed_keys_to_remove
-                                    .push(*key)
-                                    .expect("Error adding a key to be removed!");
-                            }
-
-                            _ => { /* do nothing */ }
+                        if let Some(mut ble_status) = ble_status.try_lock() {
+                            *ble_status = BleStatus::Connected;
                         }
                     }
+                    BleStatus::Connected => {}
+                }
 
-                    #[cfg(feature = "debug")]
-                    /*  log */
-                    log::info!(
-                        "ble_keyboard.key_report.keys: {:?}",
-                        ble_keyboard.key_report.keys
-                    );
+                /* check if power save has been set */
+                if power_save_flag {
+                    /* set ble power to lowest possible */
+                    ble_keyboard.set_ble_power_save();
+                    /* set flag to false */
+                    power_save_flag = false;
+                }
 
-                    /* sent the new report */
-                    ble_keyboard.send_report();
+                /* try to lock the hashmap */
+                if let Some(mut keys_pressed) = keys_pressed.try_lock() {
+                    /* check if there are pressed keys */
+                    if !keys_pressed.is_empty() {
+                        /* iter trough the pressed keys */
+                        for (key, debounce) in keys_pressed.iter_mut() {
+                            /*check the key debounce state */
+                            match debounce.key_state {
+                                KEY_PRESSED => {
+                                    /* get the pressed key */
+                                    if let Some(valid_key) =
+                                        layers.get(&key.row, &key.col, &layer_state)
+                                    {
+                                        add_keys(&mut ble_keyboard, valid_key, &mut layer_state);
+                                    }
+                                }
+                                /* check if the key is calculated for debounce */
+                                KEY_RELEASED => {
+                                    /* get the mapped key from the hashmap */
+                                    if let Some(valid_key) =
+                                        layers.get(&key.row, &key.col, &layer_state)
+                                    {
+                                        remove_keys(&mut ble_keyboard, valid_key, &mut layer_state);
+                                    }
+                                    /* if key has been debounced, add it to be removed */
+                                    pressed_keys_to_remove
+                                        .push(*key)
+                                        .expect("Error adding a key to be removed!");
+                                }
 
-                    /* remove the sent keys and empty the vec */
-                    while let Some(key) = pressed_keys_to_remove.pop() {
-                        keys_pressed.remove(&key).unwrap();
+                                _ => { /* do nothing */ }
+                            }
+                        }
+
+                        #[cfg(feature = "debug")]
+                        /*  log */
+                        log::info!(
+                            "ble_keyboard.key_report.keys: {:?}",
+                            ble_keyboard.key_report.keys
+                        );
+
+                        /* sent the new report */
+                        ble_keyboard.send_report();
+
+                        /* remove the sent keys and empty the vec */
+                        while let Some(key) = pressed_keys_to_remove.pop() {
+                            keys_pressed.remove(&key).unwrap();
+                        }
                     }
                 }
-            }
+            } else {
+                /* debug log */
+                #[cfg(feature = "debug")]
+                log::info!("Keyboard not connected!");
 
-            /* there must be a delay so the WDT in not triggered */
-            delay_ms(1).await;
-        } else {
-            /* debug log */
-            #[cfg(feature = "debug")]
-            log::info!("Keyboard not connected!");
+                /* check and store the ble status */
 
-            /* check and store the ble status */
+                /* check and store the ble status */
+                match ble_status_prev {
+                    BleStatus::NotConnected => {}
+                    BleStatus::Connected => {
+                        ble_status_prev = BleStatus::NotConnected;
 
-            /* check and store the ble status */
-            match ble_status_prev {
-                BleStatus::NotConnected => {}
-                BleStatus::Connected => {
-                    ble_status_prev = BleStatus::NotConnected;
-
-                    /* lock the mutex and set the new value */
-                    *ble_status.lock() = BleStatus::NotConnected;
+                        /* lock the mutex and set the new value */
+                        *ble_status.lock() = BleStatus::NotConnected;
+                    }
                 }
-            }
 
-            /* check the power save flag */
-            if !power_save_flag {
-                /* if false, set to true */
-                power_save_flag = true;
-            }
+                /* check the power save flag */
+                if !power_save_flag {
+                    /* if false, set to true */
+                    power_save_flag = true;
+                }
 
-            /* sleep for 100ms */
-            delay_ms(100).await;
+                /* sleep for 100ms */
+                delay_ms(100).await;
+            }
         }
+        /* there must be a delay so the WDT in not triggered */
+        delay_ms(1).await;
     }
 }
