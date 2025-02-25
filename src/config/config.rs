@@ -19,11 +19,14 @@ pub const COLS: usize = 6;
 
 #[cfg(feature = "master")]
 pub const COL_INIT: u8 = 0;
+#[cfg(feature = "master")]
+pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(50);
 
 #[cfg(feature = "slave")]
 pub const COL_INIT: u8 = 6;
+#[cfg(feature = "slave")]
+pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(5);
 
-pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(50);
 pub const BLE_STATUS_DEBOUNCE_DELAY: Duration = Duration::from_millis(500); /* 0.5 sec */
 pub const SLEEP_DELAY: Duration = Duration::from_millis(300000); /* 5 minutes */
 pub const SLEEP_DELAY_NOT_CONNECTED: Duration = Duration::from_millis(60000); /* 1 minute */
