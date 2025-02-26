@@ -2,6 +2,8 @@
 to build: cargo build --release
 to flash: espflash flash ./target/riscv32imc-esp-espidf/release/esp32_rustboard --monitor
 */
+extern crate alloc;
+use alloc::sync::Arc;
 
 use anyhow;
 use ble::BleStatus;
@@ -23,11 +25,11 @@ fn main() -> anyhow::Result<()> {
     esp_idf_svc::log::EspLogger::initialize_default();
 
     /* initialize keys pressed hashmap */
-    let keys_pressed: Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>> =
-        Mutex::new(FnvIndexMap::new());
+    let keys_pressed: Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>> =
+        Arc::new(Mutex::new(FnvIndexMap::new()));
 
     /* ble connection information shared variable */
-    let ble_status: Mutex<BleStatus> = Mutex::new(BleStatus::NotConnected);
+    let ble_status: Arc<Mutex<BleStatus>> = Arc::new(Mutex::new(BleStatus::NotConnected));
 
     /* run the tasks concurrently */
     block_on(async {
