@@ -6,8 +6,8 @@ pub enum Layer {
     Upper,
 }
 pub struct Layers {
-    pub base: FnvIndexMap<(i8, i8), HidKeys, LAYER_INDEXMAP_SIZE>,
-    pub upper: FnvIndexMap<(i8, i8), HidKeys, LAYER_INDEXMAP_SIZE>,
+    pub base: FnvIndexMap<(u8, u8), HidKeys, LAYER_INDEXMAP_SIZE>,
+    pub upper: FnvIndexMap<(u8, u8), HidKeys, LAYER_INDEXMAP_SIZE>,
 }
 
 impl Layers {
@@ -21,7 +21,7 @@ impl Layers {
         *self = provide_layout();
     }
 
-    pub fn get(&mut self, row: &i8, col: &i8, layer_state: &Layer) -> Option<&HidKeys> {
+    pub fn get(&mut self, row: &u8, col: &u8, layer_state: &Layer) -> Option<&HidKeys> {
         /* provide the key depending on the layer */
         match layer_state {
             Layer::Base => self.base.get(&(*row, *col)),
