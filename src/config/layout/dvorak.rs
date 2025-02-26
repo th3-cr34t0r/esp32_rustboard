@@ -12,9 +12,9 @@ X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  0  |  1  |  2  |  3
 UPPER LAYER:
 
 X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |
-   0 |_ESC_|_SUP_|__7__|__8__|__9__|_CPY_|              0 |__!__|__@__|__#__|__$__|__%__|__^__|
+   0 |_ESC_|_SUP_|__7__|__8__|__9__|_PScr|              0 |__!__|__@__|__#__|__$__|__%__|__^__|
    1 |_BSP_|_ALT_|__4__|__5__|__6__|_DEL_|              1 |__&__|_left|_down|__up_|_rght|__*__|
-   2 |_CTL_|__0__|__1__|__2__|__3__|_PST_|              2 |__\__|__[__|__]__|__(__|__)__|_____|
+   2 |_CTL_|__0__|__1__|__2__|__3__|_PST_|              2 |__\__|__(__|__)__|__[__|__]__|__`__|
    3                   |_LYR_|_SPC_|_SFT_|              3 |_TAB_|_ENT_|_LYR_|
 
 *********************************************************************************************
@@ -64,8 +64,7 @@ pub fn layout() -> Layers {
         layout.upper.insert((0, 2), HidKeys::Num7).unwrap(); // 7
         layout.upper.insert((0, 3), HidKeys::Num8).unwrap(); // 8
         layout.upper.insert((0, 4), HidKeys::Num9).unwrap(); // 9
-        layout.upper.insert((0, 5), HidKeys::MacroCopy).unwrap(); // MACRO COPY
-
+        layout.upper.insert((0, 5), HidKeys::Pscreen).unwrap(); // Print Screen
         layout.upper.insert((1, 0), HidKeys::Bspace).unwrap(); // BACKSPACE
         layout.upper.insert((1, 1), HidKeys::ModifierAlt).unwrap(); // ALT
         layout.upper.insert((1, 2), HidKeys::Num4).unwrap(); // 4
@@ -143,16 +142,16 @@ pub fn layout() -> Layers {
         layout.upper.insert((1, 5), HidKeys::MacroAsterix).unwrap(); // *
 
         layout.upper.insert((2, 0), HidKeys::Backslash).unwrap(); // \
-        layout.upper.insert((2, 1), HidKeys::Lbracket).unwrap(); // [
-        layout.upper.insert((2, 2), HidKeys::Rbracket).unwrap(); // ]
         layout
             .upper
-            .insert((2, 3), HidKeys::MacroOpenedBracket)
+            .insert((2, 1), HidKeys::MacroOpenedBracket)
             .unwrap(); // (
         layout
             .upper
-            .insert((2, 4), HidKeys::MacroClosedBracket)
+            .insert((2, 2), HidKeys::MacroClosedBracket)
             .unwrap(); // )
+        layout.upper.insert((2, 3), HidKeys::Lbracket).unwrap(); // [
+        layout.upper.insert((2, 4), HidKeys::Rbracket).unwrap(); // ]
         layout.upper.insert((2, 5), HidKeys::Grave).unwrap(); // ` or ~ with SHIFT
 
         layout.upper.insert((3, 0), HidKeys::Tab).unwrap(); // TAB
