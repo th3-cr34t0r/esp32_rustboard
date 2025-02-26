@@ -1,6 +1,7 @@
 // originally: https://github.com/T-vK/ESP32-BLE-Keyboard
 #![allow(dead_code)]
 extern crate alloc;
+use alloc::sync::Arc;
 
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
 use crate::config::{config::*, layers::*};
@@ -8,13 +9,11 @@ use crate::debounce::{Debounce, KEY_PRESSED, KEY_RELEASED};
 use crate::delay::*;
 use crate::matrix::Key;
 
-use alloc::sync::Arc;
 use embassy_futures::block_on;
 use esp32_nimble::{
     enums::*, hid::*, utilities::mutex::Mutex, BLEAdvertisementData, BLECharacteristic, BLEDevice,
     BLEHIDDevice, BLEServer,
 };
-use esp32_nimble::{BLEAddress, BLEClient};
 use esp_idf_sys::{
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_ADV, esp_ble_power_type_t_ESP_BLE_PWR_TYPE_DEFAULT,
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_SCAN,
@@ -101,7 +100,6 @@ struct KeyReport {
 
 pub struct BleKeyboard {
     server: &'static mut BLEServer,
-    client: BLEClient,
     input_keyboard: Arc<Mutex<BLECharacteristic>>,
     output_keyboard: Arc<Mutex<BLECharacteristic>>,
     input_media_keys: Arc<Mutex<BLECharacteristic>>,
@@ -120,7 +118,7 @@ impl BleKeyboard {
         device
             .security()
             .set_auth(AuthReq::all())
-            .set_io_cap(SecurityIOCap::NoInputNoOutput)
+            .set_io_cap(SecurityIOCap::KeyboardOnly)
             .resolve_rpa();
 
         let server = device.get_server();
@@ -158,14 +156,8 @@ impl BleKeyboard {
             .unwrap();
         ble_advertising.lock().start().unwrap();
 
-        //Client initialization
-        let mut client = device.new_client();
-
-        block_on(async {});
-
         Self {
             server,
-            client,
             input_keyboard,
             output_keyboard,
             input_media_keys,
@@ -208,13 +200,13 @@ impl BleKeyboard {
     }
 }
 
-fn send_keys(ble_keyboard: &mut BleKeyboard, valid_key: &HidKeys, layer_state: &mut Layer) {
+fn add_keys(ble_keyboard: &mut BleKeyboard, valid_key: &HidKeys, layer_state: &mut Layer) {
     /* get the key type */
     match KeyType::check_type(valid_key) {
         KeyType::Macro => {
             let macro_valid_keys = HidKeys::get_macro_sequence(valid_key);
             for valid_key in macro_valid_keys.iter() {
-                send_keys(ble_keyboard, valid_key, layer_state);
+                add_keys(ble_keyboard, valid_key, layer_state);
             }
         }
         KeyType::Layer => {
@@ -308,28 +300,6 @@ pub async fn ble_send_keys(
     /* construct ble */
     let mut ble_keyboard = BleKeyboard::new();
 
-    #[cfg(feature = "left-side")]
-    #[cfg(feature = "connect-right-half")]
-    // Try to connect to the other keyboard half
-    match ble_keyboard
-        .client
-        .connect(
-            &BLEAddress::from_str(
-                "other esp32's address",
-                esp32_nimble::BLEAddressType::Public,
-            )
-            .unwrap(),
-        )
-        .await
-    {
-        Ok(res) => {
-            log::info!("Successfilly connected! - {:?}", res)
-        }
-        Err(err) => {
-            log::info!("{err}")
-        }
-    }
-
     /* initialize layers */
     let mut layers = Layers::new();
 
@@ -383,7 +353,7 @@ pub async fn ble_send_keys(
                                 if let Some(valid_key) =
                                     layers.get(&key.row, &key.col, &layer_state)
                                 {
-                                    send_keys(&mut ble_keyboard, valid_key, &mut layer_state);
+                                    add_keys(&mut ble_keyboard, valid_key, &mut layer_state);
                                 }
                             }
                             /* check if the key is calculated for debounce */
@@ -404,8 +374,8 @@ pub async fn ble_send_keys(
                         }
                     }
 
-                    #[cfg(feature = "debug")]
                     /* debug log */
+                    #[cfg(feature = "debug")]
                     log::info!(
                         "ble_keyboard.key_report.keys: {:?}",
                         ble_keyboard.key_report.keys
