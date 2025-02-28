@@ -9,7 +9,6 @@ use crate::debounce::{Debounce, KEY_PRESSED, KEY_RELEASED};
 use crate::delay::*;
 use crate::matrix::Key;
 
-use embassy_futures::block_on;
 use esp32_nimble::{
     enums::*, hid::*, utilities::mutex::Mutex, BLEAdvertisementData, BLECharacteristic, BLEDevice,
     BLEHIDDevice, BLEServer,
@@ -118,7 +117,7 @@ impl BleKeyboard {
         device
             .security()
             .set_auth(AuthReq::all())
-            .set_io_cap(SecurityIOCap::KeyboardOnly)
+            .set_io_cap(SecurityIOCap::NoInputNoOutput)
             .resolve_rpa();
 
         let server = device.get_server();
