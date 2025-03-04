@@ -275,7 +275,10 @@ pub async fn scan_grid(
                 ble_status_last_timestamp = current_timestamp;
 
                 #[cfg(feature = "debug")]
-                log::info!("Entered ble status check");
+                {
+                    log::info!("Entered ble status check");
+                    log::info!("BLESTATUS: {:?}", ble_status_local);
+                }
             }
         }
 
