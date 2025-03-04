@@ -13,6 +13,7 @@ use crate::debounce::*;
 use crate::matrix::Key;
 use alloc::sync::Arc;
 use ble::BleStatus;
+use embassy_futures::select::select3;
 use heapless::FnvIndexMap;
 use matrix::scan_grid;
 use spin::Mutex;
@@ -32,20 +33,14 @@ fn main() -> anyhow::Result<()> {
 
     #[cfg(feature = "master")]
     {
-        use crate::ble::master::{ble_rx, ble_tx};
-        use ble::BleKeyboardMaster;
-        use embassy_futures::select::select4;
+        use crate::ble::master::ble_tx;
 
         /* run the tasks concurrently */
         block_on(async {
-            let ble_keyboard: Arc<Mutex<BleKeyboardMaster>> =
-                Arc::new(Mutex::new(BleKeyboardMaster::new().await));
-
-            select4(
+            select3(
                 scan_grid(&keys_pressed, &ble_status),
                 calculate_debounce(&keys_pressed),
-                ble_rx(&ble_keyboard, &keys_pressed),
-                ble_tx(&ble_keyboard, &ble_status, &keys_pressed),
+                ble_tx(&ble_status, &keys_pressed),
             )
             .await;
         });
@@ -54,7 +49,6 @@ fn main() -> anyhow::Result<()> {
     #[cfg(feature = "slave")]
     {
         use crate::ble::slave::ble_tx;
-        use embassy_futures::select::select3;
 
         /* run the tasks concurrently */
         block_on(async {
