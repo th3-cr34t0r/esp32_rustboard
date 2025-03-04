@@ -4,20 +4,18 @@ use crate::matrix::Key;
 use crate::{config::config::*, debounce::Debounce};
 
 use super::{BleKeyboardSlave, BleStatus};
-use esp32_nimble::{
-    enums::*, uuid128, BLEAddress, BLEAdvertisementData, BLEConnDesc, BLEDevice, NimbleProperties,
-};
+use esp32_nimble::{enums::*, uuid128, BLEAddress, BLEDevice};
 use esp_idf_sys::{
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_ADV, esp_ble_power_type_t_ESP_BLE_PWR_TYPE_DEFAULT,
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_SCAN,
 };
-use zerocopy::IntoBytes;
+use zerocopy::{IntoByteSlice, IntoBytes};
 
 use heapless::{FnvIndexMap, Vec};
 use spin::Mutex as spinMutex;
 
 impl BleKeyboardSlave {
-    pub fn new() -> Self {
+    pub async fn new() -> Self {
         let device = BLEDevice::take();
 
         device
@@ -26,37 +24,40 @@ impl BleKeyboardSlave {
             .set_io_cap(SecurityIOCap::NoInputNoOutput)
             .resolve_rpa();
 
-        let server = device.get_server();
+        let mut client = device.new_client();
 
-        let service = server.create_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"));
+        client
+            .connect(
+                &BLEAddress::from_str("EC:DA:3B:BD:D7:B6", esp32_nimble::BLEAddressType::Public)
+                    .unwrap(),
+            )
+            .await
+            .expect("Unable to connect to server device!");
 
-        let characteristic = service.lock().create_characteristic(
-            BLE_SLAVE_UUID,
-            NimbleProperties::READ | NimbleProperties::NOTIFY,
-        );
-
-        let ble_advertising = device.get_advertising();
-
-        ble_advertising
-            .lock()
-            .scan_response(false)
-            .set_data(BLEAdvertisementData::new().add_service_uuid(BLE_SLAVE_UUID))
-            .unwrap();
-
-        ble_advertising.lock().start().unwrap();
-
-        #[cfg(feature = "debug")]
-        server.ble_gatts_show_local();
+        client.on_connect(|client| {
+            client.update_conn_params(5, 10, 0, 200).unwrap();
+        });
 
         Self {
-            server,
-            characteristic,
+            client,
             keys: [0; 6],
         }
     }
 
-    pub fn connected(&self) -> bool {
-        self.server.connected_count() > 0
+    async fn send_report(&mut self) {
+        let remote_characteristic = self
+            .client
+            .get_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"))
+            .await
+            .unwrap()
+            .get_characteristic(BLE_SLAVE_UUID)
+            .await
+            .unwrap();
+
+        remote_characteristic
+            .write_value(self.keys.as_bytes(), false)
+            .await
+            .expect("Unable to set the new data!");
     }
 
     pub fn set_ble_power_save(&mut self) {
@@ -76,27 +77,8 @@ impl BleKeyboardSlave {
             );
         }
     }
-
-    pub async fn send_report(&mut self) {
-        self.characteristic
-            .lock()
-            .set_value(&self.keys.as_bytes())
-            .notify();
-        // .on_read(|value, bleconn_desc| {
-        //     if bleconn_desc.address()
-        //         == BLEAddress::from_str(
-        //             "EC:DA:3B:BD:D7:B6",
-        //             esp32_nimble::BLEAddressType::Public,
-        //         )
-        //         .unwrap()
-        //     {
-        //         value.clear();
-        //     }
-        // });
-
-        delay_ms(1).await;
-    }
 }
+
 fn add_keys(ble_keyboard_slave: &mut BleKeyboardSlave, key: &Key) {
     // combine the row and the col to a single byte before sending
     //
@@ -146,7 +128,7 @@ pub async fn ble_tx(
     ble_status: &spinMutex<BleStatus>,
 ) {
     /* construct ble slave */
-    let mut ble_keyboard_slave: BleKeyboardSlave = BleKeyboardSlave::new();
+    let mut ble_keyboard_slave: BleKeyboardSlave = BleKeyboardSlave::new().await;
 
     /* vec to store the keys needed to be removed */
     let mut pressed_keys_to_remove: Vec<Key, 6> = Vec::new();
@@ -154,21 +136,13 @@ pub async fn ble_tx(
     /* flag to set the power mode of the esp */
     let mut power_save_flag: bool = true;
 
-    let mut ble_status_prev: BleStatus = BleStatus::NotConnected;
-
     /* Run the main loop */
     loop {
-        if ble_keyboard_slave.connected() {
+        if ble_keyboard_slave.client.connected() {
             /* check and store the ble status, then release the lock */
-            match ble_status_prev {
-                BleStatus::NotConnected => {
-                    ble_status_prev = BleStatus::Connected;
 
-                    if let Some(mut ble_status) = ble_status.try_lock() {
-                        *ble_status = BleStatus::Connected;
-                    }
-                }
-                BleStatus::Connected => {}
+            if let Some(mut ble_status) = ble_status.try_lock() {
+                *ble_status = BleStatus::Connected;
             }
 
             /* check if power save has been set */
@@ -224,15 +198,10 @@ pub async fn ble_tx(
             log::info!("Keyboard not connected!");
 
             /* check and store the ble status */
-            match ble_status_prev {
-                BleStatus::NotConnected => {}
-                BleStatus::Connected => {
-                    ble_status_prev = BleStatus::NotConnected;
-
-                    /* lock the mutex and set the new value */
-                    *ble_status.lock() = BleStatus::NotConnected;
-                }
+            if let Some(mut ble_status) = ble_status.try_lock() {
+                *ble_status = BleStatus::NotConnected;
             }
+
             /* check the power save flag */
             if !power_save_flag {
                 /* if false, set to true */

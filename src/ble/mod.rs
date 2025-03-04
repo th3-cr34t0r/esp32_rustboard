@@ -90,16 +90,15 @@ struct KeyReport {
 }
 
 pub struct BleKeyboardMaster {
-    server: &'static mut BLEServer,
-    client: BLEClient,
+    server_pc: &'static mut BLEServer,
+    slave_characteristic: Arc<Mutex<BLECharacteristic>>,
     input_keyboard: Arc<Mutex<BLECharacteristic>>,
     output_keyboard: Arc<Mutex<BLECharacteristic>>,
     input_media_keys: Arc<Mutex<BLECharacteristic>>,
     key_report: KeyReport,
 }
 pub struct BleKeyboardSlave {
-    server: &'static mut BLEServer,
-    characteristic: Arc<Mutex<BLECharacteristic>>,
+    client: BLEClient,
     keys: [u8; 6],
 }
 #[derive(Clone, Copy, Debug)]
