@@ -33,19 +33,28 @@ impl BleKeyboardMaster {
             .set_io_cap(SecurityIOCap::NoInputNoOutput)
             .resolve_rpa();
 
-        let server_slave = device.get_server();
+        let server = device.get_server();
+        let ble_advertising = device.get_advertising();
+
+        server.on_connect(|server, desc| {
+            log::info!("Client connected: {:?}", desc);
+
+            if server.connected_count() < (esp_idf_svc::sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS as _)
+            {
+                log::info!("Multi-connect support: start advertising!");
+                ble_advertising.lock().start().unwrap();
+            }
+        });
 
         // create ble client characteristic
-        let service = server_slave.create_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"));
+        let service = server.create_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"));
 
         let slave_characteristic = service.lock().create_characteristic(
             BLE_SLAVE_UUID,
             NimbleProperties::READ | NimbleProperties::WRITE,
         );
 
-        let server_pc = device.get_server();
-
-        let mut hid = BLEHIDDevice::new(server_pc);
+        let mut hid = BLEHIDDevice::new(server);
 
         let input_keyboard = hid.input_report(KEYBOARD_ID);
         let output_keyboard = hid.output_report(KEYBOARD_ID);
@@ -58,8 +67,6 @@ impl BleKeyboardMaster {
         hid.report_map(HID_REPORT_DISCRIPTOR);
 
         hid.set_battery_level(100);
-
-        let ble_advertising = device.get_advertising();
 
         ble_advertising
             .lock()
@@ -75,8 +82,14 @@ impl BleKeyboardMaster {
 
         ble_advertising.lock().start().unwrap();
 
+        // on esp32-c3, advertising stops when a device is boded.
+        ble_advertising.lock().on_complete(|_| {
+            ble_advertising.lock().start().unwrap();
+            log::info!("bonded_addresses: {:?}", device.bonded_addresses());
+        });
+
         Self {
-            server_pc,
+            server,
             slave_characteristic,
             input_keyboard,
             output_keyboard,
@@ -90,7 +103,7 @@ impl BleKeyboardMaster {
     }
 
     pub fn connected(&self) -> bool {
-        self.server_pc.connected_count() > 1
+        self.server.connected_count() > 1
     }
 
     pub async fn send_report(&mut self) {
@@ -212,70 +225,6 @@ fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_
         }
     }
 }
-
-// This is the function that recieves information from the client
-// about the keys pressed on the other half of the keyboard
-// pub async fn ble_rx(
-//     ble_keyboard: &Arc<spinMutex<BleKeyboardMaster>>,
-//     keys_pressed: &Arc<spinMutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
-// ) {
-//     // let service = ble_keyboard
-//     //     .lock()
-//     //     .client
-//     //     .get_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"))
-//     //     .await
-//     //     .unwrap();
-
-//     // let remote_characteristic = service.get_characteristic(BLE_SLAVE_UUID).await.unwrap();
-
-//     let mut restored_key_count: [Key; 6] = [Key::new(255, 255); 6];
-
-//     loop {
-//         if let Some(mut ble_keyboard) = ble_keyboard.try_lock() {
-//             let remote_characteristic = ble_keyboard
-//                 .client
-//                 .get_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"))
-//                 .await
-//                 .unwrap()
-//                 .get_characteristic(BLE_SLAVE_UUID)
-//                 .await
-//                 .unwrap();
-
-//             let data = remote_characteristic.read_value().await.unwrap_or_default();
-
-//             data.iter().for_each(|key| {
-//                 if *key != 0 {
-//                     match restored_key_count
-//                         .iter()
-//                         .position(|&element| element == Key::new(255, 255))
-//                     {
-//                         Some(index) => {
-//                             let mut recovered_key: Key = Key::new(255, 255);
-
-//                             recovered_key.row = (key >> BIT_MASK) & 0xFF;
-//                             recovered_key.col = key & ((1 << BIT_MASK) - 1);
-//                             restored_key_count[index] = recovered_key;
-//                         }
-//                         None => { // do nothing
-//                         }
-//                     }
-//                 }
-//             });
-//         }
-
-//         if !restored_key_count.starts_with(&[Key::new(255, 255)]) {
-//             #[cfg(feature = "debug")]
-//             log::info!(
-//                 "Recieved from slave - restored_key_count: {:?}",
-//                 restored_key_count
-//             );
-
-//             store_key(&keys_pressed, &mut restored_key_count);
-//         }
-
-//         delay_ms(1).await;
-//     }
-// }
 
 /// Function that processes the received data from the slave
 fn process_received_data(

@@ -55,9 +55,10 @@ impl BleKeyboardSlave {
             .unwrap();
 
         remote_characteristic
-            .write_value(self.keys.as_bytes(), false)
+            .write_value(self.keys.into_byte_slice(), false)
             .await
             .expect("Unable to set the new data!");
+        delay_ms(1).await;
     }
 
     pub fn set_ble_power_save(&mut self) {
@@ -191,7 +192,7 @@ pub async fn ble_tx(
                 }
             }
             /* there must be a delay so the WDT in not triggered */
-            delay_ms(1).await;
+            delay_ms(5).await;
         } else {
             /* debug log */
             #[cfg(feature = "debug")]

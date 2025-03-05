@@ -90,7 +90,7 @@ struct KeyReport {
 }
 
 pub struct BleKeyboardMaster {
-    server_pc: &'static mut BLEServer,
+    server: &'static mut BLEServer,
     slave_characteristic: Arc<Mutex<BLECharacteristic>>,
     input_keyboard: Arc<Mutex<BLECharacteristic>>,
     output_keyboard: Arc<Mutex<BLECharacteristic>>,
