@@ -269,7 +269,7 @@ pub async fn ble_tx(
             args.recv_data().iter().for_each(|byte_data| {
                 let mut received_data_locked = received_data.lock();
 
-                if !received_data_locked.contains(&*byte_data) {
+                if !received_data_locked.contains(byte_data) {
                     received_data_locked
                         .push(*byte_data)
                         .expect("Not enough space to store incoming slave data.");
@@ -292,8 +292,8 @@ pub async fn ble_tx(
     /* vec to store the keys needed to be removed */
     let mut pressed_keys_to_remove: Vec<Key, 6> = Vec::new();
 
-    /* flag to set the power mode of the esp */
-    let mut power_save_flag: bool = true;
+    /* set ble power to lowest possible */
+    ble_keyboard.set_ble_power_save();
 
     /* Run the main loop */
     loop {
@@ -304,13 +304,6 @@ pub async fn ble_tx(
                 *ble_status = BleStatus::Connected;
             }
 
-            /* check if power save has been set */
-            if power_save_flag {
-                /* set ble power to lowest possible */
-                ble_keyboard.set_ble_power_save();
-                /* set flag to false */
-                power_save_flag = false;
-            }
             // proccess received data
             process_received_data(&received_data, keys_pressed);
 
