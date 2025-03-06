@@ -35,7 +35,7 @@ impl BleKeyboardSlave {
             .expect("Unable to connect to server device!");
 
         client.on_connect(|client| {
-            client.update_conn_params(5, 10, 0, 200).unwrap();
+            client.update_conn_params(1, 5, 0, 200).unwrap();
         });
 
         Self {
@@ -134,8 +134,8 @@ pub async fn ble_tx(
     /* vec to store the keys needed to be removed */
     let mut pressed_keys_to_remove: Vec<Key, 6> = Vec::new();
 
-    /* flag to set the power mode of the esp */
-    let mut power_save_flag: bool = true;
+    /* set ble power to lowest possible */
+    ble_keyboard_slave.set_ble_power_save();
 
     /* Run the main loop */
     loop {
@@ -144,14 +144,6 @@ pub async fn ble_tx(
 
             if let Some(mut ble_status) = ble_status.try_lock() {
                 *ble_status = BleStatus::Connected;
-            }
-
-            /* check if power save has been set */
-            if power_save_flag {
-                /* set ble power to lowest possible */
-                ble_keyboard_slave.set_ble_power_save();
-                /* set flag to false */
-                power_save_flag = false;
             }
 
             /* try to lock the hashmap */
