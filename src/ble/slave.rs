@@ -9,7 +9,7 @@ use esp_idf_sys::{
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_ADV, esp_ble_power_type_t_ESP_BLE_PWR_TYPE_DEFAULT,
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_SCAN,
 };
-use zerocopy::{IntoByteSlice, IntoBytes};
+use zerocopy::IntoByteSlice;
 
 use heapless::{FnvIndexMap, Vec};
 use spin::Mutex as spinMutex;
@@ -58,7 +58,6 @@ impl BleKeyboardSlave {
             .write_value(self.keys.into_byte_slice(), false)
             .await
             .expect("Unable to set the new data!");
-        delay_ms(1).await;
     }
 
     pub fn set_ble_power_save(&mut self) {
@@ -193,12 +192,6 @@ pub async fn ble_tx(
             /* check and store the ble status */
             if let Some(mut ble_status) = ble_status.try_lock() {
                 *ble_status = BleStatus::NotConnected;
-            }
-
-            /* check the power save flag */
-            if !power_save_flag {
-                /* if false, set to true */
-                power_save_flag = true;
             }
 
             /* sleep for 100ms */
