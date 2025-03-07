@@ -111,7 +111,6 @@ impl BleKeyboardMaster {
             .lock()
             .set_value(&self.key_report.as_bytes())
             .notify();
-        delay_ms(1).await;
     }
 
     pub fn set_ble_power_save(&mut self) {
@@ -341,8 +340,8 @@ pub async fn ble_tx(
                         }
                     }
 
-                    #[cfg(feature = "debug")]
                     /*  log */
+                    #[cfg(feature = "debug")]
                     log::info!(
                         "ble_keyboard.key_report.keys: {:?}",
                         ble_keyboard.key_report.keys
@@ -370,12 +369,6 @@ pub async fn ble_tx(
             /* check and store the ble status */
             if let Some(mut ble_status) = ble_status.try_lock() {
                 *ble_status = BleStatus::NotConnected;
-            }
-
-            /* check the power save flag */
-            if !power_save_flag {
-                /* if false, set to true */
-                power_save_flag = true;
             }
 
             /* sleep for 100ms */
