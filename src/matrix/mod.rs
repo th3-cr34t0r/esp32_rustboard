@@ -31,6 +31,7 @@ impl Key {
 pub struct PinMatrix<'a> {
     pub rows: [PinDriver<'a, AnyIOPin, Output>; ROWS],
     pub cols: [PinDriver<'a, AnyIOPin, Input>; COLS],
+    pub pressed_keys_array: [Key; 6],
     pub enter_sleep_delay: Instant,
 }
 
@@ -74,6 +75,7 @@ impl PinMatrix<'_> {
         PinMatrix {
             rows,
             cols,
+            pressed_keys_array: [Key::new(255, 255); 6],
             enter_sleep_delay: Instant::now() + SLEEP_DELAY_NOT_CONNECTED,
         }
     }
@@ -159,8 +161,6 @@ impl PinMatrix<'_> {
         keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
     ) {
         /* initialize counts */
-        let mut pressed_keys_buffer: [Key; 6] = [Key::new(255, 255); 6];
-
         let mut count: Key = Key::new(0, COL_INIT);
 
         /* check rows and cols */
@@ -176,12 +176,13 @@ impl PinMatrix<'_> {
                 /* check if a col is set to high (key pressed) */
                 if col.is_high() {
                     /* store the key in the buffer */
-                    match pressed_keys_buffer
+                    match self
+                        .pressed_keys_array
                         .iter()
                         .position(|&element| element == Key::new(255, 255))
                     {
                         Some(index) => {
-                            pressed_keys_buffer[index] = count;
+                            self.pressed_keys_array[index] = count;
                         }
                         None => {
                             // do nothing
@@ -206,7 +207,7 @@ impl PinMatrix<'_> {
         /* reset row count */
         count.row = 0;
 
-        store_key(keys_pressed, &mut pressed_keys_buffer);
+        store_key(keys_pressed, &mut self.pressed_keys_array);
     }
 }
 
@@ -236,16 +237,10 @@ pub fn store_key(
                         },
                     )
                     .unwrap();
-            }
 
-            *element = Key::new(255, 255);
-        });
-        #[cfg(feature = "debug")]
-        {
-            if !keys_pressed.is_empty() {
-                log::info!("Pressed keys stored! {:?}", keys_pressed);
+                *element = Key::new(255, 255);
             }
-        }
+        });
     }
 }
 
