@@ -1,25 +1,24 @@
 extern crate alloc;
 
 use alloc::sync::Arc;
-use spin::mutex::Mutex;
 
 use crate::ble::BleStatus;
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
 use crate::config::{config::*, layers::*};
-use crate::debounce::{Debounce, KEY_PRESSED, KEY_RELEASED};
+use crate::debounce::{Debounce, KeyState};
 use crate::delay::*;
 use crate::matrix::{store_key, Key};
 
 use super::{BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID};
 use esp32_nimble::{
-    enums::*, uuid128, BLEAdvertisementData, BLEDevice, BLEHIDDevice, NimbleProperties,
+    enums::*, utilities::mutex::Mutex, uuid128, BLEAdvertisementData, BLEDevice, BLEHIDDevice,
+    NimbleProperties,
 };
 use esp_idf_sys::{
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_ADV, esp_ble_power_type_t_ESP_BLE_PWR_TYPE_DEFAULT,
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_SCAN,
 };
 use heapless::{FnvIndexMap, Vec};
-use spin::Mutex as spinMutex;
 use zerocopy::IntoBytes;
 
 impl BleKeyboardMaster {
@@ -227,8 +226,8 @@ fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_
 
 /// Function that processes the received data from the slave
 fn process_received_data(
-    received_data: &Arc<spinMutex<Vec<u8, 6>>>,
-    keys_pressed: &Arc<spinMutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
+    received_data: &Arc<Mutex<Vec<u8, 6>>>,
+    keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
 ) {
     let mut pressed_keys_array: [Key; 6] = [Key::new(255, 255); 6];
     let mut recovered_key: Key = Key::new(255, 255);
@@ -254,13 +253,13 @@ fn process_received_data(
 }
 
 pub async fn ble_tx(
-    ble_status: &Arc<spinMutex<BleStatus>>,
-    keys_pressed: &Arc<spinMutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
+    ble_status: &Arc<Mutex<BleStatus>>,
+    keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
 ) -> ! {
     // init ble
     let mut ble_keyboard: BleKeyboardMaster = BleKeyboardMaster::new().await;
 
-    let received_data: Arc<Mutex<Vec<u8, 6>>> = Arc::new(spinMutex::new(Vec::new()));
+    let received_data: Arc<Mutex<Vec<u8, 6>>> = Arc::new(Mutex::new(Vec::new()));
 
     ble_keyboard.slave_characteristic.lock().on_write({
         let received_data = Arc::clone(&received_data);
@@ -274,7 +273,7 @@ pub async fn ble_tx(
                         .expect("Not enough space to store incoming slave data.");
                 }
                 #[cfg(feature = "debug")]
-                log::info!("Received from slave: {:?}", received_data_locked);
+                log::info!("Received from slave: {:?}", *received_data_locked);
             });
         }
     });
@@ -314,7 +313,7 @@ pub async fn ble_tx(
                     for (key, debounce) in keys_pressed.iter_mut() {
                         /*check the key debounce state */
                         match debounce.key_state {
-                            KEY_PRESSED => {
+                            KeyState::KeyPressed => {
                                 /* get the pressed key */
                                 if let Some(valid_key) =
                                     layers.get(&key.row, &key.col, &layer_state)
@@ -323,7 +322,7 @@ pub async fn ble_tx(
                                 }
                             }
                             /* check if the key is calculated for debounce */
-                            KEY_RELEASED => {
+                            KeyState::KeyReleased => {
                                 /* get the mapped key from the hashmap */
                                 if let Some(valid_key) =
                                     layers.get(&key.row, &key.col, &layer_state)
@@ -336,7 +335,7 @@ pub async fn ble_tx(
                                     .expect("Error adding a key to be removed!");
                             }
 
-                            _ => { /* do nothing */ }
+                            KeyState::KeySent => { /* do nothing */ }
                         }
                     }
 

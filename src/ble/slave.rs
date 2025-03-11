@@ -1,10 +1,10 @@
-use crate::debounce::{KEY_PRESSED, KEY_RELEASED};
+use crate::debounce::KeyState;
 use crate::delay::delay_ms;
 use crate::matrix::Key;
 use crate::{config::config::*, debounce::Debounce};
 
 use super::{BleKeyboardSlave, BleStatus};
-use esp32_nimble::{enums::*, uuid128, BLEAddress, BLEDevice};
+use esp32_nimble::{enums::*, utilities::mutex::Mutex, uuid128, BLEAddress, BLEDevice};
 use esp_idf_sys::{
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_ADV, esp_ble_power_type_t_ESP_BLE_PWR_TYPE_DEFAULT,
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_SCAN,
@@ -12,7 +12,6 @@ use esp_idf_sys::{
 use zerocopy::IntoByteSlice;
 
 use heapless::{FnvIndexMap, Vec};
-use spin::Mutex as spinMutex;
 
 impl BleKeyboardSlave {
     pub async fn new() -> Self {
@@ -44,7 +43,10 @@ impl BleKeyboardSlave {
         }
     }
 
-    async fn send_report(&mut self) {
+    async fn send_report(
+        &mut self,
+        keys_pressed: &mut FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>,
+    ) {
         let remote_characteristic = self
             .client
             .get_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"))
@@ -58,6 +60,18 @@ impl BleKeyboardSlave {
             .write_value(self.keys.into_byte_slice(), false)
             .await
             .expect("Unable to set the new data!");
+
+        let mut recovered_key: Key = Key::new(255, 255);
+
+        // set the KeyState to KeySent
+        self.keys.iter_mut().for_each(|combined_key| {
+            recovered_key.row = (*combined_key >> BIT_MASK) & 0xFF;
+            recovered_key.col = *combined_key & ((1 << BIT_MASK) - 1);
+
+            if let Some(debounce) = keys_pressed.get_mut(&recovered_key) {
+                debounce.key_state = KeyState::KeySent;
+            }
+        });
     }
 
     pub fn set_ble_power_save(&mut self) {
@@ -124,8 +138,8 @@ fn remove_keys(ble_keyboard_slave: &mut BleKeyboardSlave, key: &Key) {
     }
 }
 pub async fn ble_tx(
-    keys_pressed: &spinMutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
-    ble_status: &spinMutex<BleStatus>,
+    keys_pressed: &Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>,
+    ble_status: &Mutex<BleStatus>,
 ) {
     /* construct ble slave */
     let mut ble_keyboard_slave: BleKeyboardSlave = BleKeyboardSlave::new().await;
@@ -153,19 +167,21 @@ pub async fn ble_tx(
                     for (key, debounce) in keys_pressed.iter_mut() {
                         /*check the key debounce state */
                         match debounce.key_state {
-                            KEY_PRESSED => {
+                            // if key state is keyPressed, add it to the key report
+                            KeyState::KeyPressed => {
                                 add_keys(&mut ble_keyboard_slave, &key);
                             }
-                            /* check if the key is calculated for debounce */
-                            KEY_RELEASED => {
-                                remove_keys(&mut ble_keyboard_slave, key);
-                                /* if key has been debounced, add it to be removed */
+                            // if key has been debounced, add it to be removed
+                            KeyState::KeyReleased => {}
+
+                            // if key has been sent, remove it from the key report
+                            KeyState::KeySent => {
+                                remove_keys(&mut ble_keyboard_slave, &key);
+
                                 pressed_keys_to_remove
                                     .push(*key)
                                     .expect("Error adding a key to be removed!");
                             }
-
-                            _ => { /* do nothing */ }
                         }
                     }
 
@@ -174,7 +190,7 @@ pub async fn ble_tx(
                     log::info!("ble_keyboard_slave.keys: {:?}", ble_keyboard_slave.keys);
 
                     /* sent the new report */
-                    ble_keyboard_slave.send_report().await;
+                    ble_keyboard_slave.send_report(&mut keys_pressed).await;
 
                     /* remove the sent keys and empty the vec */
                     while let Some(key) = pressed_keys_to_remove.pop() {
