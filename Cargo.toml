@@ -41,7 +41,6 @@ anyhow = "1"
 esp-idf-sys = "0.36.1"
 embassy-time =  { version = "0.4.0", features = ["generic-queue-8"] }
 embassy-futures = "0.1.1"
-spin = "0.9.8"
 heapless = "0.8.0"
 zerocopy = { version = "0.8.14", features = ["derive"] }
 bstr = "1.11.3"
