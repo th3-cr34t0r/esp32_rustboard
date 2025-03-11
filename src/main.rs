@@ -14,9 +14,9 @@ use crate::matrix::Key;
 use alloc::sync::Arc;
 use ble::BleStatus;
 use embassy_futures::select::select3;
+use esp32_nimble::utilities::mutex::Mutex;
 use heapless::FnvIndexMap;
 use matrix::scan_grid;
-use spin::Mutex;
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
