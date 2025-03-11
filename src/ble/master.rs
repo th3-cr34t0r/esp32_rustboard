@@ -239,8 +239,8 @@ fn process_received_data(
                 .position(|&element| element == Key::new(255, 255))
             {
                 Some(index) => {
-                    recovered_key.row = (received_element >> BIT_MASK) & 0xFF;
-                    recovered_key.col = received_element & ((1 << BIT_MASK) - 1);
+                    recovered_key.row = received_element >> BIT_SHIFT;
+                    recovered_key.col = received_element & 0x0F;
                     pressed_keys_array[index] = recovered_key;
                 }
                 None => { // do nothing
@@ -249,7 +249,9 @@ fn process_received_data(
         }
     }
 
-    store_key(keys_pressed, &mut pressed_keys_array);
+    if Key::new(255, 255) != pressed_keys_array.iter().min() {
+        store_key(keys_pressed, &mut pressed_keys_array);
+    }
 }
 
 pub async fn ble_tx(

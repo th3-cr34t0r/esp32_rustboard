@@ -65,8 +65,8 @@ impl BleKeyboardSlave {
 
         // set the KeyState to KeySent
         self.keys.iter_mut().for_each(|combined_key| {
-            recovered_key.row = (*combined_key >> BIT_MASK) & 0xFF;
-            recovered_key.col = *combined_key & ((1 << BIT_MASK) - 1);
+            recovered_key.row = (*combined_key >> BIT_SHIFT) & 0xFF;
+            recovered_key.col = *combined_key & ((1 << BIT_SHIFT) - 1);
 
             if let Some(debounce) = keys_pressed.get_mut(&recovered_key) {
                 debounce.key_state = KeyState::KeySent;
@@ -104,7 +104,7 @@ fn add_keys(ble_keyboard_slave: &mut BleKeyboardSlave, key: &Key) {
     //
     // combined = 0010 1011
     //
-    let combined_key = (key.row << BIT_MASK) | key.col;
+    let combined_key = (key.row << BIT_SHIFT) | key.col;
 
     /* check if the key count is less than 6 */
     if !ble_keyboard_slave.keys.contains(&combined_key) {
@@ -122,7 +122,7 @@ fn add_keys(ble_keyboard_slave: &mut BleKeyboardSlave, key: &Key) {
 
 fn remove_keys(ble_keyboard_slave: &mut BleKeyboardSlave, key: &Key) {
     // combine the row and the col to a single byte before sending
-    let combined_key = (key.row << BIT_MASK) | key.col;
+    let combined_key = (key.row << BIT_SHIFT) | key.col;
 
     /* find the key slot of the released key */
     match ble_keyboard_slave
