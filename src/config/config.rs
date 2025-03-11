@@ -34,7 +34,7 @@ pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 16;
 pub const LAYER_INDEXMAP_SIZE: usize = 64;
 pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
 pub const BLE_SLAVE_UUID: BleUuid = uuid128!("06984d74-0fdb-491e-9c4c-c25603a9bc34");
-pub const BIT_MASK: u8 = 4;
+pub const BIT_SHIFT: u8 = 4;
 
 pub enum EspPowerLevel {
     Negative24,
