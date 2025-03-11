@@ -4,15 +4,15 @@ use embassy_time::Instant;
 use esp_idf_svc::hal::gpio::*;
 use esp_idf_svc::hal::peripherals::Peripherals;
 
+use esp32_nimble::utilities::mutex::Mutex;
 use esp_idf_sys::{
     self as _, gpio_int_type_t_GPIO_INTR_HIGH_LEVEL, gpio_num_t_GPIO_NUM_10,
     gpio_num_t_GPIO_NUM_20, gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
 };
 
 pub use crate::ble::BleStatus;
-pub use crate::debounce::{Debounce, KEY_PRESSED};
+pub use crate::debounce::{Debounce, KeyState};
 pub use heapless::FnvIndexMap;
-pub use spin::Mutex;
 
 extern crate alloc;
 use alloc::sync::Arc;
@@ -233,7 +233,7 @@ pub fn store_key(
                         },
                         Debounce {
                             key_pressed_time: Instant::now(),
-                            key_state: KEY_PRESSED,
+                            key_state: KeyState::KeyPressed,
                         },
                     )
                     .unwrap();
