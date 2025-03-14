@@ -1,7 +1,7 @@
 use crate::debounce::KeyState;
 use crate::delay::delay_ms;
 use crate::matrix::Key;
-use crate::{config::config::*, debounce::Debounce};
+use crate::{config::user_config::*, debounce::Debounce};
 
 use super::{BleKeyboardSlave, BleStatus};
 use esp32_nimble::{enums::*, utilities::mutex::Mutex, uuid128, BLEAddress, BLEDevice};
@@ -65,8 +65,8 @@ impl BleKeyboardSlave {
 
         // set the KeyState to KeySent
         self.keys.iter_mut().for_each(|combined_key| {
-            recovered_key.row = (*combined_key >> BIT_SHIFT) & 0xFF;
-            recovered_key.col = *combined_key & ((1 << BIT_SHIFT) - 1);
+            recovered_key.row = *combined_key >> BIT_SHIFT;
+            recovered_key.col = *combined_key & 0x0F;
 
             if let Some(debounce) = keys_pressed.get_mut(&recovered_key) {
                 debounce.key_state = KeyState::KeySent;
@@ -169,14 +169,14 @@ pub async fn ble_tx(
                         match debounce.key_state {
                             // if key state is keyPressed, add it to the key report
                             KeyState::KeyPressed => {
-                                add_keys(&mut ble_keyboard_slave, &key);
+                                add_keys(&mut ble_keyboard_slave, key);
                             }
                             // if key has been debounced, add it to be removed
                             KeyState::KeyReleased => {}
 
                             // if key has been sent, remove it from the key report
                             KeyState::KeySent => {
-                                remove_keys(&mut ble_keyboard_slave, &key);
+                                remove_keys(&mut ble_keyboard_slave, key);
 
                                 pressed_keys_to_remove
                                     .push(*key)

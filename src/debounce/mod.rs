@@ -1,5 +1,5 @@
 use crate::{
-    config::config::{DEBOUNCE_DELAY, PRESSED_KEYS_INDEXMAP_SIZE},
+    config::user_config::{DEBOUNCE_DELAY, PRESSED_KEYS_INDEXMAP_SIZE},
     delay::delay_ms,
     matrix::Key,
 };

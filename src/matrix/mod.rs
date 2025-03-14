@@ -1,4 +1,4 @@
-use crate::config::config::*;
+use crate::config::user_config::*;
 use crate::delay::*;
 use embassy_time::Instant;
 use esp_idf_svc::hal::gpio::*;
@@ -17,7 +17,7 @@ pub use heapless::FnvIndexMap;
 extern crate alloc;
 use alloc::sync::Arc;
 
-#[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
+#[derive(PartialOrd, Ord, Eq, Hash, PartialEq, Clone, Copy, Debug)]
 pub struct Key {
     pub row: u8,
     pub col: u8,

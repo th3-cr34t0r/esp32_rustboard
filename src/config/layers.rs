@@ -1,4 +1,4 @@
-use crate::config::{config::*, enums::*, layout::*};
+use crate::config::{enums::*, layout::*, user_config::*};
 
 use heapless::FnvIndexMap;
 pub enum Layer {
@@ -27,5 +27,11 @@ impl Layers {
             Layer::Base => self.base.get(&(*row as i8, *col as i8)),
             Layer::Upper => self.upper.get(&(*row as i8, *col as i8)),
         }
+    }
+}
+
+impl Default for Layers {
+    fn default() -> Self {
+        Self::new()
     }
 }

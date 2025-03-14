@@ -4,7 +4,7 @@ use alloc::sync::Arc;
 
 use crate::ble::BleStatus;
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
-use crate::config::{config::*, layers::*};
+use crate::config::{layers::*, user_config::*};
 use crate::debounce::{Debounce, KeyState};
 use crate::delay::*;
 use crate::matrix::{store_key, Key};
@@ -108,7 +108,7 @@ impl BleKeyboardMaster {
     pub async fn send_report(&mut self) {
         self.input_keyboard
             .lock()
-            .set_value(&self.key_report.as_bytes())
+            .set_value(self.key_report.as_bytes())
             .notify();
     }
 
@@ -249,7 +249,7 @@ fn process_received_data(
         }
     }
 
-    if Key::new(255, 255) != pressed_keys_array.iter().min() {
+    if Key::new(255, 255) != *pressed_keys_array.iter().min().unwrap() {
         store_key(keys_pressed, &mut pressed_keys_array);
     }
 }

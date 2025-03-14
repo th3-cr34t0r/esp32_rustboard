@@ -3,12 +3,11 @@ to build: cargo build --release
 to flash: espflash flash ./target/riscv32imc-esp-espidf/release/esp32_rustboard --monitor
 */
 
-use anyhow;
 use esp32_rustboard::*;
 use esp_idf_hal::task::block_on;
 
 extern crate alloc;
-use crate::config::config::*;
+use crate::config::user_config::*;
 use crate::debounce::*;
 use crate::matrix::Key;
 use alloc::sync::Arc;
