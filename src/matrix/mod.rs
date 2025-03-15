@@ -4,7 +4,7 @@ use alloc::sync::Arc;
 use crate::ble::BleStatus;
 use crate::debounce::KEY_PRESSED;
 use crate::delay::*;
-use crate::{config::config::*, debounce::Debounce};
+use crate::{config::user_config::*, debounce::Debounce};
 use embassy_time::Instant;
 use esp_idf_svc::hal::gpio::*;
 use esp_idf_svc::hal::peripherals::Peripherals;
@@ -178,14 +178,11 @@ impl PinMatrix<'_> {
                 if col.is_high() {
                     /* store the key */
 
-                    match stored_keys_buffer
+                    if let Some(index) = stored_keys_buffer
                         .iter()
                         .position(|&value| value == Key::new(255, 255))
                     {
-                        Some(index) => {
-                            stored_keys_buffer[index] = count;
-                        }
-                        None => {}
+                        stored_keys_buffer[index] = count;
                     }
 
                     self.enter_sleep_delay = Instant::now() + SLEEP_DELAY;
@@ -207,7 +204,7 @@ impl PinMatrix<'_> {
         count.row = 0;
 
         // store the keys in the hashmap
-        store_keys(&keys_pressed, &mut stored_keys_buffer);
+        store_keys(keys_pressed, &mut stored_keys_buffer);
     }
 }
 

@@ -4,7 +4,7 @@ extern crate alloc;
 use alloc::sync::Arc;
 
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
-use crate::config::{config::*, layers::*};
+use crate::config::{layers::*, user_config::*};
 use crate::debounce::{Debounce, KEY_PRESSED, KEY_RELEASED};
 use crate::delay::*;
 use crate::matrix::Key;
@@ -111,6 +111,12 @@ pub enum BleStatus {
     NotConnected,
 }
 
+impl Default for BleKeyboard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BleKeyboard {
     pub fn new() -> Self {
         let device = BLEDevice::take();
@@ -175,7 +181,7 @@ impl BleKeyboard {
     fn send_report(&mut self) {
         self.input_keyboard
             .lock()
-            .set_value(&self.key_report.as_bytes()) // .set_from(&self.key_report)
+            .set_value(self.key_report.as_bytes()) // .set_from(&self.key_report)
             .notify();
         esp_idf_svc::hal::delay::Ets::delay_ms(1);
     }

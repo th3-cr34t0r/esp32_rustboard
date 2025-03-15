@@ -5,7 +5,6 @@ to flash: espflash flash ./target/riscv32imc-esp-espidf/release/esp32_rustboard 
 extern crate alloc;
 use alloc::sync::Arc;
 
-use anyhow;
 use ble::BleStatus;
 use embassy_futures::select::select3;
 use esp32_rustboard::*;
@@ -14,7 +13,7 @@ use heapless::FnvIndexMap;
 use spin::Mutex;
 
 use crate::ble::ble_send_keys;
-use crate::config::config::*;
+use crate::config::user_config::*;
 use crate::debounce::*;
 use crate::matrix::{scan_grid, Key};
 
