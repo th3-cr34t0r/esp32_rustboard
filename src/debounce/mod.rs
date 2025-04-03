@@ -12,7 +12,6 @@ use esp32_nimble::utilities::mutex::Mutex;
 pub enum KeyState {
     KeyPressed,
     KeyReleased,
-    KeySent,
 }
 
 #[derive(Debug)]
