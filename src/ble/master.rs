@@ -293,7 +293,7 @@ pub async fn ble_tx(
     let mut pressed_keys_to_remove: Vec<Key, 6> = Vec::new();
 
     /* set ble power to lowest possible */
-    ble_keyboard.set_ble_power_save();
+    // ble_keyboard.set_ble_power_save();
 
     /* Run the main loop */
     loop {
@@ -336,8 +336,6 @@ pub async fn ble_tx(
                                     .push(*key)
                                     .expect("Error adding a key to be removed!");
                             }
-
-                            KeyState::KeySent => { /* do nothing */ }
                         }
                     }
 
