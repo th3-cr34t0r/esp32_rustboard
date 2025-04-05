@@ -6,8 +6,8 @@ pub enum Layer {
     Upper,
 }
 pub struct Layers {
-    pub base: FnvIndexMap<(i8, i8), HidKeys, LAYER_INDEXMAP_SIZE>,
-    pub upper: FnvIndexMap<(i8, i8), HidKeys, LAYER_INDEXMAP_SIZE>,
+    pub base: FnvIndexMap<(u8, u8), HidKeys, LAYER_INDEXMAP_SIZE>,
+    pub upper: FnvIndexMap<(u8, u8), HidKeys, LAYER_INDEXMAP_SIZE>,
 }
 
 impl Layers {

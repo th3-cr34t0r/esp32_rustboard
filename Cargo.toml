@@ -4,7 +4,7 @@ version = "0.2.2"
 authors = ["th3-cr34t0r"]
 edition = "2021"
 resolver = "2"
-rust-version = "1.77"
+rust-version = "1.86"
 
 [[bin]]
 name = "esp32_rustboard"

@@ -1,6 +1,7 @@
 // originally: https://github.com/T-vK/ESP32-BLE-Keyboard
 #![allow(dead_code)]
 extern crate alloc;
+use alloc::sync::Arc;
 
 use alloc::sync::Arc;
 use esp32_nimble::BLEClient;

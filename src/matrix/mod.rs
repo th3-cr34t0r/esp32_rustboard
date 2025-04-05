@@ -1,5 +1,7 @@
 use crate::config::user_config::*;
 use crate::delay::*;
+
+
 use embassy_time::Instant;
 use esp_idf_svc::hal::gpio::*;
 use esp_idf_svc::hal::peripherals::Peripherals;
@@ -134,7 +136,7 @@ impl PinMatrix<'_> {
         /* enter sleep mode */
         unsafe {
             /* disable bt before entering sleep */
-            // esp_bt_controller_disable();
+            esp_bt_controller_disable();
 
             esp_idf_sys::esp_sleep_enable_gpio_switch(false);
 
@@ -157,9 +159,13 @@ impl PinMatrix<'_> {
     /// This is the standard scan mode
     /// Each row is set to high, then each col is checked if it is high or not
     async fn standard_scan(
+
         &mut self,
         keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
     ) {
+        // initialize buffer
+        let mut stored_keys_buffer: [Key; 6] = [Key::new(255, 255); 6];
+
         /* initialize counts */
         let mut count: Key = Key::new(0, COL_INIT);
 
@@ -189,6 +195,7 @@ impl PinMatrix<'_> {
                         }
                     }
                     // reset the sleep delay on key press
+
                     self.enter_sleep_delay = Instant::now() + SLEEP_DELAY;
                 }
                 /* increment col */
@@ -241,6 +248,7 @@ pub fn store_key(
                 *element = Key::new(255, 255);
             }
         });
+
     }
 }
 
