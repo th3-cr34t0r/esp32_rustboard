@@ -1,36 +1,39 @@
-extern crate alloc;
-use alloc::sync::Arc;
-
-use crate::ble::BleStatus;
-use crate::debounce::KEY_PRESSED;
+use crate::config::user_config::*;
 use crate::delay::*;
-use crate::{config::user_config::*, debounce::Debounce};
+
+
 use embassy_time::Instant;
 use esp_idf_svc::hal::gpio::*;
 use esp_idf_svc::hal::peripherals::Peripherals;
 
+use esp32_nimble::utilities::mutex::Mutex;
 use esp_idf_sys::{
-    self as _, esp_bt_controller_disable, gpio_int_type_t_GPIO_INTR_HIGH_LEVEL,
-    gpio_num_t_GPIO_NUM_10, gpio_num_t_GPIO_NUM_20, gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
+    self as _, gpio_int_type_t_GPIO_INTR_HIGH_LEVEL, gpio_num_t_GPIO_NUM_10,
+    gpio_num_t_GPIO_NUM_20, gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
 };
 
-use heapless::FnvIndexMap;
-use spin::Mutex;
+pub use crate::ble::BleStatus;
+pub use crate::debounce::{Debounce, KeyState};
+pub use heapless::FnvIndexMap;
 
-#[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
+extern crate alloc;
+use alloc::sync::Arc;
+
+#[derive(PartialOrd, Ord, Eq, Hash, PartialEq, Clone, Copy, Debug)]
 pub struct Key {
     pub row: u8,
     pub col: u8,
 }
 
 impl Key {
-    fn new(row: u8, col: u8) -> Key {
+    pub fn new(row: u8, col: u8) -> Key {
         Key { row, col }
     }
 }
 pub struct PinMatrix<'a> {
     pub rows: [PinDriver<'a, AnyIOPin, Output>; ROWS],
     pub cols: [PinDriver<'a, AnyIOPin, Input>; COLS],
+    pub pressed_keys_array: [Key; 6],
     pub enter_sleep_delay: Instant,
 }
 
@@ -74,6 +77,7 @@ impl PinMatrix<'_> {
         PinMatrix {
             rows,
             cols,
+            pressed_keys_array: [Key::new(255, 255); 6],
             enter_sleep_delay: Instant::now() + SLEEP_DELAY_NOT_CONNECTED,
         }
     }
@@ -154,7 +158,8 @@ impl PinMatrix<'_> {
 
     /// This is the standard scan mode
     /// Each row is set to high, then each col is checked if it is high or not
-    async fn scan(
+    async fn standard_scan(
+
         &mut self,
         keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
     ) {
@@ -162,7 +167,7 @@ impl PinMatrix<'_> {
         let mut stored_keys_buffer: [Key; 6] = [Key::new(255, 255); 6];
 
         /* initialize counts */
-        let mut count = Key::new(0, 0);
+        let mut count: Key = Key::new(0, COL_INIT);
 
         /* check rows and cols */
         for row in self.rows.iter_mut() {
@@ -176,14 +181,20 @@ impl PinMatrix<'_> {
             for col in self.cols.iter() {
                 /* check if a col is set to high (key pressed) */
                 if col.is_high() {
-                    /* store the key */
-
-                    if let Some(index) = stored_keys_buffer
+                    /* store the key in the buffer */
+                    match self
+                        .pressed_keys_array
                         .iter()
-                        .position(|&value| value == Key::new(255, 255))
+                        .position(|&element| element == Key::new(255, 255))
                     {
-                        stored_keys_buffer[index] = count;
+                        Some(index) => {
+                            self.pressed_keys_array[index] = count;
+                        }
+                        None => {
+                            // do nothing
+                        }
                     }
+                    // reset the sleep delay on key press
 
                     self.enter_sleep_delay = Instant::now() + SLEEP_DELAY;
                 }
@@ -197,29 +208,29 @@ impl PinMatrix<'_> {
             count.row += 1;
 
             /* reset col count */
-            count.col = 0;
+            count.col = COL_INIT;
         }
 
         /* reset row count */
         count.row = 0;
 
-        // store the keys in the hashmap
-        store_keys(keys_pressed, &mut stored_keys_buffer);
+        store_key(keys_pressed, &mut self.pressed_keys_array);
     }
 }
 
 /// The main function for stornig the registered key in to the shared pressed keys hashmap
-fn store_keys(
+pub fn store_key(
     keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
-    keys_pressed_buffer: &mut [Key; 6],
+    pressed_keys_array: &mut [Key; 6],
 ) {
-    /* lock the hashmap */
+    /* Inserts a key-value pair into the map.
+    * If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
+    * If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
+
+    */
+
     if let Some(mut keys_pressed) = keys_pressed.try_lock() {
-        /* Inserts a key-value pair into the map.
-         * If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
-         * If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
-         */
-        keys_pressed_buffer.iter_mut().for_each(|element| {
+        pressed_keys_array.iter_mut().for_each(|element| {
             if *element != Key::new(255, 255) {
                 keys_pressed
                     .insert(
@@ -229,24 +240,22 @@ fn store_keys(
                         },
                         Debounce {
                             key_pressed_time: Instant::now(),
-                            key_state: KEY_PRESSED,
+                            key_state: KeyState::KeyPressed,
                         },
                     )
-                    .expect("Error setting new key in the hashmap");
+                    .unwrap();
 
                 *element = Key::new(255, 255);
             }
         });
 
-        #[cfg(feature = "debug")]
-        log::info!("Pressed keys stored! {:?}", keys_pressed);
     }
 }
 
 /// The main matrix scan function
 pub async fn scan_grid(
     keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
-    ble_status: &Mutex<BleStatus>,
+    ble_status: &Arc<Mutex<BleStatus>>,
 ) -> ! {
     /* construct the matrix */
     let mut matrix = PinMatrix::new();
@@ -269,18 +278,19 @@ pub async fn scan_grid(
                 ble_status_last_timestamp = current_timestamp;
 
                 #[cfg(feature = "debug")]
-                log::info!("Entered ble status check");
+                {
+                    log::info!("Entered ble status check");
+                    log::info!("BLESTATUS: {:?}", ble_status_local);
+                }
             }
         }
 
         /* if a connection is established, run the key matrix */
         match ble_status_local {
             BleStatus::Connected => {
-                // scan the matrix
-                matrix.scan(keys_pressed).await;
+                matrix.standard_scan(keys_pressed).await;
             }
             BleStatus::NotConnected => {
-                /* wait till there is a connection */
                 /* sleep for 100ms */
                 delay_ms(100).await;
             }
