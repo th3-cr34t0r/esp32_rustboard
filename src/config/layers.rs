@@ -24,8 +24,8 @@ impl Layers {
     pub fn get(&mut self, row: &u8, col: &u8, layer_state: &Layer) -> Option<&HidKeys> {
         /* provide the key depending on the layer */
         match layer_state {
-            Layer::Base => self.base.get(&(*row as i8, *col as i8)),
-            Layer::Upper => self.upper.get(&(*row as i8, *col as i8)),
+            Layer::Base => self.base.get(&(*row as u8, *col as u8)),
+            Layer::Upper => self.upper.get(&(*row as u8, *col as u8)),
         }
     }
 }

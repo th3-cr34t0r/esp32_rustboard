@@ -1,15 +1,14 @@
 use crate::config::user_config::*;
 use crate::delay::*;
 
-
 use embassy_time::Instant;
 use esp_idf_svc::hal::gpio::*;
 use esp_idf_svc::hal::peripherals::Peripherals;
 
 use esp32_nimble::utilities::mutex::Mutex;
 use esp_idf_sys::{
-    self as _, gpio_int_type_t_GPIO_INTR_HIGH_LEVEL, gpio_num_t_GPIO_NUM_10,
-    gpio_num_t_GPIO_NUM_20, gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
+    self as _, esp_bt_controller_disable, gpio_int_type_t_GPIO_INTR_HIGH_LEVEL,
+    gpio_num_t_GPIO_NUM_10, gpio_num_t_GPIO_NUM_20, gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
 };
 
 pub use crate::ble::BleStatus;
@@ -159,13 +158,9 @@ impl PinMatrix<'_> {
     /// This is the standard scan mode
     /// Each row is set to high, then each col is checked if it is high or not
     async fn standard_scan(
-
         &mut self,
         keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
     ) {
-        // initialize buffer
-        let mut stored_keys_buffer: [Key; 6] = [Key::new(255, 255); 6];
-
         /* initialize counts */
         let mut count: Key = Key::new(0, COL_INIT);
 
@@ -224,11 +219,9 @@ pub fn store_key(
     pressed_keys_array: &mut [Key; 6],
 ) {
     /* Inserts a key-value pair into the map.
-    * If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
-    * If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
-
-    */
-
+     * If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
+     * If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
+     */
     if let Some(mut keys_pressed) = keys_pressed.try_lock() {
         pressed_keys_array.iter_mut().for_each(|element| {
             if *element != Key::new(255, 255) {
@@ -248,7 +241,6 @@ pub fn store_key(
                 *element = Key::new(255, 255);
             }
         });
-
     }
 }
 

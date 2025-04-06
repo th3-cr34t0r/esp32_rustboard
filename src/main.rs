@@ -8,12 +8,9 @@ use alloc::sync::Arc;
 use esp32_rustboard::*;
 use esp_idf_hal::task::block_on;
 
-extern crate alloc;
-
 use crate::config::user_config::*;
 use crate::debounce::*;
 use crate::matrix::Key;
-use alloc::sync::Arc;
 use ble::BleStatus;
 use embassy_futures::select::select3;
 use esp32_nimble::utilities::mutex::Mutex;
