@@ -239,7 +239,7 @@ fn process_received_data(
             {
                 recovered_key.row = received_element >> BIT_SHIFT;
                 recovered_key.col = received_element & 0x0F;
-                keys_pressed_array[index] = recovered_key;
+                keys_pressed_array[index] = *recovered_key;
             }
         }
     }
@@ -248,7 +248,7 @@ fn process_received_data(
         .iter()
         .any(|&element| element != Key::new(255, 255))
     {
-        store_key(keys_pressed, &mut keys_pressed_array);
+        store_key(keys_pressed, keys_pressed_array);
     }
 }
 
