@@ -234,22 +234,21 @@ fn process_received_data(
 
     while let Some(received_element) = received_data.lock().pop() {
         if received_element != 0 {
-            match pressed_keys_array
+            if let Some(index) = pressed_keys_array
                 .iter()
                 .position(|&element| element == Key::new(255, 255))
             {
-                Some(index) => {
-                    recovered_key.row = received_element >> BIT_SHIFT;
-                    recovered_key.col = received_element & 0x0F;
-                    pressed_keys_array[index] = recovered_key;
-                }
-                None => { // do nothing
-                }
+                recovered_key.row = received_element >> BIT_SHIFT;
+                recovered_key.col = received_element & 0x0F;
+                pressed_keys_array[index] = recovered_key;
             }
         }
     }
 
-    if Key::new(255, 255) != *pressed_keys_array.iter().min().unwrap() {
+    if pressed_keys_array
+        .iter()
+        .any(|&element| element != Key::new(255, 255))
+    {
         store_key(keys_pressed, &mut pressed_keys_array);
     }
 }
