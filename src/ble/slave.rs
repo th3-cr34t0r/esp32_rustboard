@@ -113,7 +113,7 @@ pub async fn ble_tx(
     // ble_keyboard_slave.set_ble_power_save();
 
     //key report delay elapsed
-    let mut sent_key_report_instant = Instant::now();
+    let mut last_sent_key_report = Instant::now();
 
     //variable for storing info about a key pressed event
     let mut has_key_been_pressed: bool;
@@ -153,13 +153,10 @@ pub async fn ble_tx(
                         ble_keyboard_slave.keys.iter().any(|&element| element != 0);
 
                     if has_key_been_pressed
-                        && sent_key_report_instant + KEY_REPORT_INTERVAL < Instant::now()
+                        && last_sent_key_report + KEY_REPORT_INTERVAL <= Instant::now()
                     {
                         //sent the new report
                         ble_keyboard_slave.send_report().await;
-
-                        //reset key_report
-                        ble_keyboard_slave.keys.fill(0);
 
                         let mut recovered_key: Key = Key::new(255, 255);
 
@@ -174,8 +171,11 @@ pub async fn ble_tx(
                             }
                         });
 
+                        //reset key_report
+                        ble_keyboard_slave.keys.fill(0);
+
                         //store the time the key report has been sent
-                        sent_key_report_instant = Instant::now();
+                        last_sent_key_report = Instant::now();
                     }
                 }
             }
