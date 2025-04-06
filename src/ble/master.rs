@@ -228,38 +228,42 @@ fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_
 fn process_received_data(
     received_data: &Arc<Mutex<Vec<u8, 6>>>,
     keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
+    keys_pressed_array: &mut [Key; 6],
+    recovered_key: &mut Key,
 ) {
-    let mut pressed_keys_array: [Key; 6] = [Key::new(255, 255); 6];
-    let mut recovered_key: Key = Key::new(255, 255);
-
     while let Some(received_element) = received_data.lock().pop() {
         if received_element != 0 {
-            if let Some(index) = pressed_keys_array
+            if let Some(index) = keys_pressed_array
                 .iter()
                 .position(|&element| element == Key::new(255, 255))
             {
                 recovered_key.row = received_element >> BIT_SHIFT;
                 recovered_key.col = received_element & 0x0F;
-                pressed_keys_array[index] = recovered_key;
+                keys_pressed_array[index] = recovered_key;
             }
         }
     }
 
-    if pressed_keys_array
+    if keys_pressed_array
         .iter()
         .any(|&element| element != Key::new(255, 255))
     {
-        store_key(keys_pressed, &mut pressed_keys_array);
+        store_key(keys_pressed, &mut keys_pressed_array);
     }
 }
 
 pub async fn ble_tx(
     ble_status: &Arc<Mutex<BleStatus>>,
-    keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
+    pressed_keys: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
 ) -> ! {
-    // init ble
+    //init ble
     let mut ble_keyboard: BleKeyboardMaster = BleKeyboardMaster::new().await;
 
+    //received data array to be stored
+    let mut keys_pressed_array: [Key; 6] = [Key::new(255, 255); 6];
+    let mut recovered_key: Key = Key::new(255, 255);
+
+    //arc mutex that is storing the unprocessed incoming data
     let received_data: Arc<Mutex<Vec<u8, 6>>> = Arc::new(Mutex::new(Vec::new()));
 
     ble_keyboard.slave_characteristic.lock().on_write({
@@ -268,7 +272,7 @@ pub async fn ble_tx(
             args.recv_data().iter().for_each(|byte_data| {
                 let mut received_data_locked = received_data.lock();
 
-                if !received_data_locked.contains(byte_data) {
+                if *byte_data != 0 && !received_data_locked.contains(byte_data) {
                     received_data_locked
                         .push(*byte_data)
                         .expect("Not enough space to store incoming slave data.");
@@ -304,10 +308,15 @@ pub async fn ble_tx(
             }
 
             // proccess received data
-            process_received_data(&received_data, keys_pressed);
+            process_received_data(
+                &received_data,
+                pressed_keys,
+                &mut keys_pressed_array,
+                &mut recovered_key,
+            );
 
             /* try to lock the hashmap */
-            if let Some(mut keys_pressed) = keys_pressed.try_lock() {
+            if let Some(mut keys_pressed) = pressed_keys.try_lock() {
                 /* check if there are pressed keys */
                 if !keys_pressed.is_empty() {
                     /* iter trough the pressed keys */
