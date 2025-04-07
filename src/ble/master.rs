@@ -232,15 +232,13 @@ fn process_received_data(
     recovered_key: &mut Key,
 ) {
     while let Some(received_element) = received_data.lock().pop() {
-        if received_element != 0 {
-            if let Some(index) = keys_pressed_array
-                .iter()
-                .position(|&element| element == Key::new(255, 255))
-            {
-                recovered_key.row = received_element >> BIT_SHIFT;
-                recovered_key.col = received_element & 0x0F;
-                keys_pressed_array[index] = *recovered_key;
-            }
+        if let Some(index) = keys_pressed_array
+            .iter()
+            .position(|&element| element == Key::new(255, 255))
+        {
+            recovered_key.row = received_element >> BIT_SHIFT;
+            recovered_key.col = received_element & 0x0F;
+            keys_pressed_array[index] = *recovered_key;
         }
     }
 
@@ -277,9 +275,9 @@ pub async fn ble_tx(
                         .push(*byte_data)
                         .expect("Not enough space to store incoming slave data.");
                 }
-                #[cfg(feature = "debug")]
-                log::info!("Received from slave: {:?}", *received_data_locked);
             });
+            #[cfg(feature = "debug")]
+            log::info!("Received from slave: {:?}", *received_data.lock());
         }
     });
 

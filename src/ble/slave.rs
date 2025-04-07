@@ -152,8 +152,9 @@ pub async fn ble_tx(
                     has_key_been_pressed =
                         ble_keyboard_slave.keys.iter().any(|&element| element != 0);
 
+                    //only sent the key report if the key report interval has passed ann there is a key pressed
                     if has_key_been_pressed
-                        && last_sent_key_report + KEY_REPORT_INTERVAL <= Instant::now()
+                        && Instant::now() >= last_sent_key_report + KEY_REPORT_INTERVAL
                     {
                         //sent the new report
                         ble_keyboard_slave.send_report().await;

@@ -13,7 +13,7 @@ use esp_idf_sys::{
     esp_power_level_t_ESP_PWR_LVL_P6, esp_power_level_t_ESP_PWR_LVL_P9,
 };
 
-/* USER CONFIGURABLE PARAMETERS */
+//USER CONFIGURABLE PARAMETERS
 pub const ROWS: usize = 4;
 pub const COLS: usize = 6;
 
@@ -21,20 +21,23 @@ pub const COLS: usize = 6;
 pub const COL_INIT: u8 = 0;
 #[cfg(feature = "master")]
 pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(50);
+#[cfg(feature = "master")]
+pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
 
 #[cfg(feature = "slave")]
 pub const COL_INIT: u8 = 6;
 #[cfg(feature = "slave")]
 pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(10);
 #[cfg(feature = "slave")]
-pub const KEY_REPORT_INTERVAL: Duration = Duration::from_millis(5);
+pub const KEY_REPORT_INTERVAL: Duration = Duration::from_millis(10);
+#[cfg(feature = "slave")]
+pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
 
-pub const BLE_STATUS_DEBOUNCE_DELAY: Duration = Duration::from_millis(500); /* 0.5 sec */
-pub const SLEEP_DELAY: Duration = Duration::from_millis(600000); /* 5 minutes */
-pub const SLEEP_DELAY_NOT_CONNECTED: Duration = Duration::from_millis(60000); /* 1 minute */
+pub const BLE_STATUS_DEBOUNCE_DELAY: Duration = Duration::from_millis(500); //0.5 sec
+pub const SLEEP_DELAY: Duration = Duration::from_millis(600000); //10 minutes
+pub const SLEEP_DELAY_NOT_CONNECTED: Duration = Duration::from_millis(60000); //1 minute
 pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 32;
 pub const LAYER_INDEXMAP_SIZE: usize = 64;
-pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
 pub const BLE_SLAVE_UUID: BleUuid = uuid128!("06984d74-0fdb-491e-9c4c-c25603a9bc34");
 pub const BIT_SHIFT: u8 = 4;
 
