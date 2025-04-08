@@ -28,7 +28,7 @@ impl BleKeyboardMaster {
         // creating server
         device
             .security()
-            .set_auth(AuthReq::all())
+            .set_auth(AuthReq::Bond)
             .set_io_cap(SecurityIOCap::NoInputNoOutput)
             .resolve_rpa();
 
@@ -50,7 +50,7 @@ impl BleKeyboardMaster {
 
         let slave_characteristic = service.lock().create_characteristic(
             BLE_SLAVE_UUID,
-            NimbleProperties::READ | NimbleProperties::WRITE,
+            NimbleProperties::READ | NimbleProperties::WRITE | NimbleProperties::WRITE_NO_RSP,
         );
 
         let mut hid = BLEHIDDevice::new(server);
@@ -72,7 +72,7 @@ impl BleKeyboardMaster {
             .scan_response(false)
             .set_data(
                 BLEAdvertisementData::new()
-                    .name("RUSTBOARD")
+                    .name("Rustboard")
                     .appearance(0x03C1)
                     .add_service_uuid(hid.hid_service().lock().uuid())
                     .add_service_uuid(slave_characteristic.lock().uuid()),
@@ -345,17 +345,17 @@ pub async fn ble_tx(
                         }
                     }
 
-                    /*  log */
+                    //log
                     #[cfg(feature = "debug")]
                     log::info!(
                         "ble_keyboard.key_report.keys: {:?}",
                         ble_keyboard.key_report.keys
                     );
 
-                    /* sent the new report */
+                    //sent the new report
                     ble_keyboard.send_report().await;
 
-                    /* remove the sent keys and empty the vec */
+                    //remove the sent keys and empty the vec
                     while let Some(key) = pressed_keys_to_remove.pop() {
                         keys_pressed.remove(&key).unwrap();
                     }
