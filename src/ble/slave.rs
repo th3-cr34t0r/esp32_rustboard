@@ -20,7 +20,7 @@ impl BleKeyboardSlave {
 
         device
             .security()
-            .set_auth(AuthReq::all())
+            .set_auth(AuthReq::Bond)
             .set_io_cap(SecurityIOCap::NoInputNoOutput)
             .resolve_rpa();
 
@@ -35,7 +35,7 @@ impl BleKeyboardSlave {
             .expect("Unable to connect to server device!");
 
         client.on_connect(|client| {
-            client.update_conn_params(1, 5, 0, 200).unwrap();
+            client.update_conn_params(1, 10, 0, 200).unwrap();
         });
 
         Self {
@@ -144,10 +144,6 @@ pub async fn ble_tx(
                         }
                     }
 
-                    //debug log
-                    #[cfg(feature = "debug")]
-                    log::info!("ble_keyboard_slave.keys: {:?}", ble_keyboard_slave.keys);
-
                     //check if we have a key pressed
                     has_key_been_pressed =
                         ble_keyboard_slave.keys.iter().any(|&element| element != 0);
@@ -156,6 +152,10 @@ pub async fn ble_tx(
                     if has_key_been_pressed
                         && Instant::now() >= last_sent_key_report + KEY_REPORT_INTERVAL
                     {
+                        //debug log
+                        #[cfg(feature = "debug")]
+                        log::info!("ble_keyboard_slave.keys: {:?}", ble_keyboard_slave.keys);
+
                         //sent the new report
                         ble_keyboard_slave.send_report().await;
 
