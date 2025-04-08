@@ -271,7 +271,6 @@ pub async fn scan_grid(
 
                 #[cfg(feature = "debug")]
                 {
-                    log::info!("Entered ble status check");
                     log::info!("BLESTATUS: {:?}", ble_status_local);
                 }
             }
