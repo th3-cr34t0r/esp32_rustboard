@@ -158,10 +158,7 @@ impl PinMatrix<'_> {
 
     /// This is the standard scan mode
     /// Each row is set to high, then each col is checked if it is high or not
-    async fn standard_scan(
-        &mut self,
-        pressed_keys: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
-    ) {
+    async fn standard_scan(&mut self, pressed_keys: &Arc<Mutex<StoredKeys>>) {
         /* initialize counts */
         let mut count: Key = Key::new(0, COL_INIT);
 
@@ -209,22 +206,26 @@ impl PinMatrix<'_> {
         /* reset row count */
         count.row = 0;
 
-        store_key(pressed_keys, &mut self.pressed_keys_array);
+        if let Some(mut pressed_keys) = pressed_keys.try_lock() {
+            pressed_keys.store_key(&mut self.pressed_keys_array);
+        }
     }
 }
 
-/// The main function for stornig the registered key in to the shared pressed keys hashmap
-pub fn store_key(
-    pressed_keys: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
-    pressed_keys_array: &mut [Key; 6],
-) {
-    // Inserts a key-value pair into the map.
-    // If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
-    // If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
-    if let Some(mut keys_pressed) = pressed_keys.try_lock() {
+#[derive(Default)]
+pub struct StoredKeys {
+    pub index_map: FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>,
+}
+
+impl StoredKeys {
+    /// The main function for stornig the registered key in to the shared pressed keys hashmap
+    pub fn store_key(&mut self, pressed_keys_array: &mut [Key; 6]) {
+        // Inserts a key-value pair into the map.
+        // If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
+        // If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
         pressed_keys_array.iter_mut().for_each(|element| {
             if *element != Key::new(255, 255) {
-                keys_pressed
+                self.index_map
                     .insert(
                         Key {
                             row: element.row,
@@ -245,7 +246,7 @@ pub fn store_key(
 
 /// The main matrix scan function
 pub async fn scan_grid(
-    pressed_keys: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
+    pressed_keys: &Arc<Mutex<StoredKeys>>,
     ble_status: &Arc<Mutex<BleStatus>>,
 ) -> ! {
     // construct the matrix

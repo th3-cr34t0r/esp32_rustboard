@@ -1,13 +1,14 @@
 extern crate alloc;
 
 use alloc::sync::Arc;
+use embassy_time::Instant;
 
 use crate::ble::BleStatus;
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
 use crate::config::{layers::*, user_config::*};
 use crate::debounce::{Debounce, KeyState};
 use crate::delay::*;
-use crate::matrix::{store_key, Key};
+use crate::matrix::{Key, StoredKeys};
 
 use super::{BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID};
 use esp32_nimble::{
@@ -18,7 +19,7 @@ use esp_idf_sys::{
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_ADV, esp_ble_power_type_t_ESP_BLE_PWR_TYPE_DEFAULT,
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_SCAN,
 };
-use heapless::{FnvIndexMap, Vec};
+use heapless::Vec;
 use zerocopy::IntoBytes;
 
 impl BleKeyboardMaster {
@@ -224,81 +225,12 @@ fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_
     }
 }
 
-/// Function that processes the received data from the slave
-fn process_received_data(
-    received_data: &Arc<Mutex<Vec<u8, 6>>>,
-    keys_pressed: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
-    keys_pressed_array: &mut [Key; 6],
-    recovered_key: &mut Key,
-) {
-    while let Some(received_element) = received_data.lock().pop() {
-        if let Some(index) = keys_pressed_array
-            .iter()
-            .position(|&element| element == Key::new(255, 255))
-        {
-            recovered_key.row = received_element >> BIT_SHIFT;
-            recovered_key.col = received_element & 0x0F;
-            keys_pressed_array[index] = *recovered_key;
-        }
-    }
-
-    if keys_pressed_array
-        .iter()
-        .any(|&element| element != Key::new(255, 255))
-    {
-        store_key(keys_pressed, keys_pressed_array);
-    }
-}
-
 pub async fn ble_tx(
+    pressed_keys: &Arc<Mutex<StoredKeys>>,
     ble_status: &Arc<Mutex<BleStatus>>,
-    pressed_keys: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
 ) -> ! {
     //init ble
     let mut ble_keyboard: BleKeyboardMaster = BleKeyboardMaster::new().await;
-
-    //received data array to be stored
-    let mut keys_pressed_array: [Key; 6] = [Key::new(255, 255); 6];
-    let mut recovered_key: Key = Key::new(255, 255);
-
-    //arc mutex that is storing the unprocessed incoming data
-    let received_data: Arc<Mutex<Vec<u8, 6>>> = Arc::new(Mutex::new(Vec::new()));
-    //sqc counter init
-    let sqc_expected: Arc<Mutex<u8>> = Arc::new(Mutex::new(0));
-
-    // on_write callback
-    ble_keyboard.slave_characteristic.lock().on_write({
-        let received_data = Arc::clone(&received_data);
-        let sqc_expected = Arc::clone(&sqc_expected);
-        move |args| {
-            let mut received_data_locked = received_data.lock();
-            let mut sqc_expected_locked = sqc_expected.lock();
-
-            // get the first element (sqc counter)
-            if let Some(&sqc_byte) = args.recv_data().get(0) {
-                // check if sqc counter matches the expected one
-                if sqc_byte == *sqc_expected_locked {
-                    // iterate trough the rest of the elements
-                    for &byte_data in args.recv_data()[1..].iter() {
-                        if byte_data != 0 && !received_data_locked.contains(&byte_data) {
-                            received_data_locked
-                                .push(byte_data)
-                                .expect("Not enough space to store incoming slave data.");
-                        }
-                    }
-                    // prepare the sqc for the next frame
-                    *sqc_expected_locked += 1;
-                }
-            }
-
-            #[cfg(feature = "debug")]
-            log::info!(
-                "SQC: {:?}\nReceived from slave: {:?}",
-                *sqc_expected_locked,
-                *received_data_locked
-            );
-        }
-    });
 
     /* initialize layers */
     let mut layers = Layers::new();
@@ -315,7 +247,54 @@ pub async fn ble_tx(
     /* set ble power to lowest possible */
     // ble_keyboard.set_ble_power_save();
 
-    /* Run the main loop */
+    // sqc counter init
+    let sqc_expected: Arc<Mutex<u8>> = Arc::new(Mutex::new(0));
+
+    // on_write callback
+    ble_keyboard.slave_characteristic.lock().on_write({
+        let sqc_expected = Arc::clone(&sqc_expected);
+        let pressed_keys = Arc::clone(&pressed_keys);
+        move |args| {
+            let mut sqc_expected_locked = sqc_expected.lock();
+            let mut pressed_keys_locked = pressed_keys.lock();
+            let mut recovered_key = Key::new(255, 255);
+            // get the first element (sqc counter)
+            if let Some(&sqc_byte) = args.recv_data().get(0) {
+                // check if sqc counter matches the expected one
+                if sqc_byte == *sqc_expected_locked {
+                    // iterate trough the rest of the elements
+                    for &byte_data in args.recv_data()[1..].iter() {
+                        if byte_data != 0 {
+                            recovered_key.row = byte_data >> BIT_SHIFT;
+                            recovered_key.col = byte_data & 0x0F;
+
+                            pressed_keys_locked
+                                .index_map
+                                .insert(
+                                    recovered_key,
+                                    Debounce {
+                                        key_pressed_time: Instant::now(),
+                                        key_state: KeyState::KeyPressed,
+                                    },
+                                )
+                                .expect("Not enough space to store incoming slave data.");
+                        }
+                    }
+                    // prepare the sqc for the next frame
+                    *sqc_expected_locked += 1;
+                }
+            }
+
+            #[cfg(feature = "debug")]
+            log::info!(
+                "SQC: {:?}\nReceived from slave: {:?}",
+                *sqc_expected_locked,
+                pressed_keys_locked.index_map
+            );
+        }
+    });
+
+    // Run the main loop
     loop {
         if ble_keyboard.connected() {
             /* check and store the ble status, then release the lock */
@@ -324,20 +303,12 @@ pub async fn ble_tx(
                 *ble_status = BleStatus::Connected;
             }
 
-            // proccess received data
-            process_received_data(
-                &received_data,
-                pressed_keys,
-                &mut keys_pressed_array,
-                &mut recovered_key,
-            );
-
             /* try to lock the hashmap */
-            if let Some(mut keys_pressed) = pressed_keys.try_lock() {
+            if let Some(mut pressed_keys) = pressed_keys.try_lock() {
                 /* check if there are pressed keys */
-                if !keys_pressed.is_empty() {
+                if !pressed_keys.index_map.is_empty() {
                     /* iter trough the pressed keys */
-                    for (key, debounce) in keys_pressed.iter_mut() {
+                    for (key, debounce) in pressed_keys.index_map.iter_mut() {
                         /*check the key debounce state */
                         match debounce.key_state {
                             KeyState::KeyPressed => {
@@ -376,13 +347,13 @@ pub async fn ble_tx(
 
                     //remove the sent keys and empty the vec
                     while let Some(key) = pressed_keys_to_remove.pop() {
-                        keys_pressed.remove(&key).unwrap();
+                        pressed_keys.index_map.remove(&key).unwrap();
                     }
                 }
             }
 
             /* there must be a delay so the WDT in not triggered */
-            delay_ms(10).await;
+            delay_ms(1).await;
         } else {
             /* debug log */
             #[cfg(feature = "debug")]
