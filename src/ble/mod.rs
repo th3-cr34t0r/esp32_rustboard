@@ -4,9 +4,12 @@
 extern crate alloc;
 use alloc::sync::Arc;
 
+use embassy_time::{Duration, Instant};
 use esp32_nimble::BLEClient;
 use esp32_nimble::{hid::*, utilities::mutex::Mutex, BLECharacteristic, BLEServer};
 use zerocopy::{Immutable, IntoBytes};
+
+use crate::config::user_config::SLEEP_DELAY;
 
 #[cfg(feature = "master")]
 pub mod master;
@@ -100,10 +103,45 @@ pub struct BleKeyboardMaster {
 }
 pub struct BleKeyboardSlave {
     client: BLEClient,
+    sqc: u8,
     keys: [u8; 6],
+    key_report: [u8; 7],
 }
 #[derive(Clone, Copy, Debug)]
 pub enum BleStatus {
     Connected,
     NotConnected,
+}
+
+pub struct DebounceCounter {
+    future_instant: Instant,
+    current_instant: Instant,
+    previous_instant: Instant,
+    debounce: Duration,
+}
+
+impl DebounceCounter {
+    pub fn new(debounce: Duration) -> Self {
+        DebounceCounter {
+            future_instant: Instant::now(),
+            current_instant: Instant::now(),
+            previous_instant: Instant::now(),
+            debounce,
+        }
+    }
+
+    pub fn is_debounced(&mut self) -> bool {
+        self.current_instant = Instant::now();
+        self.future_instant = self.previous_instant + self.debounce;
+
+        if self.current_instant >= self.future_instant {
+            self.previous_instant = self.current_instant;
+            true
+        } else {
+            false
+        }
+    }
+    pub fn reset_debounce(&mut self) {
+        self.previous_instant = Instant::now() + SLEEP_DELAY;
+    }
 }
