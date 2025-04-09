@@ -3,8 +3,7 @@ use crate::delay::delay_ms;
 use crate::matrix::Key;
 use crate::{config::user_config::*, debounce::Debounce};
 
-use super::{BleKeyboardSlave, BleStatus};
-use embassy_time::Instant;
+use super::{BleKeyboardSlave, BleStatus, DebounceCounter};
 use esp32_nimble::{enums::*, utilities::mutex::Mutex, uuid128, BLEAddress, BLEDevice};
 use esp_idf_sys::{
     esp_ble_power_type_t_ESP_BLE_PWR_TYPE_ADV, esp_ble_power_type_t_ESP_BLE_PWR_TYPE_DEFAULT,
@@ -40,7 +39,9 @@ impl BleKeyboardSlave {
 
         Self {
             client,
+            sqc: 0,
             keys: [0; 6],
+            key_report: [0; 7],
         }
     }
 
@@ -54,8 +55,25 @@ impl BleKeyboardSlave {
             .await
             .unwrap();
 
+        //increment the sqc counter
+        self.sqc += 1;
+
+        //set the sqc info as first byte
+        self.key_report = [
+            self.sqc.clone(),
+            self.keys[0],
+            self.keys[1],
+            self.keys[2],
+            self.keys[3],
+            self.keys[4],
+            self.keys[5],
+        ];
+
+        #[cfg(feature = "debug")]
+        log::info!("key_report: {:?}", self.key_report);
+
         remote_characteristic
-            .write_value(self.keys.into_byte_slice(), false)
+            .write_value(self.key_report.into_byte_slice(), false)
             .await
             .expect("Unable to set the new data!");
     }
@@ -112,11 +130,11 @@ pub async fn ble_tx(
     //set ble power to lowest possible
     // ble_keyboard_slave.set_ble_power_save();
 
-    //key report delay elapsed
-    let mut last_sent_key_report = Instant::now();
-
     //variable for storing info about a key pressed event
     let mut has_key_been_pressed: bool;
+
+    // initate debounce
+    let mut key_report_debounce: DebounceCounter = DebounceCounter::new(KEY_REPORT_INTERVAL);
 
     //Run the main loop
     loop {
@@ -132,15 +150,9 @@ pub async fn ble_tx(
                 if !keys_pressed.is_empty() {
                     // iter trough the pressed keys
                     for (key, debounce) in keys_pressed.iter_mut() {
-                        //check the key debounce state
-                        match debounce.key_state {
-                            //if key state is keyPressed, add it to the key report
-                            KeyState::KeyPressed => {
-                                add_keys(&mut ble_keyboard_slave, key);
-                            }
-                            _ => {
-                                //do nothing
-                            }
+                        // if key state is keyPressed, add it to the key report
+                        if let KeyState::KeyPressed = debounce.key_state {
+                            add_keys(&mut ble_keyboard_slave, key);
                         }
                     }
 
@@ -149,9 +161,7 @@ pub async fn ble_tx(
                         ble_keyboard_slave.keys.iter().any(|&element| element != 0);
 
                     //only sent the key report if the key report interval has passed ann there is a key pressed
-                    if has_key_been_pressed
-                        && Instant::now() >= last_sent_key_report + KEY_REPORT_INTERVAL
-                    {
+                    if has_key_been_pressed && key_report_debounce.is_debounced() {
                         //debug log
                         #[cfg(feature = "debug")]
                         log::info!("ble_keyboard_slave.keys: {:?}", ble_keyboard_slave.keys);
@@ -171,13 +181,9 @@ pub async fn ble_tx(
                                 keys_pressed.remove(&recovered_key).unwrap();
                             }
                         });
-
-                        //reset key_report
-                        ble_keyboard_slave.keys.fill(0);
-
-                        //store the time the key report has been sent
-                        last_sent_key_report = Instant::now();
                     }
+                    //reset key_report
+                    ble_keyboard_slave.keys.fill(0);
                 }
             }
             //there must be a delay so the WDT in not triggered
