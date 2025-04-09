@@ -263,21 +263,40 @@ pub async fn ble_tx(
 
     //arc mutex that is storing the unprocessed incoming data
     let received_data: Arc<Mutex<Vec<u8, 6>>> = Arc::new(Mutex::new(Vec::new()));
+    //sqc counter init
+    let sqc_expected: Arc<Mutex<u8>> = Arc::new(Mutex::new(0));
 
+    // on_write callback
     ble_keyboard.slave_characteristic.lock().on_write({
         let received_data = Arc::clone(&received_data);
+        let sqc_expected = Arc::clone(&sqc_expected);
         move |args| {
-            args.recv_data().iter().for_each(|byte_data| {
-                let mut received_data_locked = received_data.lock();
+            let mut received_data_locked = received_data.lock();
+            let mut sqc_expected_locked = sqc_expected.lock();
 
-                if *byte_data != 0 && !received_data_locked.contains(byte_data) {
-                    received_data_locked
-                        .push(*byte_data)
-                        .expect("Not enough space to store incoming slave data.");
+            // get the first element (sqc counter)
+            if let Some(&sqc_byte) = args.recv_data().get(0) {
+                // check if sqc counter matches the expected one
+                if sqc_byte == *sqc_expected_locked {
+                    // iterate trough the rest of the elements
+                    for &byte_data in args.recv_data()[1..].iter() {
+                        if byte_data != 0 && !received_data_locked.contains(&byte_data) {
+                            received_data_locked
+                                .push(byte_data)
+                                .expect("Not enough space to store incoming slave data.");
+                        }
+                    }
+                    // prepare the sqc for the next frame
+                    *sqc_expected_locked += 1;
                 }
-            });
+            }
+
             #[cfg(feature = "debug")]
-            log::info!("Received from slave: {:?}", *received_data.lock());
+            log::info!(
+                "SQC: {:?}\nReceived from slave: {:?}",
+                *sqc_expected_locked,
+                *received_data_locked
+            );
         }
     });
 
@@ -363,7 +382,7 @@ pub async fn ble_tx(
             }
 
             /* there must be a delay so the WDT in not triggered */
-            delay_ms(1).await;
+            delay_ms(10).await;
         } else {
             /* debug log */
             #[cfg(feature = "debug")]
