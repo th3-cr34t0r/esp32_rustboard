@@ -1,3 +1,4 @@
+use crate::ble::DebounceCounter;
 use crate::config::user_config::*;
 use crate::delay::*;
 
@@ -33,7 +34,7 @@ pub struct PinMatrix<'a> {
     pub rows: [PinDriver<'a, AnyIOPin, Output>; ROWS],
     pub cols: [PinDriver<'a, AnyIOPin, Input>; COLS],
     pub pressed_keys_array: [Key; 6],
-    pub enter_sleep_delay: Instant,
+    pub enter_sleep_debounce: DebounceCounter,
 }
 
 impl PinMatrix<'_> {
@@ -77,14 +78,14 @@ impl PinMatrix<'_> {
             rows,
             cols,
             pressed_keys_array: [Key::new(255, 255); 6],
-            enter_sleep_delay: Instant::now() + SLEEP_DELAY_NOT_CONNECTED,
+            enter_sleep_debounce: DebounceCounter::new(SLEEP_DELAY_NOT_CONNECTED),
         }
     }
 
     /// This function checks if the conditions for entering sleep mode are met
     fn sleep_mode_if_conditions_met(&mut self) {
         /* in case sleep is due */
-        if Instant::now() >= self.enter_sleep_delay {
+        if self.enter_sleep_debounce.is_debounced() {
             self.enter_light_sleep_mode();
         }
     }
@@ -190,8 +191,7 @@ impl PinMatrix<'_> {
                         }
                     }
                     // reset the sleep delay on key press
-
-                    self.enter_sleep_delay = Instant::now() + SLEEP_DELAY;
+                    self.enter_sleep_debounce.reset_debounce();
                 }
                 /* increment col */
                 count.col += 1;
@@ -218,10 +218,9 @@ pub fn store_key(
     pressed_keys: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
     pressed_keys_array: &mut [Key; 6],
 ) {
-    /* Inserts a key-value pair into the map.
-     * If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
-     * If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
-     */
+    // Inserts a key-value pair into the map.
+    // If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
+    // If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
     if let Some(mut keys_pressed) = pressed_keys.try_lock() {
         pressed_keys_array.iter_mut().for_each(|element| {
             if *element != Key::new(255, 255) {
@@ -249,40 +248,33 @@ pub async fn scan_grid(
     pressed_keys: &Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>>,
     ble_status: &Arc<Mutex<BleStatus>>,
 ) -> ! {
-    /* construct the matrix */
+    // construct the matrix
     let mut matrix = PinMatrix::new();
 
-    /* local ble status variable */
+    // local ble status variable
     let mut ble_status_local: BleStatus = BleStatus::NotConnected;
-    let mut ble_status_last_timestamp: Instant = Instant::now();
 
-    let mut current_timestamp: Instant;
+    // ble status debounce variable
+    let mut ble_status_debounce: DebounceCounter = DebounceCounter::new(BLE_STATUS_DEBOUNCE_DELAY);
 
     loop {
-        /* check if sleep conditions are met */
+        // check if sleep conditions are met
         matrix.sleep_mode_if_conditions_met();
 
-        /* check and store the ble status, then release the lock */
-        current_timestamp = Instant::now();
-        if current_timestamp >= ble_status_last_timestamp + BLE_STATUS_DEBOUNCE_DELAY {
+        // check and store the ble status, then release the lock
+        if ble_status_debounce.is_debounced() {
             if let Some(ble_status) = ble_status.try_lock() {
                 ble_status_local = *ble_status;
-                ble_status_last_timestamp = current_timestamp;
-
-                #[cfg(feature = "debug")]
-                {
-                    log::info!("BLESTATUS: {:?}", ble_status_local);
-                }
             }
         }
 
-        /* if a connection is established, run the key matrix */
+        // if a connection is established, run the key matrix
         match ble_status_local {
             BleStatus::Connected => {
                 matrix.standard_scan(pressed_keys).await;
             }
             BleStatus::NotConnected => {
-                /* sleep for 100ms */
+                // sleep for 100ms
                 delay_ms(100).await;
             }
         }
