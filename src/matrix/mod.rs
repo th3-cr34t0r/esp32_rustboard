@@ -188,7 +188,7 @@ impl PinMatrix<'_> {
                         }
                     }
                     // reset the sleep delay on key press
-                    self.enter_sleep_debounce.reset_debounce();
+                    self.enter_sleep_debounce.reset_debounce(SLEEP_DELAY);
                 }
                 /* increment col */
                 count.col += 1;
