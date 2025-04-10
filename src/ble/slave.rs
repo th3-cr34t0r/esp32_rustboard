@@ -39,9 +39,7 @@ impl BleKeyboardSlave {
 
         Self {
             client,
-            sqc: 0,
             keys: [0; 6],
-            key_report: [0; 7],
         }
     }
 
@@ -55,27 +53,10 @@ impl BleKeyboardSlave {
             .await
             .unwrap();
 
-        //increment the sqc counter
-        self.sqc += 1;
-
-        //set the sqc info as first byte
-        self.key_report = [
-            self.sqc.clone(),
-            self.keys[0],
-            self.keys[1],
-            self.keys[2],
-            self.keys[3],
-            self.keys[4],
-            self.keys[5],
-        ];
-
-        #[cfg(feature = "debug")]
-        log::info!("key_report: {:?}", self.key_report);
-
         remote_characteristic
-            .write_value(self.key_report.into_byte_slice(), false)
+            .write_value(self.keys.into_byte_slice(), false)
             .await
-            .expect("Unable to set the new data!");
+            .expect("Unable to write new data to the ble_characteristic!");
     }
 
     pub fn set_ble_power_save(&mut self) {

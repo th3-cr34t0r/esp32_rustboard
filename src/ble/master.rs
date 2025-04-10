@@ -247,50 +247,32 @@ pub async fn ble_tx(
     /* set ble power to lowest possible */
     // ble_keyboard.set_ble_power_save();
 
-    // sqc counter init
-    let sqc_expected: Arc<Mutex<u8>> = Arc::new(Mutex::new(0));
-
     // on_write callback
     ble_keyboard.slave_characteristic.lock().on_write({
-        let sqc_expected = Arc::clone(&sqc_expected);
         let pressed_keys = Arc::clone(&pressed_keys);
         move |args| {
-            let mut sqc_expected_locked = sqc_expected.lock();
             let mut pressed_keys_locked = pressed_keys.lock();
             let mut recovered_key = Key::new(255, 255);
-            // get the first element (sqc counter)
-            if let Some(&sqc_byte) = args.recv_data().get(0) {
-                // check if sqc counter matches the expected one
-                if sqc_byte == *sqc_expected_locked {
-                    // iterate trough the rest of the elements
-                    for &byte_data in args.recv_data()[1..].iter() {
-                        if byte_data != 0 {
-                            recovered_key.row = byte_data >> BIT_SHIFT;
-                            recovered_key.col = byte_data & 0x0F;
+            // iterate trough the rest of the elements
+            args.recv_data().iter().for_each(|byte_data| {
+                if *byte_data != 0 {
+                    recovered_key.row = *byte_data >> BIT_SHIFT;
+                    recovered_key.col = *byte_data & 0x0F;
 
-                            pressed_keys_locked
-                                .index_map
-                                .insert(
-                                    recovered_key,
-                                    Debounce {
-                                        key_pressed_time: Instant::now(),
-                                        key_state: KeyState::KeyPressed,
-                                    },
-                                )
-                                .expect("Not enough space to store incoming slave data.");
-                        }
-                    }
-                    // prepare the sqc for the next frame
-                    *sqc_expected_locked += 1;
+                    pressed_keys_locked
+                        .index_map
+                        .insert(
+                            recovered_key,
+                            Debounce {
+                                key_pressed_time: Instant::now(),
+                                key_state: KeyState::KeyPressed,
+                            },
+                        )
+                        .expect("Not enough space to store incoming slave data.");
                 }
-            }
-
+            });
             #[cfg(feature = "debug")]
-            log::info!(
-                "SQC: {:?}\nReceived from slave: {:?}",
-                *sqc_expected_locked,
-                pressed_keys_locked.index_map
-            );
+            log::info!("Received from slave: {:?}", pressed_keys_locked.index_map);
         }
     });
 
@@ -353,7 +335,7 @@ pub async fn ble_tx(
             }
 
             /* there must be a delay so the WDT in not triggered */
-            delay_ms(1).await;
+            delay_ms(5).await;
         } else {
             /* debug log */
             #[cfg(feature = "debug")]

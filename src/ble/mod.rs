@@ -9,8 +9,6 @@ use esp32_nimble::BLEClient;
 use esp32_nimble::{hid::*, utilities::mutex::Mutex, BLECharacteristic, BLEServer};
 use zerocopy::{Immutable, IntoBytes};
 
-use crate::config::user_config::SLEEP_DELAY;
-
 #[cfg(feature = "master")]
 pub mod master;
 
@@ -103,9 +101,7 @@ pub struct BleKeyboardMaster {
 }
 pub struct BleKeyboardSlave {
     client: BLEClient,
-    sqc: u8,
     keys: [u8; 6],
-    key_report: [u8; 7],
 }
 #[derive(Clone, Copy, Debug)]
 pub enum BleStatus {
@@ -141,7 +137,7 @@ impl DebounceCounter {
             false
         }
     }
-    pub fn reset_debounce(&mut self) {
-        self.previous_instant = Instant::now() + SLEEP_DELAY;
+    pub fn reset_debounce(&mut self, debounce_duraiton: Duration) {
+        self.previous_instant = Instant::now() + debounce_duraiton;
     }
 }
