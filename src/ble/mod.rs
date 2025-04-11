@@ -83,7 +83,7 @@ const HID_REPORT_DISCRIPTOR: &[u8] = hid!(
                        // (END_COLLECTION), // END_COLLECTION
 );
 
-#[derive(IntoBytes, Immutable)]
+#[derive(Default, PartialEq, Clone, Copy, IntoBytes, Immutable)]
 #[repr(packed, C)]
 struct KeyReport {
     modifiers: u8,
@@ -97,7 +97,8 @@ pub struct BleKeyboardMaster {
     input_keyboard: Arc<Mutex<BLECharacteristic>>,
     output_keyboard: Arc<Mutex<BLECharacteristic>>,
     input_media_keys: Arc<Mutex<BLECharacteristic>>,
-    key_report: KeyReport,
+    current_key_report: KeyReport,
+    previous_key_report: KeyReport,
 }
 pub struct BleKeyboardSlave {
     client: BLEClient,

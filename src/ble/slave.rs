@@ -34,7 +34,7 @@ impl BleKeyboardSlave {
             .expect("Unable to connect to server device!");
 
         client.on_connect(|client| {
-            client.update_conn_params(1, 10, 0, 200).unwrap();
+            client.update_conn_params(5, 20, 0, 200).unwrap();
         });
 
         Self {
