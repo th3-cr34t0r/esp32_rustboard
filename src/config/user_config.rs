@@ -27,9 +27,9 @@ pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
 #[cfg(feature = "slave")]
 pub const COL_INIT: u8 = 6;
 #[cfg(feature = "slave")]
-pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(5);
+pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(35);
 #[cfg(feature = "slave")]
-pub const KEY_REPORT_INTERVAL: Duration = Duration::from_millis(10);
+pub const KEY_REPORT_INTERVAL: Duration = Duration::from_millis(15);
 #[cfg(feature = "slave")]
 pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
 

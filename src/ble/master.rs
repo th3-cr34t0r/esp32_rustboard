@@ -5,7 +5,8 @@ use embassy_time::Instant;
 
 use crate::ble::BleStatus;
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
-use crate::config::{layers::*, user_config::*};
+use crate::config::layout::{Layer, Layers};
+use crate::config::user_config::*;
 use crate::debounce::{Debounce, KeyState};
 use crate::delay::*;
 use crate::matrix::{Key, StoredKeys};
@@ -143,7 +144,7 @@ fn add_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_sta
         }
         KeyType::Layer => {
             /* check and set the layer */
-            *layer_state = Layer::Upper;
+            *layer_state = Layer::get_layer(valid_key);
 
             /* release all keys */
             ble_keyboard
@@ -233,10 +234,7 @@ pub async fn ble_tx(
     let mut ble_keyboard: BleKeyboardMaster = BleKeyboardMaster::new().await;
 
     /* initialize layers */
-    let mut layers = Layers::new();
-
-    /* load the specified layout */
-    layers.load_layout();
+    let mut layers = Layers::init();
 
     /* layer state */
     let mut layer_state = Layer::Base;
@@ -335,7 +333,7 @@ pub async fn ble_tx(
             }
 
             /* there must be a delay so the WDT in not triggered */
-            delay_ms(5).await;
+            delay_ms(1).await;
         } else {
             /* debug log */
             #[cfg(feature = "debug")]

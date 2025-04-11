@@ -1,30 +1,39 @@
-/*
-*********************************************************************************************
-BASE LAYER:
-
-X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
-   0 |_ESC_|__'__|__,__|__.__|__p__|__y__|              0 |__f__|__g__|__c__|__r__|__l__|__/__|
-   1 |_BSP_|__a__|__o__|__e__|__u__|__i__|              1 |__d__|__h__|__t__|__n__|__s__|__-__|
-   2 |_CTL_|__;__|__q__|__j__|__k__|__x__|              2 |__b__|__m__|__w__|__v__|__z__|__=__|
-   3                   |_ALT_|_SPC_|_SFT_|              3 |_ALT_|_ENT_|_LYR_|
-
-*********************************************************************************************
-UPPER LAYER:
-
-X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
-   0 |_ESC_|_SUP_|__7__|__8__|__9__|_PScr|              0 |__!__|__@__|__#__|__$__|__%__|__^__|
-   1 |_BSP_|__.__|__4__|__5__|__6__|_DEL_|              1 |__&__|_left|_down|__up_|_rght|__*__|
-   2 |_CTL_|__0__|__1__|__2__|__3__|_PST_|              2 |__\__|__[__|__]__|__(__|__)__|__`__|
-   3                   |_ALT_|_SPC_|_SFT_|              3 |_TAB_|_ENT_|_LYR_|
-
-*********************************************************************************************
-*/
+//
+//*********************************************************************************************
+//BASE LAYER:
+//
+//X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
+//   0 |_ESC_|__'__|__,__|__.__|__p__|__y__|              0 |__f__|__g__|__c__|__r__|__l__|__/__|
+//   1 |_BSP_|__a__|__o__|__e__|__u__|__i__|              1 |__d__|__h__|__t__|__n__|__s__|__-__|
+//   2 |_CTL_|__;__|__q__|__j__|__k__|__x__|              2 |__b__|__m__|__w__|__v__|__z__|__=__|
+//   3                   |_LWR_|_SPC_|_SFT_|              3 |_TAB_|_ENT_|_UPR_|
+//
+//*********************************************************************************************
+//UPPER LAYER:
+//
+//X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
+//   0 |_ESC_|_SUP_|__7__|__8__|__9__|_PScr|              0 |__!__|__@__|__#__|__$__|__%__|__^__|
+//   1 |_BSP_|__.__|__4__|__5__|__6__|_DEL_|              1 |__&__|_left|_down|__up_|_rght|__*__|
+//   2 |_CTL_|__0__|__1__|__2__|__3__|_PST_|              2 |__\__|__[__|__]__|__(__|__)__|__`__|
+//   3                   |_LWR_|_SPC_|_SFT_|              3 |_TAB_|_ENT_|_UPR_|
+//
+//*********************************************************************************************
+//LOWER LAYER:
+//
+//X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
+//   0 |_ESC_|_____|_____|_____|_____|_____|              0 |_____|_____|_____|_____|_____|_____|
+//   1 |_BSP_|_ALT_|_____|_____|_____|_____|              1 |_____|_left|_down|__up_|_rght|_____|
+//   2 |_CTL_|_____|_____|_____|_____|_____|              2 |_____|_____|__]__|__(__|_____|_____|
+//   3                   |_LWR_|_SPC_|_SFT_|              3 |_TAB_|_ENT_|_UPR_|
+//
+//*********************************************************************************************
+//
 use crate::config::{enums::*, layout::*};
 
 pub fn layout() -> Layers {
-    let mut layout = Layers::new();
+    let mut layout = Layers::default();
 
-    /* BASE LAYER LAYOUT */
+    // BASE LAYER LAYOUT
     layout.base.insert((0, 0), HidKeys::Escape).unwrap(); // ESC
     layout.base.insert((0, 1), HidKeys::Quote).unwrap(); // '
     layout.base.insert((0, 2), HidKeys::Comma).unwrap(); // ,
@@ -70,17 +79,17 @@ pub fn layout() -> Layers {
     layout.base.insert((3, 0), HidKeys::Undefined).unwrap(); //
     layout.base.insert((3, 1), HidKeys::Undefined).unwrap(); //
     layout.base.insert((3, 2), HidKeys::Undefined).unwrap(); //
-    layout.base.insert((3, 3), HidKeys::ModifierAlt).unwrap(); // ALT
+    layout.base.insert((3, 3), HidKeys::LowerLayer).unwrap(); // Lower Layout
     layout.base.insert((3, 4), HidKeys::Space).unwrap(); // SPACE
     layout.base.insert((3, 5), HidKeys::ModifierShift).unwrap(); // SHIFT
     layout.base.insert((3, 6), HidKeys::Tab).unwrap(); // TAB
     layout.base.insert((3, 7), HidKeys::Enter).unwrap(); // ENTER
-    layout.base.insert((3, 8), HidKeys::LayerKey).unwrap(); // LAYER
+    layout.base.insert((3, 8), HidKeys::UpperLayer).unwrap(); // LAYER
     layout.base.insert((3, 9), HidKeys::Undefined).unwrap(); // Undefined
     layout.base.insert((3, 10), HidKeys::Undefined).unwrap(); // Undefined
     layout.base.insert((3, 11), HidKeys::Undefined).unwrap(); // Undefined
 
-    /* UPPER LAYER LAYOUT */
+    // UPPER LAYER LAYOUT
     layout.upper.insert((0, 0), HidKeys::Escape).unwrap(); // ESC
     layout.upper.insert((0, 1), HidKeys::ModifierSuper).unwrap(); // Super
     layout.upper.insert((0, 2), HidKeys::Num7).unwrap(); // 7
@@ -144,11 +153,70 @@ pub fn layout() -> Layers {
     layout.upper.insert((3, 5), HidKeys::ModifierShift).unwrap(); // SHIFT
     layout.upper.insert((3, 6), HidKeys::Tab).unwrap(); // TAB
     layout.upper.insert((3, 7), HidKeys::Enter).unwrap(); // ENTER
-    layout.upper.insert((3, 8), HidKeys::LayerKey).unwrap(); // LAYER
+    layout.upper.insert((3, 8), HidKeys::UpperLayer).unwrap(); // LAYER
     layout.upper.insert((3, 9), HidKeys::Undefined).unwrap(); // Undefined
     layout.upper.insert((3, 10), HidKeys::Undefined).unwrap(); // Undefined
     layout.upper.insert((3, 11), HidKeys::Undefined).unwrap(); // Undefined
 
-    /* return the layot */
+    // LOWER LAYER LAYOUT
+    layout.lower.insert((0, 0), HidKeys::Escape).unwrap(); // Escape
+    layout
+        .lower
+        .insert((0, 1), HidKeys::MacroSuperLock)
+        .unwrap(); // Macro Lock Desktop
+    layout.lower.insert((0, 2), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((0, 3), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((0, 4), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((0, 5), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((0, 6), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((0, 7), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((0, 8), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((0, 9), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((0, 10), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((0, 11), HidKeys::Undefined).unwrap(); // Undefined
+
+    layout.lower.insert((1, 0), HidKeys::Bspace).unwrap(); // Backspace
+    layout.lower.insert((1, 1), HidKeys::ModifierAlt).unwrap(); // Alt
+    layout.lower.insert((1, 2), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((1, 3), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((1, 4), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((1, 5), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((1, 6), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((1, 7), HidKeys::Left).unwrap(); // Left
+    layout.lower.insert((1, 8), HidKeys::Down).unwrap(); // Down
+    layout.lower.insert((1, 9), HidKeys::Up).unwrap(); // Up
+    layout.lower.insert((1, 10), HidKeys::Right).unwrap(); // Right
+    layout.lower.insert((1, 11), HidKeys::Undefined).unwrap(); // Undefined
+
+    layout
+        .lower
+        .insert((2, 0), HidKeys::ModifierControl)
+        .unwrap(); // Modifier
+    layout.lower.insert((2, 1), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((2, 2), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((2, 3), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((2, 4), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((2, 5), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((2, 6), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((2, 7), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((2, 8), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((2, 9), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((2, 10), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((2, 11), HidKeys::Undefined).unwrap(); // Undefined
+
+    layout.lower.insert((3, 0), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((3, 1), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((3, 2), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((3, 3), HidKeys::LowerLayer).unwrap(); // Lower Layer
+    layout.lower.insert((3, 4), HidKeys::Space).unwrap(); // Space
+    layout.lower.insert((3, 5), HidKeys::ModifierShift).unwrap(); // Shift
+    layout.lower.insert((3, 6), HidKeys::Tab).unwrap(); // Tab
+    layout.lower.insert((3, 7), HidKeys::Enter).unwrap(); // Enter
+    layout.lower.insert((3, 8), HidKeys::UpperLayer).unwrap(); // Upper Layer
+    layout.lower.insert((3, 9), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((3, 10), HidKeys::Undefined).unwrap(); // Undefined
+    layout.lower.insert((3, 11), HidKeys::Undefined).unwrap(); // Undefined
+
+    //return the layout
     layout
 }

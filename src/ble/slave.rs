@@ -131,8 +131,10 @@ pub async fn ble_tx(pressed_keys: &Arc<Mutex<StoredKeys>>, ble_status: &Arc<Mute
                         }
                     }
 
-                    // only sent the key report if the key report interval has passed ann there is a key pressed
-                    if key_report_debounce.is_debounced() {
+                    // only sent the key report if the key report interval has passed and there is a key pressed
+                    if key_report_debounce.is_debounced()
+                        && ble_keyboard_slave.keys.iter().any(|&element| element != 0)
+                    {
                         // debug log
                         #[cfg(feature = "debug")]
                         log::info!("ble_keyboard_slave.keys: {:?}", ble_keyboard_slave.keys);
@@ -152,9 +154,10 @@ pub async fn ble_tx(pressed_keys: &Arc<Mutex<StoredKeys>>, ble_status: &Arc<Mute
                                 pressed_keys.index_map.remove(&recovered_key).unwrap();
                             }
                         });
+
+                        // reset key_report
+                        ble_keyboard_slave.keys.fill(0);
                     }
-                    // reset key_report
-                    ble_keyboard_slave.keys.fill(0);
                 }
             }
             // there must be a delay so the WDT in not triggered
