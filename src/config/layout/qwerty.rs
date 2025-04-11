@@ -22,7 +22,7 @@ X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9
 use crate::config::{enums::*, layout::*};
 
 pub fn layout() -> Layers {
-    let mut layout = Layers::new();
+    let mut layout = Layers::default();
 
     /* BASE LAYER LAYOUT */
     layout.base.insert((0, 0), HidKeys::Escape).unwrap();
@@ -75,7 +75,7 @@ pub fn layout() -> Layers {
     layout.base.insert((3, 5), HidKeys::ModifierShift).unwrap();
     layout.base.insert((3, 6), HidKeys::Tab).unwrap();
     layout.base.insert((3, 7), HidKeys::Enter).unwrap();
-    layout.base.insert((3, 8), HidKeys::LayerKey).unwrap();
+    layout.base.insert((3, 8), HidKeys::UpperLayer).unwrap();
     layout.base.insert((3, 9), HidKeys::Undefined).unwrap();
     layout.base.insert((3, 10), HidKeys::Undefined).unwrap();
     layout.base.insert((3, 11), HidKeys::Undefined).unwrap();
@@ -144,7 +144,7 @@ pub fn layout() -> Layers {
     layout.upper.insert((3, 5), HidKeys::ModifierShift).unwrap();
     layout.upper.insert((3, 6), HidKeys::Tab).unwrap();
     layout.upper.insert((3, 7), HidKeys::Enter).unwrap();
-    layout.upper.insert((3, 8), HidKeys::LayerKey).unwrap();
+    layout.upper.insert((3, 8), HidKeys::UpperLayer).unwrap();
     layout.upper.insert((3, 9), HidKeys::Undefined).unwrap();
     layout.upper.insert((3, 10), HidKeys::Undefined).unwrap();
     layout.upper.insert((3, 11), HidKeys::Undefined).unwrap();

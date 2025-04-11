@@ -5,16 +5,14 @@ to flash: espflash flash ./target/riscv32imc-esp-espidf/release/esp32_rustboard 
 extern crate alloc;
 use alloc::sync::Arc;
 
+use esp32_rustboard::matrix::StoredKeys;
 use esp32_rustboard::*;
 use esp_idf_hal::task::block_on;
 
-use crate::config::user_config::*;
 use crate::debounce::*;
-use crate::matrix::Key;
 use ble::BleStatus;
 use embassy_futures::select::select3;
 use esp32_nimble::utilities::mutex::Mutex;
-use heapless::FnvIndexMap;
 use matrix::scan_grid;
 
 fn main() -> anyhow::Result<()> {
@@ -24,8 +22,7 @@ fn main() -> anyhow::Result<()> {
     esp_idf_svc::log::EspLogger::initialize_default();
 
     /* initialize keys pressed hashmap */
-    let keys_pressed: Arc<Mutex<FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>>> =
-        Arc::new(Mutex::new(FnvIndexMap::new()));
+    let pressed_keys: Arc<Mutex<StoredKeys>> = Arc::new(Mutex::new(StoredKeys::default()));
 
     /* ble connection information shared variable */
     let ble_status: Arc<Mutex<BleStatus>> = Arc::new(Mutex::new(BleStatus::Connected));
@@ -37,9 +34,9 @@ fn main() -> anyhow::Result<()> {
         /* run the tasks concurrently */
         block_on(async {
             select3(
-                scan_grid(&keys_pressed, &ble_status),
-                calculate_debounce(&keys_pressed),
-                ble_tx(&ble_status, &keys_pressed),
+                scan_grid(&pressed_keys, &ble_status),
+                calculate_debounce(&pressed_keys),
+                ble_tx(&pressed_keys, &ble_status),
             )
             .await;
         });
@@ -52,9 +49,9 @@ fn main() -> anyhow::Result<()> {
         /* run the tasks concurrently */
         block_on(async {
             select3(
-                scan_grid(&keys_pressed, &ble_status),
-                calculate_debounce(&keys_pressed),
-                ble_tx(&keys_pressed, &ble_status),
+                scan_grid(&pressed_keys, &ble_status),
+                calculate_debounce(&pressed_keys),
+                ble_tx(&pressed_keys, &ble_status),
             )
             .await;
         });

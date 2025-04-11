@@ -4,6 +4,7 @@
 extern crate alloc;
 use alloc::sync::Arc;
 
+use embassy_time::{Duration, Instant};
 use esp32_nimble::BLEClient;
 use esp32_nimble::{hid::*, utilities::mutex::Mutex, BLECharacteristic, BLEServer};
 use zerocopy::{Immutable, IntoBytes};
@@ -82,7 +83,7 @@ const HID_REPORT_DISCRIPTOR: &[u8] = hid!(
                        // (END_COLLECTION), // END_COLLECTION
 );
 
-#[derive(IntoBytes, Immutable)]
+#[derive(Default, PartialEq, Clone, Copy, IntoBytes, Immutable)]
 #[repr(packed, C)]
 struct KeyReport {
     modifiers: u8,
@@ -96,14 +97,51 @@ pub struct BleKeyboardMaster {
     input_keyboard: Arc<Mutex<BLECharacteristic>>,
     output_keyboard: Arc<Mutex<BLECharacteristic>>,
     input_media_keys: Arc<Mutex<BLECharacteristic>>,
-    key_report: KeyReport,
+    current_key_report: KeyReport,
+    previous_key_report: KeyReport,
 }
+
 pub struct BleKeyboardSlave {
     client: BLEClient,
-    keys: [u8; 6],
+    current_pressed_keys: [u8; 6],
+    previous_pressed_keys: [u8; 6],
 }
+
 #[derive(Clone, Copy, Debug)]
 pub enum BleStatus {
     Connected,
     NotConnected,
+}
+
+pub struct DebounceCounter {
+    future_instant: Instant,
+    current_instant: Instant,
+    previous_instant: Instant,
+    debounce: Duration,
+}
+
+impl DebounceCounter {
+    pub fn new(debounce: Duration) -> Self {
+        DebounceCounter {
+            future_instant: Instant::now(),
+            current_instant: Instant::now(),
+            previous_instant: Instant::now(),
+            debounce,
+        }
+    }
+
+    pub fn is_debounced(&mut self) -> bool {
+        self.current_instant = Instant::now();
+        self.future_instant = self.previous_instant + self.debounce;
+
+        if self.current_instant >= self.future_instant {
+            self.previous_instant = self.current_instant;
+            true
+        } else {
+            false
+        }
+    }
+    pub fn reset_debounce(&mut self, debounce_duraiton: Duration) {
+        self.previous_instant = Instant::now() + debounce_duraiton;
+    }
 }

@@ -25,7 +25,8 @@ This project aims to provide a customizable and efficient firmware solution for 
 - ~~**Both halves of the keyboard are connected individually**: As of now, both keyboard halves are connected as indipendant keyboards. This will be fixed in the future.~~ - Fixed.
 - ~~**The key 'A' is not being recognized by the OS**: The keycode for the 'A' character is not being recognized by the OS~~ - Fixed.
 - ~~**Modifier keys are not working**: The current implementation of the sending logic is needs to be improved~~ - Fixed.
-- **Sometimes, the slave keyboard will send the same key twice.**
+- ~~**Sometimes, the slave keyboard will send the same key twice.**~~ - Fixed.
+
 ## How to Build
 
 To compile the firmware, follow these steps:

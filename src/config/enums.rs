@@ -169,7 +169,8 @@ pub enum HidKeys {
     Exsel = 0xA4,
 
     /* dummy layer */
-    LayerKey = 0xA5,
+    UpperLayer = 0xA5,
+    LowerLayer = 0xA6,
 
     /* dummy modifiers */
     ModifierShift = 0xB1,
@@ -190,6 +191,7 @@ pub enum HidKeys {
     MacroCaret = 0xD0,
     MacroAmpersand = 0xD1,
     MacroAsterix = 0xD2,
+    MacroSuperLock = 0xD3,
 }
 
 pub enum KeyType {
@@ -213,9 +215,10 @@ impl KeyType {
             | HidKeys::MacroModul
             | HidKeys::MacroCaret
             | HidKeys::MacroAmpersand
-            | HidKeys::MacroAsterix => KeyType::Macro,
+            | HidKeys::MacroAsterix
+            | HidKeys::MacroSuperLock => KeyType::Macro,
 
-            HidKeys::LayerKey => KeyType::Layer,
+            HidKeys::UpperLayer | HidKeys::LowerLayer => KeyType::Layer,
 
             HidKeys::ModifierShift
             | HidKeys::ModifierControl
@@ -311,6 +314,11 @@ impl HidKeys {
             HidKeys::MacroOpenedBracket => {
                 vec.push(HidKeys::ModifierShift).unwrap();
                 vec.push(HidKeys::Num9).unwrap();
+                vec
+            }
+            HidKeys::MacroSuperLock => {
+                vec.push(HidKeys::ModifierSuper).unwrap();
+                vec.push(HidKeys::L).unwrap();
                 vec
             }
             _ => vec,
