@@ -128,6 +128,15 @@ impl BleKeyboardMaster {
             );
         }
     }
+
+    fn is_key_report_changed(&mut self) -> bool {
+        if self.previous_key_report != self.current_key_report {
+            self.previous_key_report = self.current_key_report;
+            true
+        } else {
+            false
+        }
+    }
 }
 
 fn add_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_state: &mut Layer) {
@@ -245,6 +254,7 @@ pub async fn ble_tx(
         move |args| {
             let mut pressed_keys_locked = pressed_keys.lock();
             let mut recovered_key = Key::new(255, 255);
+
             // iterate trough the rest of the elements
             args.recv_data().iter().for_each(|byte_data| {
                 if *byte_data != 0 {
@@ -316,11 +326,8 @@ pub async fn ble_tx(
                     );
 
                     // sent the new report only if it differes from the previous
-                    if ble_keyboard.previous_key_report != ble_keyboard.current_key_report {
+                    if ble_keyboard.is_key_report_changed() {
                         ble_keyboard.send_report().await;
-
-                        // store the current report in the previous
-                        ble_keyboard.previous_key_report = ble_keyboard.current_key_report.clone();
                     }
 
                     // remove the sent keys and empty the vec
