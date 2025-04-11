@@ -100,10 +100,13 @@ pub struct BleKeyboardMaster {
     current_key_report: KeyReport,
     previous_key_report: KeyReport,
 }
+
 pub struct BleKeyboardSlave {
     client: BLEClient,
-    keys: [u8; 6],
+    current_pressed_keys: [u8; 6],
+    previous_pressed_keys: [u8; 6],
 }
+
 #[derive(Clone, Copy, Debug)]
 pub enum BleStatus {
     Connected,

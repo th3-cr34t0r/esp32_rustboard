@@ -229,6 +229,32 @@ fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_
     }
 }
 
+fn process_slave_key_report(
+    pressed_keys: &Arc<Mutex<StoredKeys>>,
+    slave_key_report: &Arc<Mutex<[u8; 6]>>,
+) {
+    let mut recovered_key: Key = Key::new(255, 255);
+
+    slave_key_report.lock().iter().for_each(|element| {
+        if *element != 0 {
+            recovered_key.row = *element >> BIT_SHIFT;
+            recovered_key.col = *element & 0x0F;
+
+            pressed_keys
+                .lock()
+                .index_map
+                .insert(
+                    recovered_key,
+                    Debounce {
+                        key_pressed_time: Instant::now(),
+                        key_state: KeyState::KeyPressed,
+                    },
+                )
+                .expect("Not enough space to store incoming slave data.");
+        }
+    });
+}
+
 pub async fn ble_tx(
     pressed_keys: &Arc<Mutex<StoredKeys>>,
     ble_status: &Arc<Mutex<BleStatus>>,
@@ -248,33 +274,24 @@ pub async fn ble_tx(
     // set ble power to lowest possible
     // ble_keyboard.set_ble_power_save();
 
+    let slave_key_report: Arc<Mutex<[u8; 6]>> = Arc::new(Mutex::new([0; 6]));
+
     // on_write callback
     ble_keyboard.slave_characteristic.lock().on_write({
-        let pressed_keys = Arc::clone(&pressed_keys);
+        // let pressed_keys = Arc::clone(&pressed_keys);
+        let slave_key_report = Arc::clone(&slave_key_report);
         move |args| {
-            let mut pressed_keys_locked = pressed_keys.lock();
-            let mut recovered_key = Key::new(255, 255);
-
-            // iterate trough the rest of the elements
+            let mut slave_key_report_locked = slave_key_report.lock();
+            let mut index: usize = 0;
             args.recv_data().iter().for_each(|byte_data| {
-                if *byte_data != 0 {
-                    recovered_key.row = *byte_data >> BIT_SHIFT;
-                    recovered_key.col = *byte_data & 0x0F;
+                slave_key_report_locked[index] = *byte_data;
 
-                    pressed_keys_locked
-                        .index_map
-                        .insert(
-                            recovered_key,
-                            Debounce {
-                                key_pressed_time: Instant::now(),
-                                key_state: KeyState::KeyPressed,
-                            },
-                        )
-                        .expect("Not enough space to store incoming slave data.");
-                }
+                index += 1;
             });
+
+            // debug log
             #[cfg(feature = "debug")]
-            log::info!("Received from slave: {:?}", pressed_keys_locked.index_map);
+            log::info!("Received from slave: {:?}", *slave_key_report_locked);
         }
     });
 
@@ -285,6 +302,9 @@ pub async fn ble_tx(
             if let Some(mut ble_status) = ble_status.try_lock() {
                 *ble_status = BleStatus::Connected;
             }
+
+            // process slave key report
+            process_slave_key_report(pressed_keys, &slave_key_report);
 
             // try to lock the hashmap
             if let Some(mut pressed_keys) = pressed_keys.try_lock() {
