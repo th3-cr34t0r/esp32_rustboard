@@ -15,17 +15,17 @@ This project aims to provide a customizable and efficient firmware solution for 
 
 ## Build related features
 - When compiling, the features flag can be called with the following keywords:
-   - left-side, right-side (for which board to be build for)
-   - sleep-mode (if sleep should be enabled)
+   - master(left side), slave(right side) (for which board to be build for)
    - dvorak (for dvorak keyboard layout)
    - qwerty (for qwerty keyboard layout)
    - debug (only should be use in development for console logs)
 
 ## Current Bugs
 
-- **Both halves of the keyboard are connected individually**: As of now, both keyboard halves are connected as indipendant keyboards. This will be fixed in the future.
+- ~~**Both halves of the keyboard are connected individually**: As of now, both keyboard halves are connected as indipendant keyboards. This will be fixed in the future.~~ - Fixed.
 - ~~**The key 'A' is not being recognized by the OS**: The keycode for the 'A' character is not being recognized by the OS~~ - Fixed.
 - ~~**Modifier keys are not working**: The current implementation of the sending logic is needs to be improved~~ - Fixed.
+- ~~**Sometimes, the slave keyboard will send the same key twice.**~~ - Fixed.
 
 ## How to Build
 
@@ -46,18 +46,18 @@ To compile the firmware, follow these steps:
    For left half of the keyboard with 'qwerty' layout:
 
    ```bash
-   cargo build --release --features qwerty,left-side,sleep-mode
+   cargo build --release --features qwerty,master
    ```
 
    For right half of the keyboard with 'qwerty' layout:
 
    ```bash
-   cargo build --release --features qwerty,right-side,sleep-mode
+   cargo build --release --features qwerty,slave
    ```
 
 5. **Flash the Firmware**: Connect your ESP32C3 device and use the following command to flash the firmware:
    ```bash
-   espflash flash ./target/riscv32imc-esp-espidf/release/esp32_rustboard --monitor
+   espflash flash ./target/riscv32imc-esp-espidf/release/esp32_rustboard
    ```
 
 ## Contributing
