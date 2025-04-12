@@ -6,7 +6,7 @@
 //   0 |_ESC_|__'__|__,__|__.__|__p__|__y__|              0 |__f__|__g__|__c__|__r__|__l__|__/__|
 //   1 |_BSP_|__a__|__o__|__e__|__u__|__i__|              1 |__d__|__h__|__t__|__n__|__s__|__-__|
 //   2 |_CTL_|__;__|__q__|__j__|__k__|__x__|              2 |__b__|__m__|__w__|__v__|__z__|__=__|
-//   3                   |_LWR_|_SPC_|_SFT_|              3 |_TAB_|_ENT_|_UPR_|
+//   3                   |_ALT_|_SPC_|_SFT_|              3 |_TAB_|_ENT_|_UPR_|
 //
 //*********************************************************************************************
 //UPPER LAYER:
@@ -15,16 +15,16 @@
 //   0 |_ESC_|_SUP_|__7__|__8__|__9__|_PScr|              0 |__!__|__@__|__#__|__$__|__%__|__^__|
 //   1 |_BSP_|__.__|__4__|__5__|__6__|_DEL_|              1 |__&__|_left|_down|__up_|_rght|__*__|
 //   2 |_CTL_|__0__|__1__|__2__|__3__|_PST_|              2 |__\__|__[__|__]__|__(__|__)__|__`__|
-//   3                   |_LWR_|_SPC_|_SFT_|              3 |_TAB_|_ENT_|_UPR_|
+//   3                   |_ALT_|_SPC_|_SFT_|              3 |_TAB_|_ENT_|_UPR_|
 //
 //*********************************************************************************************
 //LOWER LAYER:
 //
 //X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
-//   0 |_ESC_|_____|_____|_____|_____|_____|              0 |_____|_____|_____|_____|_____|_____|
+//   0 |_ESC_|_WLCK|_____|_____|_____|_____|              0 |_____|_____|_____|_____|_____|_____|
 //   1 |_BSP_|_ALT_|_____|_____|_____|_____|              1 |_____|_left|_down|__up_|_rght|_____|
-//   2 |_CTL_|_____|_____|_____|_____|_____|              2 |_____|_____|__]__|__(__|_____|_____|
-//   3                   |_LWR_|_SPC_|_SFT_|              3 |_TAB_|_ENT_|_UPR_|
+//   2 |_CTL_|_____|_____|_____|_____|_____|              2 |_____|_____|_____|_____|_____|_____|
+//   3                   |_ALT_|_SPC_|_SFT_|              3 |_TAB_|_ENT_|_UPR_|
 //
 //*********************************************************************************************
 //
@@ -34,7 +34,7 @@ pub fn layout() -> Layers {
     let mut layout = Layers::default();
 
     // BASE LAYER LAYOUT
-    layout.base.insert((0, 0), HidKeys::Escape).unwrap(); // ESC
+    layout.base.insert((0, 0), HidKeys::Escape).unwrap(); // Escape
     layout.base.insert((0, 1), HidKeys::Quote).unwrap(); // '
     layout.base.insert((0, 2), HidKeys::Comma).unwrap(); // ,
     layout.base.insert((0, 3), HidKeys::Period).unwrap(); // .
@@ -47,7 +47,7 @@ pub fn layout() -> Layers {
     layout.base.insert((0, 10), HidKeys::L).unwrap(); // l
     layout.base.insert((0, 11), HidKeys::Slash).unwrap(); // /
 
-    layout.base.insert((1, 0), HidKeys::Bspace).unwrap(); // BACKSPACE
+    layout.base.insert((1, 0), HidKeys::Bspace).unwrap(); // Backspace
     layout.base.insert((1, 1), HidKeys::A).unwrap(); // a
     layout.base.insert((1, 2), HidKeys::O).unwrap(); // o
     layout.base.insert((1, 3), HidKeys::E).unwrap(); // e
@@ -79,18 +79,18 @@ pub fn layout() -> Layers {
     layout.base.insert((3, 0), HidKeys::Undefined).unwrap(); //
     layout.base.insert((3, 1), HidKeys::Undefined).unwrap(); //
     layout.base.insert((3, 2), HidKeys::Undefined).unwrap(); //
-    layout.base.insert((3, 3), HidKeys::LowerLayer).unwrap(); // Lower Layout
-    layout.base.insert((3, 4), HidKeys::Space).unwrap(); // SPACE
-    layout.base.insert((3, 5), HidKeys::ModifierShift).unwrap(); // SHIFT
-    layout.base.insert((3, 6), HidKeys::Tab).unwrap(); // TAB
-    layout.base.insert((3, 7), HidKeys::Enter).unwrap(); // ENTER
-    layout.base.insert((3, 8), HidKeys::UpperLayer).unwrap(); // LAYER
+    layout.base.insert((3, 3), HidKeys::ModifierAlt).unwrap(); // Lower Layout
+    layout.base.insert((3, 4), HidKeys::Space).unwrap(); // Space
+    layout.base.insert((3, 5), HidKeys::ModifierShift).unwrap(); // Shift
+    layout.base.insert((3, 6), HidKeys::Tab).unwrap(); // Tab
+    layout.base.insert((3, 7), HidKeys::Enter).unwrap(); // Enter
+    layout.base.insert((3, 8), HidKeys::UpperLayer).unwrap(); // Upper Layer
     layout.base.insert((3, 9), HidKeys::Undefined).unwrap(); // Undefined
     layout.base.insert((3, 10), HidKeys::Undefined).unwrap(); // Undefined
     layout.base.insert((3, 11), HidKeys::Undefined).unwrap(); // Undefined
 
     // UPPER LAYER LAYOUT
-    layout.upper.insert((0, 0), HidKeys::Escape).unwrap(); // ESC
+    layout.upper.insert((0, 0), HidKeys::Escape).unwrap(); // Escape
     layout.upper.insert((0, 1), HidKeys::ModifierSuper).unwrap(); // Super
     layout.upper.insert((0, 2), HidKeys::Num7).unwrap(); // 7
     layout.upper.insert((0, 3), HidKeys::Num8).unwrap(); // 8
@@ -106,7 +106,7 @@ pub fn layout() -> Layers {
     layout.upper.insert((0, 10), HidKeys::MacroModul).unwrap(); // %
     layout.upper.insert((0, 11), HidKeys::MacroCaret).unwrap(); // ^
 
-    layout.upper.insert((1, 0), HidKeys::Bspace).unwrap(); // BACKSPACE
+    layout.upper.insert((1, 0), HidKeys::Bspace).unwrap(); // Backspace
     layout.upper.insert((1, 1), HidKeys::Period).unwrap(); // Peirod
     layout.upper.insert((1, 2), HidKeys::Num4).unwrap(); // 4
     layout.upper.insert((1, 3), HidKeys::Num5).unwrap(); // 5
@@ -117,10 +117,10 @@ pub fn layout() -> Layers {
         .upper
         .insert((1, 6), HidKeys::MacroAmpersand)
         .unwrap(); // &
-    layout.upper.insert((1, 7), HidKeys::Left).unwrap(); // LEFT
-    layout.upper.insert((1, 8), HidKeys::Down).unwrap(); // DOWN
-    layout.upper.insert((1, 9), HidKeys::Up).unwrap(); // UP
-    layout.upper.insert((1, 10), HidKeys::Right).unwrap(); // RIGHT
+    layout.upper.insert((1, 7), HidKeys::Left).unwrap(); // Left
+    layout.upper.insert((1, 8), HidKeys::Down).unwrap(); // Down
+    layout.upper.insert((1, 9), HidKeys::Up).unwrap(); // Up
+    layout.upper.insert((1, 10), HidKeys::Right).unwrap(); // Right
     layout.upper.insert((1, 11), HidKeys::MacroAsterix).unwrap(); // *
 
     layout
@@ -143,17 +143,17 @@ pub fn layout() -> Layers {
         .upper
         .insert((2, 10), HidKeys::MacroClosedBracket)
         .unwrap(); // )
-    layout.upper.insert((2, 11), HidKeys::Grave).unwrap(); // ` or ~ with SHIFT
+    layout.upper.insert((2, 11), HidKeys::Grave).unwrap(); // ` or ~ with Shift
 
     layout.upper.insert((3, 0), HidKeys::Undefined).unwrap(); // Undefined
     layout.upper.insert((3, 1), HidKeys::Undefined).unwrap(); // Undefined
     layout.upper.insert((3, 2), HidKeys::Undefined).unwrap(); // Undefined
-    layout.upper.insert((3, 3), HidKeys::ModifierAlt).unwrap(); // ALT
-    layout.upper.insert((3, 4), HidKeys::Space).unwrap(); // SPACE
-    layout.upper.insert((3, 5), HidKeys::ModifierShift).unwrap(); // SHIFT
-    layout.upper.insert((3, 6), HidKeys::Tab).unwrap(); // TAB
-    layout.upper.insert((3, 7), HidKeys::Enter).unwrap(); // ENTER
-    layout.upper.insert((3, 8), HidKeys::UpperLayer).unwrap(); // LAYER
+    layout.upper.insert((3, 3), HidKeys::ModifierAlt).unwrap(); // Alt
+    layout.upper.insert((3, 4), HidKeys::Space).unwrap(); // Space
+    layout.upper.insert((3, 5), HidKeys::ModifierShift).unwrap(); // Shift
+    layout.upper.insert((3, 6), HidKeys::Tab).unwrap(); // Tab
+    layout.upper.insert((3, 7), HidKeys::Enter).unwrap(); // Enter
+    layout.upper.insert((3, 8), HidKeys::UpperLayer).unwrap(); // Upper Layer
     layout.upper.insert((3, 9), HidKeys::Undefined).unwrap(); // Undefined
     layout.upper.insert((3, 10), HidKeys::Undefined).unwrap(); // Undefined
     layout.upper.insert((3, 11), HidKeys::Undefined).unwrap(); // Undefined
@@ -207,7 +207,7 @@ pub fn layout() -> Layers {
     layout.lower.insert((3, 0), HidKeys::Undefined).unwrap(); // Undefined
     layout.lower.insert((3, 1), HidKeys::Undefined).unwrap(); // Undefined
     layout.lower.insert((3, 2), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((3, 3), HidKeys::LowerLayer).unwrap(); // Lower Layer
+    layout.lower.insert((3, 3), HidKeys::ModifierAlt).unwrap(); // Lower Layer
     layout.lower.insert((3, 4), HidKeys::Space).unwrap(); // Space
     layout.lower.insert((3, 5), HidKeys::ModifierShift).unwrap(); // Shift
     layout.lower.insert((3, 6), HidKeys::Tab).unwrap(); // Tab
