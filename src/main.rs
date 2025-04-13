@@ -18,20 +18,20 @@ use matrix::scan_grid;
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
 
-    /* Bind the log crate to the ESP Logging facilities */
+    // Bind the log crate to the ESP Logging facilities
     esp_idf_svc::log::EspLogger::initialize_default();
 
-    /* initialize keys pressed hashmap */
+    // initialize keys pressed hashmap
     let pressed_keys: Arc<Mutex<StoredKeys>> = Arc::new(Mutex::new(StoredKeys::default()));
 
-    /* ble connection information shared variable */
+    // ble connection information shared variable
     let ble_status: Arc<Mutex<BleStatus>> = Arc::new(Mutex::new(BleStatus::Connected));
 
     #[cfg(feature = "master")]
     {
         use crate::ble::master::ble_tx;
 
-        /* run the tasks concurrently */
+        // run the tasks concurrently
         block_on(async {
             select3(
                 scan_grid(&pressed_keys, &ble_status),
@@ -46,7 +46,7 @@ fn main() -> anyhow::Result<()> {
     {
         use crate::ble::slave::ble_tx;
 
-        /* run the tasks concurrently */
+        // run the tasks concurrently
         block_on(async {
             select3(
                 scan_grid(&pressed_keys, &ble_status),

@@ -67,7 +67,7 @@ impl PinMatrix<'_> {
                 .expect("Not able to set port as input."),
         ];
 
-        /* set input ports to proper pull and interrupt type */
+        // set input ports to proper pull and interrupt type
 
         for col in cols.iter_mut() {
             col.set_pull(Pull::Down).ok();
@@ -124,18 +124,18 @@ impl PinMatrix<'_> {
     /// This function sets the home row to high,
     /// and sets the configured gpio to listen for interrupt (key press) in order to wake up the processor
     fn enter_light_sleep_mode(&mut self) {
-        /* enable interrupts */
+        // enable interrupts
         self.set_col_enable_sleep_interrupts();
 
-        /* set gpio wakeup enable interrup */
+        // set gpio wakeup enable interrup
         self.set_light_sleep_gpio_wakeup_enable();
 
-        /* set the home row to high */
+        // set the home row to high
         self.rows[1].set_high().unwrap();
 
-        /* enter sleep mode */
+        // enter sleep mode
         unsafe {
-            /* disable bt before entering sleep */
+            // disable bt before entering sleep
             esp_bt_controller_disable();
 
             esp_idf_sys::esp_sleep_enable_gpio_switch(false);
@@ -145,7 +145,7 @@ impl PinMatrix<'_> {
             #[cfg(feature = "debug")]
             log::info!("Entering sleep...");
 
-            /* enter sleep */
+            // enter sleep
             esp_idf_sys::esp_light_sleep_start();
 
             #[cfg(feature = "debug")]
@@ -159,53 +159,49 @@ impl PinMatrix<'_> {
     /// This is the standard scan mode
     /// Each row is set to high, then each col is checked if it is high or not
     async fn standard_scan(&mut self, pressed_keys: &Arc<Mutex<StoredKeys>>) {
-        /* initialize counts */
+        // initialize counts
         let mut count: Key = Key::new(0, COL_INIT);
 
-        /* check rows and cols */
+        // check rows and cols
         for row in self.rows.iter_mut() {
-            /* set row to high */
+            // set row to high
             row.set_high().unwrap();
 
-            /* delay so pin can propagate */
+            // delay so pin can propagate
             delay_us(100).await;
 
-            /* check if a col is high */
+            // check if a col is high
             for col in self.cols.iter() {
-                /* check if a col is set to high (key pressed) */
+                // check if a col is set to high (key pressed)
                 if col.is_high() {
-                    /* store the key in the buffer */
-                    match self
+                    // store the key in the buffer
+                    if let Some(index) = self
                         .pressed_keys_array
                         .iter()
                         .position(|&element| element == Key::new(255, 255))
                     {
-                        Some(index) => {
-                            self.pressed_keys_array[index] = count;
-                        }
-                        None => {
-                            // do nothing
-                        }
+                        self.pressed_keys_array[index] = count;
                     }
                     // reset the sleep delay on key press
                     self.enter_sleep_debounce.reset_debounce(SLEEP_DELAY);
                 }
-                /* increment col */
+                // increment col
                 count.col += 1;
             }
-            /* set row to low */
+            // set row to low
             row.set_low().unwrap();
 
-            /* increment row */
+            // increment row
             count.row += 1;
 
-            /* reset col count */
+            // reset col count
             count.col = COL_INIT;
         }
 
-        /* reset row count */
+        // reset row count
         count.row = 0;
 
+        // store the local pressed keys in the shared pressed keys hashmap
         if let Some(mut pressed_keys) = pressed_keys.try_lock() {
             pressed_keys.store_key(&mut self.pressed_keys_array);
         }
