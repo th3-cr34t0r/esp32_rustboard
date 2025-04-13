@@ -142,7 +142,7 @@ pub async fn ble_tx(pressed_keys: &Arc<Mutex<StoredKeys>>, ble_status: &Arc<Mute
                 if !pressed_keys.index_map.is_empty() {
                     // iter trough the pressed keys
                     for (key, debounce) in pressed_keys.index_map.iter_mut() {
-                        match debounce.key_state {
+                        match debounce.state {
                             KeyState::KeyPressed => {
                                 // if key state is keyPressed, add it to the key report
                                 add_keys(&mut ble_keyboard_slave, key);
@@ -160,6 +160,9 @@ pub async fn ble_tx(pressed_keys: &Arc<Mutex<StoredKeys>>, ble_status: &Arc<Mute
                                 pressed_keys_to_remove
                                     .push(*key)
                                     .expect("Error adding a key to be removed!");
+                            }
+                            _ => {
+                                // do nothing
                             }
                         }
                     }

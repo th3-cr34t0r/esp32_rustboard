@@ -221,18 +221,29 @@ impl StoredKeys {
         // If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
         pressed_keys_array.iter_mut().for_each(|element| {
             if *element != Key::new(255, 255) {
-                self.index_map
-                    .insert(
-                        Key {
-                            row: element.row,
-                            col: element.col,
-                        },
-                        Debounce {
-                            key_pressed_time: Instant::now(),
-                            key_state: KeyState::KeyPressed,
-                        },
-                    )
-                    .unwrap();
+                // check if it has been pressed before debounce elapsed
+                if self.index_map.contains_key(element) {
+                    // update the last press time
+                    if let Some(key) = self.index_map.get_mut(element) {
+                        key.last_press = Instant::now();
+                    }
+                }
+                // if the key has not been pressed before, store it with full info
+                else {
+                    self.index_map
+                        .insert(
+                            Key {
+                                row: element.row,
+                                col: element.col,
+                            },
+                            Debounce {
+                                initial_press: Instant::now(),
+                                last_press: Instant::now(),
+                                state: KeyState::KeyStateUndefined,
+                            },
+                        )
+                        .expect("Cannot store pressed key in hashmap");
+                }
 
                 *element = Key::new(255, 255);
             }
