@@ -49,16 +49,16 @@ pub enum HidKeys {
     Space = 0x2C,
     Minus = 0x2D,
     Equal = 0x2E,
-    Lbracket = 0x2F,  /* [ and { */
-    Rbracket = 0x30,  /* ] and } */
-    Backslash = 0x31, /* \ (and |) */
-    NonusHash = 0x32, /* Non-US # and ~ (Typically near the Enter key) */
-    SemiColon = 0x33, /* ; (and :) */
-    Quote = 0x34,     /* ' and " */
-    Grave = 0x35,     /* Grave accent and tilde */
-    Comma = 0x36,     /*  =  and < */
-    Period = 0x37,    /* . and > */
-    Slash = 0x38,     /* / and ? */
+    Lbracket = 0x2F,  // [ and {
+    Rbracket = 0x30,  // ] and }
+    Backslash = 0x31, // \ (and |)
+    NonusHash = 0x32, // Non-US # and ~ (Typically near the Enter key)
+    SemiColon = 0x33, //  ; (and :)
+    Quote = 0x34,     // ' and "
+    Grave = 0x35,     // Grave accent and tilde
+    Comma = 0x36,     //  =  and <
+    Period = 0x37,    // . and >
+    Slash = 0x38,     // / and ?
     Capslock = 0x39,
     F1 = 0x3A,
     F2 = 0x3B,
@@ -102,7 +102,7 @@ pub enum HidKeys {
     Kp9 = 0x61,
     Kp0 = 0x62,
     KpDot = 0x63,
-    NonusBslash = 0x64, /* Non-US \ and | (Typically near the Left-Shift key) */
+    NonusBslash = 0x64, // Non-US \ and | (Typically near the Left-Shift key)
     Application = 0x65,
     Power = 0x66,
     KpEqual = 0x67,
@@ -132,11 +132,11 @@ pub enum HidKeys {
     Mute = 0x7F,
     Volup = 0x80,
     Voldown = 0x81,
-    LockingCaps = 0x82,   /* locking Caps Lock */
-    LockingNum = 0x83,    /* locking Num Lock */
-    LockingScroll = 0x84, /* locking Scroll Lock */
+    LockingCaps = 0x82,   // locking Caps Lock
+    LockingNum = 0x83,    // locking Num Lock
+    LockingScroll = 0x84, // locking Scroll Lock
     KpComma = 0x85,
-    KpEqualAs400 = 0x86, /* equal sign on AS/400 */
+    KpEqualAs400 = 0x86, // equal sign on AS/400
     Int1 = 0x87,
     Int2 = 0x88,
     Int3 = 0x89,
@@ -168,17 +168,17 @@ pub enum HidKeys {
     Crsel = 0xA3,
     Exsel = 0xA4,
 
-    /* dummy layer */
+    // dummy layer
     UpperLayer = 0xA5,
     LowerLayer = 0xA6,
 
-    /* dummy modifiers */
+    // dummy modifiers
     ModifierShift = 0xB1,
     ModifierControl = 0xB2,
     ModifierAlt = 0xB3,
     ModifierSuper = 0xB4,
 
-    /* dummy macros */
+    // dummy macros
     MacroOpenedBracket = 0xC1,
     MacroClosedBracket = 0xC2,
     MacroCopy = 0xC3,
@@ -239,7 +239,7 @@ pub enum HidModifiers {
 }
 impl HidModifiers {
     pub fn get_modifier(key: &HidKeys) -> u8 {
-        /* set the modifier */
+        // set the modifier
         match *key {
             HidKeys::ModifierShift => HidModifiers::Shift as u8,
             HidKeys::ModifierControl => HidModifiers::Control as u8,

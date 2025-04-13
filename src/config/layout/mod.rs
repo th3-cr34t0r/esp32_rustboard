@@ -27,6 +27,7 @@ pub struct Layers {
 }
 
 impl Layers {
+    /// initializes the Layers struct with the compiled layout
     pub fn init() -> Layers {
         let init: Layers;
         #[cfg(feature = "dvorak")]
@@ -41,6 +42,7 @@ impl Layers {
         init
     }
 
+    /// Returns the key command mapped to the row x col
     pub fn get(&mut self, row: &u8, col: &u8, layer_state: &Layer) -> Option<&HidKeys> {
         // provide the key depending on the layer
         match layer_state {
