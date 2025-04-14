@@ -1,6 +1,6 @@
 [package]
 name = "esp32_rustboard"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["th3-cr34t0r"]
 edition = "2021"
 resolver = "2"

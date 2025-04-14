@@ -7,14 +7,14 @@ use esp32_nimble::utilities::mutex::Mutex;
 
 #[derive(Debug)]
 pub enum KeyState {
-    KeyPressed,
-    KeyReleased,
+    Pressed,
+    Released,
 }
 
 #[derive(Debug)]
-pub struct Debounce {
-    pub key_pressed_time: Instant,
-    pub key_state: KeyState,
+pub struct KeyInfo {
+    pub pressed_time: Instant,
+    pub state: KeyState,
 }
 
 pub async fn calculate_debounce(pressed_keys: &Arc<Mutex<StoredKeys>>) -> ! {
@@ -25,11 +25,11 @@ pub async fn calculate_debounce(pressed_keys: &Arc<Mutex<StoredKeys>>) -> ! {
             pressed_keys
                 .index_map
                 .iter_mut()
-                .for_each(|(_key, debounce)| {
+                .for_each(|(_key_pos, key_info)| {
                     // check if the key has passed the debounce delay or has been released
-                    if Instant::now() >= debounce.key_pressed_time + DEBOUNCE_DELAY {
+                    if Instant::now() >= key_info.pressed_time + DEBOUNCE_DELAY {
                         // set the key_state to RELEASED
-                        debounce.key_state = KeyState::KeyReleased;
+                        key_info.state = KeyState::Released;
                     }
                 });
         }

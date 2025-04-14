@@ -33,190 +33,140 @@ use crate::config::{enums::*, layout::*};
 pub fn layout() -> Layers {
     let mut layout = Layers::default();
 
-    // BASE LAYER LAYOUT
-    layout.base.insert((0, 0), HidKeys::Escape).unwrap();
-    layout.base.insert((0, 1), HidKeys::Q).unwrap();
-    layout.base.insert((0, 2), HidKeys::W).unwrap();
-    layout.base.insert((0, 3), HidKeys::E).unwrap();
-    layout.base.insert((0, 4), HidKeys::R).unwrap();
-    layout.base.insert((0, 5), HidKeys::T).unwrap();
-    layout.base.insert((0, 6), HidKeys::Y).unwrap();
-    layout.base.insert((0, 7), HidKeys::U).unwrap();
-    layout.base.insert((0, 8), HidKeys::I).unwrap();
-    layout.base.insert((0, 9), HidKeys::O).unwrap();
-    layout.base.insert((0, 10), HidKeys::P).unwrap();
-    layout.base.insert((0, 11), HidKeys::Lbracket).unwrap();
+    {
+        // BASE LAYER LAYOUT
+        let base_layer_keys = [
+            (0, 0, HidKeys::Escape),
+            (0, 1, HidKeys::Q),
+            (0, 2, HidKeys::W),
+            (0, 3, HidKeys::E),
+            (0, 4, HidKeys::R),
+            (0, 5, HidKeys::T),
+            (0, 6, HidKeys::Y),
+            (0, 7, HidKeys::U),
+            (0, 8, HidKeys::I),
+            (0, 9, HidKeys::O),
+            (0, 10, HidKeys::P),
+            (0, 11, HidKeys::LeftBracket),
+            (1, 0, HidKeys::BackSpace),
+            (1, 1, HidKeys::A),
+            (1, 2, HidKeys::S),
+            (1, 3, HidKeys::D),
+            (1, 4, HidKeys::F),
+            (1, 5, HidKeys::G),
+            (1, 6, HidKeys::H),
+            (1, 7, HidKeys::J),
+            (1, 8, HidKeys::K),
+            (1, 9, HidKeys::L),
+            (1, 10, HidKeys::SemiColon),
+            (1, 11, HidKeys::Quote),
+            (2, 0, HidKeys::ModifierControl),
+            (2, 1, HidKeys::Z),
+            (2, 2, HidKeys::X),
+            (2, 3, HidKeys::C),
+            (2, 4, HidKeys::V),
+            (2, 5, HidKeys::B),
+            (2, 6, HidKeys::N),
+            (2, 7, HidKeys::M),
+            (2, 8, HidKeys::Comma),
+            (2, 9, HidKeys::Period),
+            (2, 10, HidKeys::ForwardSlash),
+            (2, 11, HidKeys::Minus),
+            (3, 0, HidKeys::Undefined),
+            (3, 1, HidKeys::Undefined),
+            (3, 2, HidKeys::Undefined),
+            (3, 3, HidKeys::ModifierAlt),
+            (3, 4, HidKeys::Space),
+            (3, 5, HidKeys::ModifierShift),
+            (3, 6, HidKeys::Tab),
+            (3, 7, HidKeys::Enter),
+            (3, 8, HidKeys::UpperLayer),
+            (3, 9, HidKeys::Undefined),
+            (3, 10, HidKeys::Undefined),
+            (3, 11, HidKeys::Undefined),
+        ];
 
-    layout.base.insert((1, 0), HidKeys::Bspace).unwrap();
-    layout.base.insert((1, 1), HidKeys::A).unwrap();
-    layout.base.insert((1, 2), HidKeys::S).unwrap();
-    layout.base.insert((1, 3), HidKeys::D).unwrap();
-    layout.base.insert((1, 4), HidKeys::F).unwrap();
-    layout.base.insert((1, 5), HidKeys::G).unwrap();
-    layout.base.insert((1, 6), HidKeys::H).unwrap();
-    layout.base.insert((1, 7), HidKeys::J).unwrap();
-    layout.base.insert((1, 8), HidKeys::K).unwrap();
-    layout.base.insert((1, 9), HidKeys::L).unwrap();
-    layout.base.insert((1, 10), HidKeys::SemiColon).unwrap();
-    layout.base.insert((1, 11), HidKeys::Quote).unwrap();
+        for (row, col, key) in base_layer_keys.iter() {
+            layout
+                .base
+                .insert(
+                    KeyPos {
+                        row: *row,
+                        col: *col,
+                    },
+                    *key,
+                )
+                .unwrap();
+        }
+    }
 
-    layout
-        .base
-        .insert((2, 0), HidKeys::ModifierControl)
-        .unwrap(); // Control
-    layout.base.insert((2, 1), HidKeys::Z).unwrap();
-    layout.base.insert((2, 2), HidKeys::X).unwrap();
-    layout.base.insert((2, 3), HidKeys::C).unwrap();
-    layout.base.insert((2, 4), HidKeys::V).unwrap();
-    layout.base.insert((2, 5), HidKeys::B).unwrap();
-    layout.base.insert((2, 6), HidKeys::N).unwrap();
-    layout.base.insert((2, 7), HidKeys::M).unwrap();
-    layout.base.insert((2, 8), HidKeys::Comma).unwrap();
-    layout.base.insert((2, 9), HidKeys::Period).unwrap();
-    layout.base.insert((2, 10), HidKeys::Slash).unwrap();
-    layout.base.insert((2, 11), HidKeys::Rbracket).unwrap();
+    {
+        // UPPER LAYER LAYOUT
+        let upper_layer_keys = [
+            (0, 0, HidKeys::Escape),
+            (0, 1, HidKeys::ModifierSuper),
+            (0, 2, HidKeys::Num7),
+            (0, 3, HidKeys::Num8),
+            (0, 4, HidKeys::Num9),
+            (0, 5, HidKeys::Pscreen),
+            (0, 6, HidKeys::MacroExclamationMark),
+            (0, 7, HidKeys::MacroAt),
+            (0, 8, HidKeys::MacroHash),
+            (0, 9, HidKeys::MacroDollar),
+            (0, 10, HidKeys::MacroModul),
+            (0, 11, HidKeys::MacroCaret),
+            (1, 0, HidKeys::BackSpace),
+            (1, 1, HidKeys::KpDot),
+            (1, 2, HidKeys::Num4),
+            (1, 3, HidKeys::Num5),
+            (1, 4, HidKeys::Num6),
+            (1, 5, HidKeys::Delete),
+            (1, 6, HidKeys::MacroAmpersand),
+            (1, 7, HidKeys::ArrowLeft),
+            (1, 8, HidKeys::ArrowDown),
+            (1, 9, HidKeys::ArrowUp),
+            (1, 10, HidKeys::ArrowRight),
+            (1, 11, HidKeys::MacroAsterix),
+            (2, 0, HidKeys::ModifierControl),
+            (2, 1, HidKeys::Num0),
+            (2, 2, HidKeys::Num1),
+            (2, 3, HidKeys::Num2),
+            (2, 4, HidKeys::Num3),
+            (2, 5, HidKeys::Paste),
+            (2, 6, HidKeys::BackSlash),
+            (2, 7, HidKeys::LeftBracket),
+            (2, 8, HidKeys::RightBracket),
+            (2, 9, HidKeys::MacroLeftParenthesis),
+            (2, 10, HidKeys::MacroRightParenthesis),
+            (2, 11, HidKeys::Grave),
+            (3, 0, HidKeys::Undefined),
+            (3, 1, HidKeys::Undefined),
+            (3, 2, HidKeys::Undefined),
+            (3, 3, HidKeys::ModifierAlt),
+            (3, 4, HidKeys::Space),
+            (3, 5, HidKeys::ModifierShift),
+            (3, 6, HidKeys::Tab),
+            (3, 7, HidKeys::Enter),
+            (3, 8, HidKeys::UpperLayer),
+            (3, 9, HidKeys::Undefined),
+            (3, 10, HidKeys::Undefined),
+            (3, 11, HidKeys::Undefined),
+        ];
 
-    layout.base.insert((3, 0), HidKeys::Undefined).unwrap();
-    layout.base.insert((3, 1), HidKeys::Undefined).unwrap();
-    layout.base.insert((3, 2), HidKeys::Undefined).unwrap();
-    layout.base.insert((3, 3), HidKeys::ModifierAlt).unwrap();
-    layout.base.insert((3, 4), HidKeys::Space).unwrap();
-    layout.base.insert((3, 5), HidKeys::ModifierShift).unwrap();
-    layout.base.insert((3, 6), HidKeys::Tab).unwrap();
-    layout.base.insert((3, 7), HidKeys::Enter).unwrap();
-    layout.base.insert((3, 8), HidKeys::UpperLayer).unwrap();
-    layout.base.insert((3, 9), HidKeys::Undefined).unwrap();
-    layout.base.insert((3, 10), HidKeys::Undefined).unwrap();
-    layout.base.insert((3, 11), HidKeys::Undefined).unwrap();
+        for (row, col, key) in upper_layer_keys.iter() {
+            layout
+                .upper
+                .insert(
+                    KeyPos {
+                        row: *row,
+                        col: *col,
+                    },
+                    *key,
+                )
+                .unwrap();
+        }
+    }
 
-    // UPPER LAYER LAYOUT
-    layout.upper.insert((0, 0), HidKeys::Escape).unwrap();
-    layout.upper.insert((0, 1), HidKeys::ModifierSuper).unwrap();
-    layout.upper.insert((0, 2), HidKeys::Num7).unwrap();
-    layout.upper.insert((0, 3), HidKeys::Num8).unwrap();
-    layout.upper.insert((0, 4), HidKeys::Num9).unwrap();
-    layout.upper.insert((0, 5), HidKeys::Pscreen).unwrap();
-    layout
-        .upper
-        .insert((0, 6), HidKeys::MacroExclamationMark)
-        .unwrap();
-    layout.upper.insert((0, 7), HidKeys::MacroAt).unwrap();
-    layout.upper.insert((0, 8), HidKeys::MacroHash).unwrap();
-    layout.upper.insert((0, 9), HidKeys::MacroDollar).unwrap();
-    layout.upper.insert((0, 10), HidKeys::MacroModul).unwrap();
-    layout.upper.insert((0, 11), HidKeys::MacroCaret).unwrap();
-
-    layout.upper.insert((1, 0), HidKeys::Bspace).unwrap();
-    layout.upper.insert((1, 1), HidKeys::Period).unwrap();
-    layout.upper.insert((1, 2), HidKeys::Num4).unwrap();
-    layout.upper.insert((1, 3), HidKeys::Num5).unwrap();
-    layout.upper.insert((1, 4), HidKeys::Num6).unwrap();
-    layout.upper.insert((1, 5), HidKeys::Delete).unwrap();
-
-    layout
-        .upper
-        .insert((1, 6), HidKeys::MacroAmpersand)
-        .unwrap();
-    layout.upper.insert((1, 7), HidKeys::Left).unwrap();
-    layout.upper.insert((1, 8), HidKeys::Down).unwrap();
-    layout.upper.insert((1, 9), HidKeys::Up).unwrap();
-    layout.upper.insert((1, 10), HidKeys::Right).unwrap();
-    layout.upper.insert((1, 11), HidKeys::MacroAsterix).unwrap();
-
-    layout
-        .upper
-        .insert((2, 0), HidKeys::ModifierControl)
-        .unwrap();
-    layout.upper.insert((2, 1), HidKeys::Num0).unwrap();
-    layout.upper.insert((2, 2), HidKeys::Num1).unwrap();
-    layout.upper.insert((2, 3), HidKeys::Num2).unwrap();
-    layout.upper.insert((2, 4), HidKeys::Num3).unwrap();
-    layout.upper.insert((2, 5), HidKeys::MacroPaste).unwrap();
-    layout.upper.insert((2, 6), HidKeys::Backslash).unwrap();
-    layout.upper.insert((2, 7), HidKeys::Lbracket).unwrap();
-    layout.upper.insert((2, 8), HidKeys::Rbracket).unwrap();
-    layout
-        .upper
-        .insert((2, 9), HidKeys::MacroOpenedBracket)
-        .unwrap();
-    layout
-        .upper
-        .insert((2, 10), HidKeys::MacroClosedBracket)
-        .unwrap();
-    layout.upper.insert((2, 11), HidKeys::Grave).unwrap();
-
-    layout.upper.insert((3, 0), HidKeys::Undefined).unwrap();
-    layout.upper.insert((3, 1), HidKeys::Undefined).unwrap();
-    layout.upper.insert((3, 2), HidKeys::Undefined).unwrap();
-    layout.upper.insert((3, 3), HidKeys::ModifierAlt).unwrap();
-    layout.upper.insert((3, 4), HidKeys::Space).unwrap();
-    layout.upper.insert((3, 5), HidKeys::ModifierShift).unwrap();
-    layout.upper.insert((3, 6), HidKeys::Tab).unwrap();
-    layout.upper.insert((3, 7), HidKeys::Enter).unwrap();
-    layout.upper.insert((3, 8), HidKeys::UpperLayer).unwrap();
-    layout.upper.insert((3, 9), HidKeys::Undefined).unwrap();
-    layout.upper.insert((3, 10), HidKeys::Undefined).unwrap();
-    layout.upper.insert((3, 11), HidKeys::Undefined).unwrap();
-
-    // LOWER LAYER LAYOUT
-    layout.lower.insert((0, 0), HidKeys::Escape).unwrap(); // Escape
-    layout
-        .lower
-        .insert((0, 1), HidKeys::MacroSuperLock)
-        .unwrap(); // Macro Lock Desktop
-    layout.lower.insert((0, 2), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((0, 3), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((0, 4), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((0, 5), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((0, 6), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((0, 7), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((0, 8), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((0, 9), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((0, 10), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((0, 11), HidKeys::Undefined).unwrap(); // Undefined
-
-    layout.lower.insert((1, 0), HidKeys::Bspace).unwrap(); // Backspace
-    layout.lower.insert((1, 1), HidKeys::ModifierAlt).unwrap(); // Alt
-    layout.lower.insert((1, 2), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((1, 3), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((1, 4), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((1, 5), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((1, 6), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((1, 7), HidKeys::Left).unwrap(); // Left
-    layout.lower.insert((1, 8), HidKeys::Down).unwrap(); // Down
-    layout.lower.insert((1, 9), HidKeys::Up).unwrap(); // Up
-    layout.lower.insert((1, 10), HidKeys::Right).unwrap(); // Right
-    layout.lower.insert((1, 11), HidKeys::Undefined).unwrap(); // Undefined
-
-    layout
-        .lower
-        .insert((2, 0), HidKeys::ModifierControl)
-        .unwrap(); // Modifier
-    layout.lower.insert((2, 1), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((2, 2), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((2, 3), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((2, 4), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((2, 5), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((2, 6), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((2, 7), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((2, 8), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((2, 9), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((2, 10), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((2, 11), HidKeys::Undefined).unwrap(); // Undefined
-
-    layout.lower.insert((3, 0), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((3, 1), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((3, 2), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((3, 3), HidKeys::ModifierAlt).unwrap(); // Lower Layer
-    layout.lower.insert((3, 4), HidKeys::Space).unwrap(); // Space
-    layout.lower.insert((3, 5), HidKeys::ModifierShift).unwrap(); // Shift
-    layout.lower.insert((3, 6), HidKeys::Tab).unwrap(); // Tab
-    layout.lower.insert((3, 7), HidKeys::Enter).unwrap(); // Enter
-    layout.lower.insert((3, 8), HidKeys::UpperLayer).unwrap(); // Upper Layer
-    layout.lower.insert((3, 9), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((3, 10), HidKeys::Undefined).unwrap(); // Undefined
-    layout.lower.insert((3, 11), HidKeys::Undefined).unwrap(); // Undefined
-
-    //return the layout
+    // return layout
     layout
 }

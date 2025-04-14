@@ -1,7 +1,7 @@
 use crate::config::user_config::*;
 use crate::debounce::KeyState;
 use crate::delay::delay_ms;
-use crate::matrix::{Key, StoredKeys};
+use crate::matrix::{KeyPos, StoredKeys};
 
 extern crate alloc;
 use super::{BleKeyboardSlave, BleStatus};
@@ -88,7 +88,7 @@ impl BleKeyboardSlave {
     }
 }
 
-fn add_keys(ble_keyboard_slave: &mut BleKeyboardSlave, key: &Key) {
+fn add_keys(ble_keyboard_slave: &mut BleKeyboardSlave, key: &KeyPos) {
     // combine the row and the col to a single byte before sending
     //
     // row: 0 - 3; col: 0 - 11
@@ -126,7 +126,7 @@ pub async fn ble_tx(pressed_keys: &Arc<Mutex<StoredKeys>>, ble_status: &Arc<Mute
     // ble_keyboard_slave.set_ble_power_save();
 
     // vec to store the keys needed to be removed
-    let mut pressed_keys_to_remove: Vec<Key, 6> = Vec::new();
+    let mut pressed_keys_to_remove: Vec<KeyPos, 6> = Vec::new();
 
     // Run the main loop
     loop {
@@ -142,12 +142,12 @@ pub async fn ble_tx(pressed_keys: &Arc<Mutex<StoredKeys>>, ble_status: &Arc<Mute
                 if !pressed_keys.index_map.is_empty() {
                     // iter trough the pressed keys
                     for (key, debounce) in pressed_keys.index_map.iter_mut() {
-                        match debounce.key_state {
-                            KeyState::KeyPressed => {
+                        match debounce.state {
+                            KeyState::Pressed => {
                                 // if key state is keyPressed, add it to the key report
                                 add_keys(&mut ble_keyboard_slave, key);
                             }
-                            KeyState::KeyReleased => {
+                            KeyState::Released => {
                                 if let Some(index) =
                                     ble_keyboard_slave.current_pressed_keys.iter().position(
                                         |&element| element == (key.row << BIT_SHIFT) | key.col,
