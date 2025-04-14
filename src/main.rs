@@ -35,7 +35,7 @@ fn main() -> anyhow::Result<()> {
         block_on(async {
             select3(
                 scan_grid(&pressed_keys, &ble_status),
-                process_key_state(&pressed_keys),
+                calculate_debounce(&pressed_keys),
                 ble_tx(&pressed_keys, &ble_status),
             )
             .await;

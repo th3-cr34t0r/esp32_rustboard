@@ -240,28 +240,17 @@ fn process_slave_key_report(
             recovered_key.row = *element >> BIT_SHIFT;
             recovered_key.col = *element & 0x0F;
 
-            // check if it has been pressed before debounce elapsed
-            if pressed_keys.lock().index_map.contains_key(&recovered_key) {
-                // update the last press time
-                if let Some(key) = pressed_keys.lock().index_map.get_mut(&recovered_key) {
-                    key.last_press = Instant::now();
-                }
-            }
-            // if the key has not been pressed before, store it with full info
-            else {
-                pressed_keys
-                    .lock()
-                    .index_map
-                    .insert(
-                        recovered_key,
-                        Debounce {
-                            initial_press: Instant::now(),
-                            last_press: Instant::now(),
-                            state: KeyState::KeyPressed,
-                        },
-                    )
-                    .expect("Cannot store pressed key in hashmap");
-            }
+            pressed_keys
+                .lock()
+                .index_map
+                .insert(
+                    recovered_key,
+                    Debounce {
+                        key_pressed_time: Instant::now(),
+                        key_state: KeyState::KeyPressed,
+                    },
+                )
+                .expect("Not enough space to store incoming slave data.");
         }
     });
 }
@@ -324,28 +313,13 @@ pub async fn ble_tx(
                     // iter trough the pressed keys
                     for (key, debounce) in pressed_keys.index_map.iter_mut() {
                         // check the key debounce state
-                        match debounce.state {
+                        match debounce.key_state {
                             KeyState::KeyPressed => {
                                 // get the pressed key
                                 if let Some(valid_key) =
                                     layers.get(&key.row, &key.col, &layer_state)
                                 {
-                                    add_keys(
-                                        &mut ble_keyboard,
-                                        &valid_key.hid_key,
-                                        &mut layer_state,
-                                    );
-                                }
-                            }
-                            KeyState::ModifierPressed => {
-                                if let Some(valid_key) =
-                                    layers.get(&key.row, &key.col, &layer_state)
-                                {
-                                    add_keys(
-                                        &mut ble_keyboard,
-                                        &valid_key.hid_modifier,
-                                        &mut layer_state,
-                                    );
+                                    add_keys(&mut ble_keyboard, valid_key, &mut layer_state);
                                 }
                             }
                             // check if the key is calculated for debounce
@@ -354,50 +328,25 @@ pub async fn ble_tx(
                                 if let Some(valid_key) =
                                     layers.get(&key.row, &key.col, &layer_state)
                                 {
-                                    remove_keys(
-                                        &mut ble_keyboard,
-                                        &valid_key.hid_key,
-                                        &mut layer_state,
-                                    );
+                                    remove_keys(&mut ble_keyboard, valid_key, &mut layer_state);
                                 }
                                 // if key has been debounced, add it to be removed
                                 pressed_keys_to_remove
                                     .push(*key)
                                     .expect("Error adding a key to be removed!");
                             }
-                            KeyState::ModifierReleased => {
-                                // get the mapped modifier from the hashmap
-                                if let Some(valid_key) =
-                                    layers.get(&key.row, &key.col, &layer_state)
-                                {
-                                    remove_keys(
-                                        &mut ble_keyboard,
-                                        &valid_key.hid_modifier,
-                                        &mut layer_state,
-                                    );
-                                }
-                                // if modifier has been debounced, add it to be removed
-                                pressed_keys_to_remove
-                                    .push(*key)
-                                    .expect("Error adding a modifier to be removed!");
-                            }
-                            _ => {
-                                //do nothing
-                            }
                         }
                     }
-                    // // log
-                    // #[cfg(feature = "debug")]
-                    // log::info!("pressed_keys.indexmap: {:?}", pressed_keys.index_map);
+
+                    // log
+                    #[cfg(feature = "debug")]
+                    log::info!(
+                        "ble_keyboard.key_report.keys: {:?}",
+                        ble_keyboard.current_key_report.keys
+                    );
 
                     // sent the new report only if it differes from the previous
                     if ble_keyboard.is_key_report_changed() {
-                        // log
-                        #[cfg(feature = "debug")]
-                        log::info!(
-                            "ble_keyboard.key_report.keys: {:?}",
-                            ble_keyboard.current_key_report.keys
-                        );
                         ble_keyboard.send_report().await;
                     }
 
