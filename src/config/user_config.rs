@@ -20,13 +20,9 @@ pub const COLS: usize = 6;
 #[cfg(feature = "master")]
 pub const COL_INIT: u8 = 0;
 #[cfg(feature = "master")]
-pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(5);
+pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(50);
 #[cfg(feature = "master")]
 pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
-#[cfg(feature = "master")]
-pub const KEY_HOLD_THRESHOLD: Duration = Duration::from_millis(200);
-#[cfg(feature = "master")]
-pub const KEY_RELEASED_THRESHOLD: Duration = Duration::from_millis(2);
 
 #[cfg(feature = "slave")]
 pub const COL_INIT: u8 = 6;

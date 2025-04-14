@@ -1,5 +1,5 @@
 use crate::{config::user_config::DEBOUNCE_DELAY, delay::delay_ms, matrix::StoredKeys};
-use embassy_time::Instant;
+use embassy_time::{Duration, Instant};
 
 extern crate alloc;
 use alloc::sync::Arc;
@@ -23,11 +23,6 @@ pub struct Debounce {
 
 #[cfg(feature = "master")]
 pub async fn process_key_state(pressed_keys: &Arc<Mutex<StoredKeys>>) -> ! {
-    use crate::{
-        config::user_config::{KEY_HOLD_THRESHOLD, KEY_RELEASED_THRESHOLD},
-        delay::delay_us,
-    };
-
     loop {
         // try to get a lock on keys_pressed
         if let Some(mut pressed_keys) = pressed_keys.try_lock() {
@@ -39,11 +34,11 @@ pub async fn process_key_state(pressed_keys: &Arc<Mutex<StoredKeys>>) -> ! {
                     // check if the key has passed the debounce delay or has been released
                     match debounce.state {
                         KeyState::KeyStateUndefined => {
-                            if debounce.initial_press.elapsed() >= KEY_HOLD_THRESHOLD
-                                && debounce.last_press.elapsed() <= KEY_RELEASED_THRESHOLD
+                            if debounce.initial_press.elapsed() >= Duration::from_millis(200)
+                                && debounce.last_press.elapsed() <= Duration::from_millis(2)
                             {
                                 debounce.state = KeyState::ModifierPressed;
-                            } else if debounce.last_press.elapsed() >= KEY_RELEASED_THRESHOLD {
+                            } else if debounce.last_press.elapsed() >= Duration::from_millis(2) {
                                 debounce.state = KeyState::KeyPressed;
                             }
                         }
@@ -69,10 +64,28 @@ pub async fn process_key_state(pressed_keys: &Arc<Mutex<StoredKeys>>) -> ! {
                         debounce.last_press.elapsed().as_millis(),
                         debounce.state
                     );
+
+                    // if debounce.initial_press.elapsed() < DEBOUNCE_DELAY
+                    //     && debounce.last_press.elapsed() >= Duration::from_millis(3)
+                    // {
+                    //     debounce.state = KeyState::KeyPressed;
+                    // } else if (debounce.initial_press.elapsed() >= Duration::from_millis(500))
+                    //     && (debounce.last_press.elapsed() <= Duration::from_millis(3))
+                    // {
+                    //     debounce.state = KeyState::ModifierPressed;
+                    // } else if debounce.last_press.elapsed() >= DEBOUNCE_DELAY {
+                    //     match debounce.state {
+                    //         KeyState::KeyPressed => debounce.state = KeyState::KeyReleased,
+                    //         KeyState::ModifierPressed => {
+                    //             debounce.state = KeyState::ModifierReleased
+                    //         }
+                    //         _ => {}
+                    //     }
+                    // }
                 });
         }
         // there must be a delay so WDT is not triggered
-        delay_us(333).await;
+        delay_ms(1).await;
     }
 }
 
