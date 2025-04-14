@@ -44,21 +44,21 @@ pub enum HidKeys {
     Num0 = 0x27,
     Enter = 0x28,
     Escape = 0x29,
-    Bspace = 0x2A,
+    BackSpace = 0x2A,
     Tab = 0x2B,
     Space = 0x2C,
     Minus = 0x2D,
     Equal = 0x2E,
-    Lbracket = 0x2F,  // [ and {
-    Rbracket = 0x30,  // ] and }
-    Backslash = 0x31, // \ (and |)
-    NonusHash = 0x32, // Non-US # and ~ (Typically near the Enter key)
-    SemiColon = 0x33, //  ; (and :)
-    Quote = 0x34,     // ' and "
-    Grave = 0x35,     // Grave accent and tilde
-    Comma = 0x36,     //  =  and <
-    Period = 0x37,    // . and >
-    Slash = 0x38,     // / and ?
+    LeftBracket = 0x2F,  // [ and {
+    RightBracket = 0x30, // ] and }
+    Backslash = 0x31,    // \ (and |)
+    NonusHash = 0x32,    // Non-US # and ~ (Typically near the Enter key)
+    SemiColon = 0x33,    //  ; (and :)
+    Quote = 0x34,        // ' and "
+    Grave = 0x35,        // Grave accent and tilde
+    Comma = 0x36,        //  =  and <
+    Period = 0x37,       // . and >
+    Slash = 0x38,        // / and ?
     Capslock = 0x39,
     F1 = 0x3A,
     F2 = 0x3B,
@@ -72,7 +72,7 @@ pub enum HidKeys {
     F10 = 0x43,
     F11 = 0x44,
     F12 = 0x45,
-    Pscreen = 0x46,
+    PrintScreen = 0x46,
     Scrolllock = 0x47,
     Pause = 0x48,
     Insert = 0x49,
@@ -81,10 +81,10 @@ pub enum HidKeys {
     Delete = 0x4C,
     End = 0x4D,
     Pgdown = 0x4E,
-    Right = 0x4F,
-    Left = 0x50,
-    Down = 0x51,
-    Up = 0x52,
+    ArrowRight = 0x4F,
+    ArrowLeft = 0x50,
+    ArrowDown = 0x51,
+    ArrowUp = 0x52,
     Numlock = 0x53,
     KpSlash = 0x54,
     KpAsterisk = 0x55,
@@ -179,8 +179,8 @@ pub enum HidKeys {
     ModifierSuper = 0xB4,
 
     // dummy macros
-    MacroOpenedBracket = 0xC1,
-    MacroClosedBracket = 0xC2,
+    MacroLeftParenthesis = 0xC1,
+    MacroRightParenthesis = 0xC2,
     MacroCopy = 0xC3,
     MacroPaste = 0xC4,
     MacroExclamationMark = 0xC5,
@@ -204,8 +204,8 @@ pub enum KeyType {
 impl KeyType {
     pub fn check_type(key: &HidKeys) -> KeyType {
         match *key {
-            HidKeys::MacroOpenedBracket
-            | HidKeys::MacroClosedBracket
+            HidKeys::MacroLeftParenthesis
+            | HidKeys::MacroRightParenthesis
             | HidKeys::MacroCopy
             | HidKeys::MacroPaste
             | HidKeys::MacroExclamationMark
@@ -266,7 +266,7 @@ impl HidKeys {
                 vec
             }
 
-            HidKeys::MacroClosedBracket => {
+            HidKeys::MacroRightParenthesis => {
                 vec.push(HidKeys::ModifierShift).unwrap();
                 vec.push(HidKeys::Num0).unwrap();
                 vec
@@ -311,7 +311,7 @@ impl HidKeys {
                 vec.push(HidKeys::Num8).unwrap();
                 vec
             }
-            HidKeys::MacroOpenedBracket => {
+            HidKeys::MacroLeftParenthesis => {
                 vec.push(HidKeys::ModifierShift).unwrap();
                 vec.push(HidKeys::Num9).unwrap();
                 vec

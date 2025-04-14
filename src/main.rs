@@ -33,9 +33,18 @@ fn main() -> anyhow::Result<()> {
 
         // run the tasks concurrently
         block_on(async {
+            #[cfg(feature = "home-row-mods")]
             select3(
                 scan_grid(&pressed_keys, &ble_status),
                 process_key_state(&pressed_keys),
+                ble_tx(&pressed_keys, &ble_status),
+            )
+            .await;
+
+            #[cfg(not(feature = "home-row-mods"))]
+            select3(
+                scan_grid(&pressed_keys, &ble_status),
+                calculate_debounce(&pressed_keys),
                 ble_tx(&pressed_keys, &ble_status),
             )
             .await;

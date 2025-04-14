@@ -1,4 +1,4 @@
-use crate::{config::user_config::DEBOUNCE_DELAY, delay::delay_ms, matrix::StoredKeys};
+use crate::{config::user_config::DEBOUNCE_DELAY, matrix::StoredKeys};
 use embassy_time::Instant;
 
 extern crate alloc;
@@ -21,11 +21,11 @@ pub struct Debounce {
     pub state: KeyState,
 }
 
-#[cfg(feature = "master")]
+#[cfg(feature = "home-row-mods")]
 pub async fn process_key_state(pressed_keys: &Arc<Mutex<StoredKeys>>) -> ! {
     use crate::{
         config::user_config::{KEY_HOLD_THRESHOLD, KEY_RELEASED_THRESHOLD},
-        delay::delay_us,
+        delay::{delay_ms, delay_us},
     };
 
     loop {
@@ -72,11 +72,11 @@ pub async fn process_key_state(pressed_keys: &Arc<Mutex<StoredKeys>>) -> ! {
                 });
         }
         // there must be a delay so WDT is not triggered
-        delay_us(333).await;
+        delay_ms(1).await;
     }
 }
 
-#[cfg(feature = "slave")]
+#[cfg(not(feature = "home-row-mods"))]
 pub async fn calculate_debounce(pressed_keys: &Arc<Mutex<StoredKeys>>) -> ! {
     loop {
         // try to get a lock on keys_pressed

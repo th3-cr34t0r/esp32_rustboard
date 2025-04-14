@@ -1,6 +1,9 @@
 pub mod dvorak;
 pub mod qwerty;
-use crate::config::{enums::*, user_config::*};
+use crate::{
+    config::{enums::*, user_config::*},
+    matrix::Key,
+};
 use heapless::FnvIndexMap;
 
 pub enum Layer {
@@ -36,9 +39,9 @@ impl Layer {
 
 #[derive(Default)]
 pub struct Layers {
-    pub base: FnvIndexMap<(u8, u8), KeyCode, LAYER_INDEXMAP_SIZE>,
-    pub upper: FnvIndexMap<(u8, u8), KeyCode, LAYER_INDEXMAP_SIZE>,
-    pub lower: FnvIndexMap<(u8, u8), KeyCode, LAYER_INDEXMAP_SIZE>,
+    pub base: FnvIndexMap<Key, KeyCode, LAYER_INDEXMAP_SIZE>,
+    pub upper: FnvIndexMap<Key, KeyCode, LAYER_INDEXMAP_SIZE>,
+    pub lower: FnvIndexMap<Key, KeyCode, LAYER_INDEXMAP_SIZE>,
 }
 
 impl Layers {
@@ -61,9 +64,24 @@ impl Layers {
     pub fn get(&mut self, row: &u8, col: &u8, layer_state: &Layer) -> Option<&KeyCode> {
         // provide the key depending on the layer
         match layer_state {
-            Layer::Base => self.base.get(&(*row as u8, *col as u8)),
-            Layer::Upper => self.upper.get(&(*row as u8, *col as u8)),
-            Layer::Lower => self.lower.get(&(*row as u8, *col as u8)),
+            Layer::Base => self.base.get(
+                &(Key {
+                    row: *row,
+                    col: *col,
+                }),
+            ),
+            Layer::Upper => self.upper.get(
+                &(Key {
+                    row: *row,
+                    col: *col,
+                }),
+            ),
+            Layer::Lower => self.lower.get(
+                &(Key {
+                    row: *row,
+                    col: *col,
+                }),
+            ),
         }
     }
 }
