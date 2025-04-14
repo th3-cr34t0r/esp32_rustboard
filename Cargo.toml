@@ -21,7 +21,6 @@ opt-level = "z"
 default = ["embassy", "esp-idf-svc/native"]
 master = [] # left half of the keyboard
 slave = [] # right half of the keyboard
-home-row-mods = []
 debug = []
 dvorak = []
 qwerty = []
