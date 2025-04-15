@@ -30,8 +30,8 @@
 //
 use crate::config::{enums::*, layout::*};
 
-pub fn layout() -> Layers {
-    let mut layout = Layers::default();
+pub fn layout() -> Layout {
+    let mut layout = Layout::default();
 
     {
         // BASE LAYER LAYOUT

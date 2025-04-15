@@ -23,16 +23,16 @@ impl Layer {
 }
 
 #[derive(Default)]
-pub struct Layers {
+pub struct Layout {
     pub base: FnvIndexMap<KeyPos, HidKeys, LAYER_INDEXMAP_SIZE>,
     pub upper: FnvIndexMap<KeyPos, HidKeys, LAYER_INDEXMAP_SIZE>,
     pub lower: FnvIndexMap<KeyPos, HidKeys, LAYER_INDEXMAP_SIZE>,
 }
 
-impl Layers {
+impl Layout {
     /// initializes the Layers struct with the compiled layout
-    pub fn init() -> Layers {
-        let init: Layers;
+    pub fn init() -> Layout {
+        let init: Layout;
         #[cfg(feature = "dvorak")]
         {
             init = dvorak::layout();
