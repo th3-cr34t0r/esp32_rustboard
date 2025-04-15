@@ -1,6 +1,6 @@
 //
 //*********************************************************************************************
-//BASE LAYER:
+// LAYER 0:
 //
 //X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
 //   0 |_ESC_|__q__|__w__|__e__|__r__|__t__|              0 |__y__|__u__|__i__|__o__|__p__|__[__|
@@ -9,22 +9,13 @@
 //   3                   |_LYR_|_SPC_|_SFT_|              3 |_ALT_|_ENT_|_LYR_|
 //
 //*****************************************************************************
-//UPPER LAYER:
+// LAYER 1:
 //
 //X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
 //   0 |_ESC_|_SUP_|__7__|__8__|__9__|_PScr|              0 |__!__|__@__|__#__|__$__|__%__|__^__|
 //   1 |_BSP_|__.__|__4__|__5__|__6__|_DEL_|              1 |__&__|_left|_down|__up_|_rght|__*__|
-//   2 |_CTL_|__0__|__1__|__2__|__3__|_PST_|              2 |__\__|__[__|__]__|__(__|__)__|__`__|
+//   2 |_CTL_|__0__|__1__|__2__|__3__|S_LCK|              2 |__\__|__[__|__]__|__(__|__)__|__`__|
 //   3                   |_ALT_|_SPC_|_SFT_|              3 |_TAB_|_ENT_|_LYR_|
-//
-//*********************************************************************************************
-//LOWER LAYER:
-//
-//X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
-//   0 |_ESC_|_WLCK|_____|_____|_____|_____|              0 |_____|_____|_____|_____|_____|_____|
-//   1 |_BSP_|_ALT_|_____|_____|_____|_____|              1 |_____|_left|_down|__up_|_rght|_____|
-//   2 |_CTL_|_____|_____|_____|_____|_____|              2 |_____|_____|_____|_____|_____|_____|
-//   3                   |_ALT_|_SPC_|_SFT_|              3 |_TAB_|_ENT_|_UPR_|
 //
 //*********************************************************************************************
 //
@@ -35,7 +26,7 @@ pub fn layout() -> Layout {
 
     {
         // BASE LAYER LAYOUT
-        let base_layer_keys = [
+        let layer_0 = [
             (0, 0, HidKeys::Escape),
             (0, 1, HidKeys::Q),
             (0, 2, HidKeys::W),
@@ -80,15 +71,14 @@ pub fn layout() -> Layout {
             (3, 5, HidKeys::ModifierShift),
             (3, 6, HidKeys::Tab),
             (3, 7, HidKeys::Enter),
-            (3, 8, HidKeys::UpperLayer),
+            (3, 8, HidKeys::Layer1),
             (3, 9, HidKeys::Undefined),
             (3, 10, HidKeys::Undefined),
             (3, 11, HidKeys::Undefined),
         ];
 
-        for (row, col, key) in base_layer_keys.iter() {
-            layout
-                .base
+        for (row, col, key) in layer_0.iter() {
+            layout.keymap[0]
                 .insert(
                     KeyPos {
                         row: *row,
@@ -102,7 +92,7 @@ pub fn layout() -> Layout {
 
     {
         // UPPER LAYER LAYOUT
-        let upper_layer_keys = [
+        let layer_1 = [
             (0, 0, HidKeys::Escape),
             (0, 1, HidKeys::ModifierSuper),
             (0, 2, HidKeys::Num7),
@@ -132,7 +122,7 @@ pub fn layout() -> Layout {
             (2, 2, HidKeys::Num1),
             (2, 3, HidKeys::Num2),
             (2, 4, HidKeys::Num3),
-            (2, 5, HidKeys::Paste),
+            (2, 5, HidKeys::MacroSuperLock),
             (2, 6, HidKeys::BackSlash),
             (2, 7, HidKeys::LeftBracket),
             (2, 8, HidKeys::RightBracket),
@@ -147,15 +137,14 @@ pub fn layout() -> Layout {
             (3, 5, HidKeys::ModifierShift),
             (3, 6, HidKeys::Tab),
             (3, 7, HidKeys::Enter),
-            (3, 8, HidKeys::UpperLayer),
+            (3, 8, HidKeys::Layer1),
             (3, 9, HidKeys::Undefined),
             (3, 10, HidKeys::Undefined),
             (3, 11, HidKeys::Undefined),
         ];
 
-        for (row, col, key) in upper_layer_keys.iter() {
-            layout
-                .upper
+        for (row, col, key) in layer_1.iter() {
+            layout.keymap[1]
                 .insert(
                     KeyPos {
                         row: *row,

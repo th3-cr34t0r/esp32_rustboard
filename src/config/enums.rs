@@ -169,8 +169,11 @@ pub enum HidKeys {
     Exsel = 0xA4,
 
     // dummy layer
-    UpperLayer = 0xA5,
-    LowerLayer = 0xA6,
+    Layer1 = 0xA5,
+    Layer2 = 0xA6,
+    Layer3 = 0xA7,
+    Layer4 = 0xA8,
+    Layer5 = 0xA9,
 
     // dummy modifiers
     ModifierShift = 0xB1,
@@ -218,7 +221,11 @@ impl KeyType {
             | HidKeys::MacroAsterix
             | HidKeys::MacroSuperLock => KeyType::Macro,
 
-            HidKeys::UpperLayer | HidKeys::LowerLayer => KeyType::Layer,
+            HidKeys::Layer1
+            | HidKeys::Layer2
+            | HidKeys::Layer3
+            | HidKeys::Layer4
+            | HidKeys::Layer5 => KeyType::Layer,
 
             HidKeys::ModifierShift
             | HidKeys::ModifierControl
