@@ -5,7 +5,7 @@ use embassy_time::Instant;
 
 use crate::ble::BleStatus;
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
-use crate::config::layout::{Layer, Layers};
+use crate::config::layout::{Layer, Layout};
 use crate::config::user_config::*;
 use crate::debounce::{KeyInfo, KeyState};
 use crate::delay::*;
@@ -153,11 +153,7 @@ fn add_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_sta
             *layer_state = Layer::get_layer(valid_key);
 
             // release all keys
-            ble_keyboard
-                .current_key_report
-                .keys
-                .iter_mut()
-                .for_each(|value| *value = 0);
+            ble_keyboard.current_key_report.keys.fill(0);
 
             // release modifiers
             ble_keyboard.current_key_report.modifiers = 0;
@@ -201,11 +197,7 @@ fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_
             *layer_state = Layer::Base;
 
             // release all keys
-            ble_keyboard
-                .current_key_report
-                .keys
-                .iter_mut()
-                .for_each(|value| *value = 0);
+            ble_keyboard.current_key_report.keys.fill(0);
 
             // release modifiers
             ble_keyboard.current_key_report.modifiers = 0;
@@ -263,7 +255,7 @@ pub async fn ble_tx(
     let mut ble_keyboard: BleKeyboardMaster = BleKeyboardMaster::new().await;
 
     // initialize layers
-    let mut layers = Layers::init();
+    let mut layers = Layout::init();
 
     // layer state
     let mut layer_state = Layer::Base;
