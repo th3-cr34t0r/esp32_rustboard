@@ -5,7 +5,7 @@ use embassy_time::Instant;
 
 use crate::ble::BleStatus;
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
-use crate::config::layout::{Layer, Layout};
+use crate::config::layout::Layout;
 use crate::config::user_config::*;
 use crate::debounce::{KeyInfo, KeyState};
 use crate::delay::*;
@@ -139,18 +139,18 @@ impl BleKeyboardMaster {
     }
 }
 
-fn add_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_state: &mut Layer) {
+fn add_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer: &mut usize) {
     // get the key type
     match KeyType::check_type(valid_key) {
         KeyType::Macro => {
             let macro_valid_keys = HidKeys::get_macro_sequence(valid_key);
             for valid_key in macro_valid_keys.iter() {
-                add_keys(ble_keyboard, valid_key, layer_state);
+                add_keys(ble_keyboard, valid_key, layer);
             }
         }
         KeyType::Layer => {
             // check and set the layer
-            *layer_state = Layer::get_layer(valid_key);
+            *layer = Layout::get_layer(valid_key);
 
             // release all keys
             ble_keyboard.current_key_report.keys.fill(0);
@@ -183,18 +183,18 @@ fn add_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_sta
     }
 }
 
-fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_state: &mut Layer) {
+fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer: &mut usize) {
     // get the key type
     match KeyType::check_type(valid_key) {
         KeyType::Macro => {
             let macro_valid_keys = HidKeys::get_macro_sequence(valid_key);
             for valid_key in macro_valid_keys.iter() {
-                remove_keys(ble_keyboard, valid_key, layer_state);
+                remove_keys(ble_keyboard, valid_key, layer);
             }
         }
         KeyType::Layer => {
-            // check and set the layer
-            *layer_state = Layer::Base;
+            // set base layer
+            *layer = 0;
 
             // release all keys
             ble_keyboard.current_key_report.keys.fill(0);
@@ -255,10 +255,10 @@ pub async fn ble_tx(
     let mut ble_keyboard: BleKeyboardMaster = BleKeyboardMaster::new().await;
 
     // initialize layers
-    let mut layers = Layout::init();
+    let layout = Layout::init();
 
     // layer state
-    let mut layer_state = Layer::Base;
+    let mut layer: usize = 0;
 
     // vec to store the keys needed to be removed
     let mut pressed_keys_to_remove: Vec<KeyPos, 6> = Vec::new();
@@ -307,20 +307,17 @@ pub async fn ble_tx(
                         match key_info.state {
                             KeyState::Pressed => {
                                 // get the pressed key
-                                if let Some(valid_key) =
-                                    layers.get(&key_pos.row, &key_pos.col, &layer_state)
-                                {
-                                    add_keys(&mut ble_keyboard, valid_key, &mut layer_state);
+                                if let Some(valid_key) = layout.keymap[layer].get(&key_pos) {
+                                    add_keys(&mut ble_keyboard, valid_key, &mut layer);
                                 }
                             }
                             // check if the key is calculated for debounce
                             KeyState::Released => {
                                 // get the mapped key from the hashmap
-                                if let Some(valid_key) =
-                                    layers.get(&key_pos.row, &key_pos.col, &layer_state)
-                                {
-                                    remove_keys(&mut ble_keyboard, valid_key, &mut layer_state);
+                                if let Some(valid_key) = layout.keymap[layer].get(&key_pos) {
+                                    remove_keys(&mut ble_keyboard, valid_key, &mut layer);
                                 }
+
                                 // if key has been debounced, add it to be removed
                                 pressed_keys_to_remove
                                     .push(*key_pos)
