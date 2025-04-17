@@ -23,10 +23,11 @@ use crate::config::{enums::*, layout::*};
 
 pub fn layout() -> Layout {
     let mut layout = Layout::default();
+    let mut layer_keymap = [[(0, 0, HidKeys::Undefined); ROWS * COLS * 2]; LAYERS];
 
     {
         // BASE LAYER LAYOUT
-        let layer_0 = [
+        layer_keymap[0] = [
             (0, 0, HidKeys::Escape),
             (0, 1, HidKeys::Quote),
             (0, 2, HidKeys::Comma),
@@ -77,7 +78,7 @@ pub fn layout() -> Layout {
             (3, 11, HidKeys::Undefined),
         ];
 
-        for (row, col, key) in layer_0.iter() {
+        for (row, col, key) in layer_keymap[0].iter() {
             layout.keymap[0]
                 .insert(
                     KeyPos {
@@ -92,7 +93,7 @@ pub fn layout() -> Layout {
 
     {
         // UPPER LAYER LAYOUT
-        let layer_1 = [
+        layer_keymap[1] = [
             (0, 0, HidKeys::Escape),
             (0, 1, HidKeys::ModifierSuper),
             (0, 2, HidKeys::Num7),
@@ -143,7 +144,7 @@ pub fn layout() -> Layout {
             (3, 11, HidKeys::Undefined),
         ];
 
-        for (row, col, key) in layer_1.iter() {
+        for (row, col, key) in layer_keymap[1].iter() {
             layout.keymap[1]
                 .insert(
                     KeyPos {
