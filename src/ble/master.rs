@@ -5,11 +5,11 @@ use embassy_time::Instant;
 
 use crate::ble::BleStatus;
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
-use crate::config::layout::{Layer, Layers};
+use crate::config::layout::Layout;
 use crate::config::user_config::*;
-use crate::debounce::{Debounce, KeyState};
+use crate::debounce::{KeyInfo, KeyState};
 use crate::delay::*;
-use crate::matrix::{Key, StoredKeys};
+use crate::matrix::{KeyPos, StoredKeys};
 
 use super::{BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID};
 use esp32_nimble::{
@@ -139,25 +139,21 @@ impl BleKeyboardMaster {
     }
 }
 
-fn add_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_state: &mut Layer) {
+fn add_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer: &mut usize) {
     // get the key type
     match KeyType::check_type(valid_key) {
         KeyType::Macro => {
             let macro_valid_keys = HidKeys::get_macro_sequence(valid_key);
             for valid_key in macro_valid_keys.iter() {
-                add_keys(ble_keyboard, valid_key, layer_state);
+                add_keys(ble_keyboard, valid_key, layer);
             }
         }
         KeyType::Layer => {
             // check and set the layer
-            *layer_state = Layer::get_layer(valid_key);
+            *layer = Layout::get_layer(valid_key);
 
             // release all keys
-            ble_keyboard
-                .current_key_report
-                .keys
-                .iter_mut()
-                .for_each(|value| *value = 0);
+            ble_keyboard.current_key_report.keys.fill(0);
 
             // release modifiers
             ble_keyboard.current_key_report.modifiers = 0;
@@ -187,25 +183,21 @@ fn add_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_sta
     }
 }
 
-fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_state: &mut Layer) {
+fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer: &mut usize) {
     // get the key type
     match KeyType::check_type(valid_key) {
         KeyType::Macro => {
             let macro_valid_keys = HidKeys::get_macro_sequence(valid_key);
             for valid_key in macro_valid_keys.iter() {
-                remove_keys(ble_keyboard, valid_key, layer_state);
+                remove_keys(ble_keyboard, valid_key, layer);
             }
         }
         KeyType::Layer => {
-            // check and set the layer
-            *layer_state = Layer::Base;
+            // set base layer
+            *layer = 0;
 
             // release all keys
-            ble_keyboard
-                .current_key_report
-                .keys
-                .iter_mut()
-                .for_each(|value| *value = 0);
+            ble_keyboard.current_key_report.keys.fill(0);
 
             // release modifiers
             ble_keyboard.current_key_report.modifiers = 0;
@@ -229,25 +221,27 @@ fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer_
     }
 }
 
+/// Store the received slave key report in the local pressed keys hashmap
 fn process_slave_key_report(
     pressed_keys: &Arc<Mutex<StoredKeys>>,
     slave_key_report: &Arc<Mutex<[u8; 6]>>,
 ) {
-    let mut recovered_key: Key = Key::new(255, 255);
-
+    // iter trough the received key report
     slave_key_report.lock().iter().for_each(|element| {
+        // we don't want to store 0s
         if *element != 0 {
-            recovered_key.row = *element >> BIT_SHIFT;
-            recovered_key.col = *element & 0x0F;
-
+            // add the key_pos and the key_info to the hashmap
             pressed_keys
                 .lock()
                 .index_map
                 .insert(
-                    recovered_key,
-                    Debounce {
-                        key_pressed_time: Instant::now(),
-                        key_state: KeyState::KeyPressed,
+                    KeyPos {
+                        row: *element >> BIT_SHIFT,
+                        col: *element & 0x0F,
+                    },
+                    KeyInfo {
+                        pressed_time: Instant::now(),
+                        state: KeyState::Pressed,
                     },
                 )
                 .expect("Not enough space to store incoming slave data.");
@@ -263,13 +257,13 @@ pub async fn ble_tx(
     let mut ble_keyboard: BleKeyboardMaster = BleKeyboardMaster::new().await;
 
     // initialize layers
-    let mut layers = Layers::init();
+    let layout = Layout::init();
 
     // layer state
-    let mut layer_state = Layer::Base;
+    let mut layer: usize = 0;
 
     // vec to store the keys needed to be removed
-    let mut pressed_keys_to_remove: Vec<Key, 6> = Vec::new();
+    let mut pressed_keys_to_remove: Vec<KeyPos, 6> = Vec::new();
 
     // set ble power to lowest possible
     // ble_keyboard.set_ble_power_save();
@@ -278,7 +272,6 @@ pub async fn ble_tx(
 
     // on_write callback
     ble_keyboard.slave_characteristic.lock().on_write({
-        // let pressed_keys = Arc::clone(&pressed_keys);
         let slave_key_report = Arc::clone(&slave_key_report);
         move |args| {
             let mut slave_key_report_locked = slave_key_report.lock();
@@ -311,28 +304,25 @@ pub async fn ble_tx(
                 // check if there are pressed keys
                 if !pressed_keys.index_map.is_empty() {
                     // iter trough the pressed keys
-                    for (key, debounce) in pressed_keys.index_map.iter_mut() {
+                    for (key_pos, key_info) in pressed_keys.index_map.iter_mut() {
                         // check the key debounce state
-                        match debounce.key_state {
-                            KeyState::KeyPressed => {
+                        match key_info.state {
+                            KeyState::Pressed => {
                                 // get the pressed key
-                                if let Some(valid_key) =
-                                    layers.get(&key.row, &key.col, &layer_state)
-                                {
-                                    add_keys(&mut ble_keyboard, valid_key, &mut layer_state);
+                                if let Some(valid_key) = layout.keymap[layer].get(&key_pos) {
+                                    add_keys(&mut ble_keyboard, valid_key, &mut layer);
                                 }
                             }
                             // check if the key is calculated for debounce
-                            KeyState::KeyReleased => {
+                            KeyState::Released => {
                                 // get the mapped key from the hashmap
-                                if let Some(valid_key) =
-                                    layers.get(&key.row, &key.col, &layer_state)
-                                {
-                                    remove_keys(&mut ble_keyboard, valid_key, &mut layer_state);
+                                if let Some(valid_key) = layout.keymap[layer].get(&key_pos) {
+                                    remove_keys(&mut ble_keyboard, valid_key, &mut layer);
                                 }
+
                                 // if key has been debounced, add it to be removed
                                 pressed_keys_to_remove
-                                    .push(*key)
+                                    .push(*key_pos)
                                     .expect("Error adding a key to be removed!");
                             }
                         }
@@ -363,8 +353,6 @@ pub async fn ble_tx(
             // debug log
             #[cfg(feature = "debug")]
             log::info!("Keyboard not connected!");
-
-            // check and store the ble status
 
             // check and store the ble status
             if let Some(mut ble_status) = ble_status.try_lock() {

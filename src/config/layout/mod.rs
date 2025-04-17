@@ -1,54 +1,36 @@
 pub mod dvorak;
 pub mod qwerty;
-use crate::config::{enums::*, user_config::*};
+
+use crate::{
+    config::{enums::*, user_config::*},
+    matrix::KeyPos,
+};
 use heapless::FnvIndexMap;
 
-pub enum Layer {
-    Base,
-    Upper,
-    Lower,
-}
-
-impl Layer {
-    pub fn get_layer(layer: &HidKeys) -> Layer {
-        match layer {
-            HidKeys::UpperLayer => Layer::Upper,
-            HidKeys::LowerLayer => Layer::Lower,
-            _ => Layer::Base,
-        }
-    }
-}
-
 #[derive(Default)]
-pub struct Layers {
-    pub base: FnvIndexMap<(u8, u8), HidKeys, LAYER_INDEXMAP_SIZE>,
-    pub upper: FnvIndexMap<(u8, u8), HidKeys, LAYER_INDEXMAP_SIZE>,
-    pub lower: FnvIndexMap<(u8, u8), HidKeys, LAYER_INDEXMAP_SIZE>,
+pub struct Layout {
+    pub keymap: [FnvIndexMap<KeyPos, HidKeys, LAYER_INDEXMAP_SIZE>; LAYERS],
 }
 
-impl Layers {
+impl Layout {
     /// initializes the Layers struct with the compiled layout
-    pub fn init() -> Layers {
-        let init: Layers;
+    pub fn init() -> Layout {
         #[cfg(feature = "dvorak")]
-        {
-            init = dvorak::layout();
-        }
+        return dvorak::layout();
 
-        #[cfg(feature = "qwerty")]
-        {
-            init = qwerty::layout();
-        }
-        init
+        #[cfg(not(feature = "dvorak"))]
+        return qwerty::layout();
     }
 
-    /// Returns the key command mapped to the row x col
-    pub fn get(&mut self, row: &u8, col: &u8, layer_state: &Layer) -> Option<&HidKeys> {
-        // provide the key depending on the layer
-        match layer_state {
-            Layer::Base => self.base.get(&(*row as u8, *col as u8)),
-            Layer::Upper => self.upper.get(&(*row as u8, *col as u8)),
-            Layer::Lower => self.lower.get(&(*row as u8, *col as u8)),
+    /// get the layer number
+    pub fn get_layer(layer: &HidKeys) -> usize {
+        match layer {
+            HidKeys::Layer1 => 1,
+            HidKeys::Layer2 => 2,
+            HidKeys::Layer3 => 3,
+            HidKeys::Layer4 => 4,
+            HidKeys::Layer5 => 5,
+            _ => 0,
         }
     }
 }

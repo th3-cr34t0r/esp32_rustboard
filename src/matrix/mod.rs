@@ -13,27 +13,27 @@ use esp_idf_sys::{
 };
 
 pub use crate::ble::BleStatus;
-pub use crate::debounce::{Debounce, KeyState};
+pub use crate::debounce::{KeyInfo, KeyState};
 pub use heapless::FnvIndexMap;
 
 extern crate alloc;
 use alloc::sync::Arc;
 
 #[derive(PartialOrd, Ord, Eq, Hash, PartialEq, Clone, Copy, Debug)]
-pub struct Key {
+pub struct KeyPos {
     pub row: u8,
     pub col: u8,
 }
 
-impl Key {
-    pub fn new(row: u8, col: u8) -> Key {
-        Key { row, col }
+impl KeyPos {
+    pub fn new(row: u8, col: u8) -> KeyPos {
+        KeyPos { row, col }
     }
 }
 pub struct PinMatrix<'a> {
     pub rows: [PinDriver<'a, AnyIOPin, Output>; ROWS],
     pub cols: [PinDriver<'a, AnyIOPin, Input>; COLS],
-    pub pressed_keys_array: [Key; 6],
+    pub pressed_keys_array: [KeyPos; 6],
     pub enter_sleep_debounce: DebounceCounter,
 }
 
@@ -77,7 +77,7 @@ impl PinMatrix<'_> {
         PinMatrix {
             rows,
             cols,
-            pressed_keys_array: [Key::new(255, 255); 6],
+            pressed_keys_array: [KeyPos::new(255, 255); 6],
             enter_sleep_debounce: DebounceCounter::new(SLEEP_DELAY_NOT_CONNECTED),
         }
     }
@@ -160,7 +160,7 @@ impl PinMatrix<'_> {
     /// Each row is set to high, then each col is checked if it is high or not
     async fn standard_scan(&mut self, pressed_keys: &Arc<Mutex<StoredKeys>>) {
         // initialize counts
-        let mut count: Key = Key::new(0, COL_INIT);
+        let mut count: KeyPos = KeyPos::new(0, COL_INIT);
 
         // check rows and cols
         for row in self.rows.iter_mut() {
@@ -178,7 +178,7 @@ impl PinMatrix<'_> {
                     if let Some(index) = self
                         .pressed_keys_array
                         .iter()
-                        .position(|&element| element == Key::new(255, 255))
+                        .position(|&element| element == KeyPos::new(255, 255))
                     {
                         self.pressed_keys_array[index] = count;
                     }
@@ -210,31 +210,31 @@ impl PinMatrix<'_> {
 
 #[derive(Default)]
 pub struct StoredKeys {
-    pub index_map: FnvIndexMap<Key, Debounce, PRESSED_KEYS_INDEXMAP_SIZE>,
+    pub index_map: FnvIndexMap<KeyPos, KeyInfo, PRESSED_KEYS_INDEXMAP_SIZE>,
 }
 
 impl StoredKeys {
     /// The main function for stornig the registered key in to the shared pressed keys hashmap
-    pub fn store_key(&mut self, pressed_keys_array: &mut [Key; 6]) {
+    pub fn store_key(&mut self, pressed_keys_array: &mut [KeyPos; 6]) {
         // Inserts a key-value pair into the map.
         // If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
         // If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
         pressed_keys_array.iter_mut().for_each(|element| {
-            if *element != Key::new(255, 255) {
+            if *element != KeyPos::new(255, 255) {
                 self.index_map
                     .insert(
-                        Key {
+                        KeyPos {
                             row: element.row,
                             col: element.col,
                         },
-                        Debounce {
-                            key_pressed_time: Instant::now(),
-                            key_state: KeyState::KeyPressed,
+                        KeyInfo {
+                            pressed_time: Instant::now(),
+                            state: KeyState::Pressed,
                         },
                     )
                     .unwrap();
 
-                *element = Key::new(255, 255);
+                *element = KeyPos::new(255, 255);
             }
         });
     }
