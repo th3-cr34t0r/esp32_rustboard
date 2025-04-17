@@ -221,22 +221,24 @@ fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer:
     }
 }
 
+/// Store the received slave key report in the local pressed keys hashmap
 fn process_slave_key_report(
     pressed_keys: &Arc<Mutex<StoredKeys>>,
     slave_key_report: &Arc<Mutex<[u8; 6]>>,
 ) {
-    let mut recovered_key: KeyPos = KeyPos::new(255, 255);
-
+    // iter trough the received key report
     slave_key_report.lock().iter().for_each(|element| {
+        // we don't want to store 0s
         if *element != 0 {
-            recovered_key.row = *element >> BIT_SHIFT;
-            recovered_key.col = *element & 0x0F;
-
+            // add the key_pos and the key_info to the hashmap
             pressed_keys
                 .lock()
                 .index_map
                 .insert(
-                    recovered_key,
+                    KeyPos {
+                        row: *element >> BIT_SHIFT,
+                        col: *element & 0x0F,
+                    },
                     KeyInfo {
                         pressed_time: Instant::now(),
                         state: KeyState::Pressed,
@@ -351,8 +353,6 @@ pub async fn ble_tx(
             // debug log
             #[cfg(feature = "debug")]
             log::info!("Keyboard not connected!");
-
-            // check and store the ble status
 
             // check and store the ble status
             if let Some(mut ble_status) = ble_status.try_lock() {
