@@ -176,85 +176,37 @@ pub enum HidKeys {
     Layer5 = 0xA9,
 
     // dummy modifiers
-    ModifierShift = 0xB1,
-    ModifierControl = 0xB2,
-    ModifierAlt = 0xB3,
-    ModifierSuper = 0xB4,
+    ModifierShift = 0xB0,
+    ModifierControl = 0xB1,
+    ModifierAlt = 0xB2,
+    ModifierSuper = 0xB3,
 
     // dummy macros
-    MacroLeftParenthesis = 0xC1,
-    MacroRightParenthesis = 0xC2,
-    MacroCopy = 0xC3,
-    MacroPaste = 0xC4,
-    MacroExclamationMark = 0xC5,
-    MacroAt = 0xC6,
-    MacroHash = 0xC7,
-    MacroDollar = 0xC8,
-    MacroModul = 0xC9,
-    MacroCaret = 0xD0,
-    MacroAmpersand = 0xD1,
-    MacroAsterix = 0xD2,
-    MacroSuperLock = 0xD3,
-}
+    MacroLeftParenthesis = 0xC0,
+    MacroRightParenthesis = 0xC1,
+    MacroCopy = 0xC2,
+    MacroPaste = 0xC3,
+    MacroExclamationMark = 0xC4,
+    MacroAt = 0xC5,
+    MacroHash = 0xC6,
+    MacroDollar = 0xC7,
+    MacroModul = 0xC8,
+    MacroCaret = 0xCA,
+    MacroAmpersand = 0xCB,
+    MacroAsterix = 0xCC,
+    MacroSuperLock = 0xCD,
 
-pub enum KeyType {
-    Macro,
-    Modifier,
-    Key,
-    Layer,
-}
-
-impl KeyType {
-    pub fn check_type(key: &HidKeys) -> KeyType {
-        match *key {
-            HidKeys::MacroLeftParenthesis
-            | HidKeys::MacroRightParenthesis
-            | HidKeys::MacroCopy
-            | HidKeys::MacroPaste
-            | HidKeys::MacroExclamationMark
-            | HidKeys::MacroAt
-            | HidKeys::MacroHash
-            | HidKeys::MacroDollar
-            | HidKeys::MacroModul
-            | HidKeys::MacroCaret
-            | HidKeys::MacroAmpersand
-            | HidKeys::MacroAsterix
-            | HidKeys::MacroSuperLock => KeyType::Macro,
-
-            HidKeys::Layer1
-            | HidKeys::Layer2
-            | HidKeys::Layer3
-            | HidKeys::Layer4
-            | HidKeys::Layer5 => KeyType::Layer,
-
-            HidKeys::ModifierShift
-            | HidKeys::ModifierControl
-            | HidKeys::ModifierAlt
-            | HidKeys::ModifierSuper => KeyType::Modifier,
-
-            _ => KeyType::Key,
-        }
-    }
-}
-
-pub enum HidModifiers {
-    None = 0x00,
-    Control = 0x01,
-    Shift = 0x02,
-    Alt = 0x04,
-    Super = 0x08,
-}
-impl HidModifiers {
-    pub fn get_modifier(key: &HidKeys) -> u8 {
-        // set the modifier
-        match *key {
-            HidKeys::ModifierShift => HidModifiers::Shift as u8,
-            HidKeys::ModifierControl => HidModifiers::Control as u8,
-            HidKeys::ModifierAlt => HidModifiers::Alt as u8,
-            HidKeys::ModifierSuper => HidModifiers::Super as u8,
-            _ => 0,
-        }
-    }
+    // dummy mouse controls
+    MouseGoLeft = 0xD0,
+    MouseGoDown = 0xD1,
+    MouseGoUp = 0xD2,
+    MouseGoRight = 0xD3,
+    MouseLeftClick = 0xD4,
+    MouseRightClick = 0xD5,
+    MouseScrollLeft = 0xD6,
+    MouseScrollRight = 0xD7,
+    MouseScrollUp = 0xD8,
+    MouseScrollDown = 0xD9,
 }
 
 impl HidKeys {
@@ -331,4 +283,84 @@ impl HidKeys {
             _ => vec,
         }
     }
+}
+
+pub enum KeyType {
+    Macro,
+    Modifier,
+    Mouse,
+    Key,
+    Layer,
+}
+
+impl KeyType {
+    pub fn check_type(key: &HidKeys) -> KeyType {
+        match *key {
+            HidKeys::MacroLeftParenthesis
+            | HidKeys::MacroRightParenthesis
+            | HidKeys::MacroCopy
+            | HidKeys::MacroPaste
+            | HidKeys::MacroExclamationMark
+            | HidKeys::MacroAt
+            | HidKeys::MacroHash
+            | HidKeys::MacroDollar
+            | HidKeys::MacroModul
+            | HidKeys::MacroCaret
+            | HidKeys::MacroAmpersand
+            | HidKeys::MacroAsterix
+            | HidKeys::MacroSuperLock => KeyType::Macro,
+
+            HidKeys::Layer1
+            | HidKeys::Layer2
+            | HidKeys::Layer3
+            | HidKeys::Layer4
+            | HidKeys::Layer5 => KeyType::Layer,
+
+            HidKeys::ModifierShift
+            | HidKeys::ModifierControl
+            | HidKeys::ModifierAlt
+            | HidKeys::ModifierSuper => KeyType::Modifier,
+
+            HidKeys::MouseGoLeft
+            | HidKeys::MouseGoDown
+            | HidKeys::MouseGoUp
+            | HidKeys::MouseGoRight
+            | HidKeys::MouseLeftClick
+            | HidKeys::MouseRightClick
+            | HidKeys::MouseScrollLeft
+            | HidKeys::MouseScrollRight
+            | HidKeys::MouseScrollUp
+            | HidKeys::MouseScrollDown => KeyType::Mouse,
+
+            _ => KeyType::Key,
+        }
+    }
+}
+
+pub enum HidModifiers {
+    None = 0x00,
+    Control = 0x01,
+    Shift = 0x02,
+    Alt = 0x04,
+    Super = 0x08,
+}
+impl HidModifiers {
+    pub fn get_modifier(key: &HidKeys) -> u8 {
+        // set the modifier
+        match *key {
+            HidKeys::ModifierShift => HidModifiers::Shift as u8,
+            HidKeys::ModifierControl => HidModifiers::Control as u8,
+            HidKeys::ModifierAlt => HidModifiers::Alt as u8,
+            HidKeys::ModifierSuper => HidModifiers::Super as u8,
+            _ => 0,
+        }
+    }
+}
+
+pub enum HidMouseKeys {
+    LeftClick = 0x01,
+    RightClick = 0x02,
+    MiddleClick = 0x04,
+    Back = 0x08,
+    Forward = 0x10,
 }

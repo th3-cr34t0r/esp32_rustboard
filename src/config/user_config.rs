@@ -31,7 +31,7 @@ pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(5);
 #[cfg(feature = "slave")]
 pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
 
-pub const LAYERS: usize = 2;
+pub const LAYERS: usize = 3;
 pub const BLE_STATUS_DEBOUNCE_DELAY: Duration = Duration::from_millis(500); //0.5 sec
 pub const SLEEP_DELAY: Duration = Duration::from_millis(600000); //10 minutes
 pub const SLEEP_DELAY_NOT_CONNECTED: Duration = Duration::from_millis(60000); //1 minute
