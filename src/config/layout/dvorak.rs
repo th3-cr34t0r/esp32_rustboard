@@ -24,7 +24,7 @@
 //   0 |_____|_____|_____|_____|_____|_____|              0 |_____|_____|_____|_____|_____|_____|
 //   1 |_____|_____|_____|M_lcl|M_rcl|_____|              1 |_____|M_lft|M_dwn|M_up_|M_rgt|_____|
 //   2 |_____|_____|_____|_____|_____|_____|              2 |_____|_____|_____|_____|_____|_____|
-//   3                   |LYR_1|SPACE|SHIFT|              3 |_TAB_|ENTER|LYR_2|
+//   3                   |LYR_1|SPACE|FASTC|              3 |_TAB_|ENTER|LYR_2|
 // //*********************************************************************************************
 //
 use crate::config::{enums::*, layout::*};
@@ -71,30 +71,16 @@ pub fn layout() -> Layout {
             (2, 9, HidKeys::V),
             (2, 10, HidKeys::Z),
             (2, 11, HidKeys::Equal),
-            (3, 0, HidKeys::Undefined),
-            (3, 1, HidKeys::Undefined),
-            (3, 2, HidKeys::Undefined),
             (3, 3, HidKeys::Layer1),
             (3, 4, HidKeys::Space),
             (3, 5, HidKeys::ModifierShift),
             (3, 6, HidKeys::Tab),
             (3, 7, HidKeys::Enter),
             (3, 8, HidKeys::Layer2),
-            (3, 9, HidKeys::Undefined),
-            (3, 10, HidKeys::Undefined),
-            (3, 11, HidKeys::Undefined),
         ];
 
-        for (row, col, key) in layer_keymap.iter() {
-            layout.keymap[0]
-                .insert(
-                    KeyPos {
-                        row: *row,
-                        col: *col,
-                    },
-                    *key,
-                )
-                .unwrap();
+        for (row, col, key) in layer_keymap {
+            layout.keymap[0].insert(KeyPos { row, col }, key).unwrap();
         }
     }
 
@@ -137,96 +123,39 @@ pub fn layout() -> Layout {
             (2, 9, HidKeys::MacroExclamationMark),
             (2, 10, HidKeys::MacroHash),
             (2, 11, HidKeys::Grave),
-            (3, 0, HidKeys::Undefined),
-            (3, 1, HidKeys::Undefined),
-            (3, 2, HidKeys::Undefined),
             (3, 3, HidKeys::Layer1),
             (3, 4, HidKeys::Space),
             (3, 5, HidKeys::ModifierShift),
             (3, 6, HidKeys::Tab),
             (3, 7, HidKeys::Enter),
             (3, 8, HidKeys::Layer2),
-            (3, 9, HidKeys::Undefined),
-            (3, 10, HidKeys::Undefined),
-            (3, 11, HidKeys::Undefined),
         ];
 
-        for (row, col, key) in layer_keymap.iter() {
-            layout.keymap[1]
-                .insert(
-                    KeyPos {
-                        row: *row,
-                        col: *col,
-                    },
-                    *key,
-                )
-                .unwrap();
+        for (row, col, key) in layer_keymap {
+            layout.keymap[1].insert(KeyPos { row, col }, key).unwrap();
         }
     }
 
     {
         // LAYER 2 LAYOUT
         let layer_keymap = [
-            (0, 0, HidKeys::Undefined),
-            (0, 1, HidKeys::Undefined),
-            (0, 2, HidKeys::Undefined),
-            (0, 3, HidKeys::Undefined),
-            (0, 4, HidKeys::Undefined),
-            (0, 5, HidKeys::Undefined),
-            (0, 6, HidKeys::Undefined),
-            (0, 7, HidKeys::Undefined),
             (0, 8, HidKeys::MouseScrollUp),
-            (0, 9, HidKeys::Undefined),
-            (0, 10, HidKeys::Undefined),
-            (0, 11, HidKeys::Undefined),
-            (1, 0, HidKeys::Undefined),
-            (1, 1, HidKeys::Undefined),
-            (1, 2, HidKeys::Undefined),
             (1, 3, HidKeys::MouseLeftClick),
             (1, 4, HidKeys::MouseRightClick),
-            (1, 5, HidKeys::Undefined),
             (1, 6, HidKeys::MouseScrollLeft),
             (1, 7, HidKeys::MouseGoLeft),
             (1, 8, HidKeys::MouseGoDown),
             (1, 9, HidKeys::MouseGoUp),
             (1, 10, HidKeys::MouseGoRight),
             (1, 11, HidKeys::MouseScrollRight),
-            (2, 0, HidKeys::Undefined),
-            (2, 1, HidKeys::Undefined),
-            (2, 2, HidKeys::Undefined),
-            (2, 3, HidKeys::Undefined),
-            (2, 4, HidKeys::Undefined),
-            (2, 5, HidKeys::Undefined),
-            (2, 6, HidKeys::Undefined),
-            (2, 7, HidKeys::Undefined),
             (2, 8, HidKeys::MouseScrollDown),
-            (2, 9, HidKeys::Undefined),
-            (2, 10, HidKeys::Undefined),
-            (2, 11, HidKeys::Undefined),
-            (3, 0, HidKeys::Undefined),
-            (3, 1, HidKeys::Undefined),
-            (3, 2, HidKeys::Undefined),
-            (3, 3, HidKeys::Layer1),
             (3, 4, HidKeys::Space),
-            (3, 5, HidKeys::ModifierShift),
-            (3, 6, HidKeys::Tab),
-            (3, 7, HidKeys::Enter),
+            (3, 5, HidKeys::MouseFastCursor),
             (3, 8, HidKeys::Layer2),
-            (3, 9, HidKeys::Undefined),
-            (3, 10, HidKeys::Undefined),
-            (3, 11, HidKeys::Undefined),
         ];
 
-        for (row, col, key) in layer_keymap.iter() {
-            layout.keymap[2]
-                .insert(
-                    KeyPos {
-                        row: *row,
-                        col: *col,
-                    },
-                    *key,
-                )
-                .unwrap();
+        for (row, col, key) in layer_keymap {
+            layout.keymap[2].insert(KeyPos { row, col }, key).unwrap();
         }
     }
     // return layout
