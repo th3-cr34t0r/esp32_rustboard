@@ -10,11 +10,13 @@ use crate::config::user_config::*;
 use crate::debounce::{KeyInfo, KeyState};
 use crate::delay::*;
 use crate::matrix::{KeyPos, StoredKeys};
+use crate::mouse::*;
 
 use super::{
-    BleKeyboardMaster, KeyReport, MouseReport, HID_REPORT_DISCRIPTOR_KEYBOARD, KEYBOARD_ID,
-    MEDIA_KEYS_ID, MOUSE_ID,
+    BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR_KEYBOARD, KEYBOARD_ID, MEDIA_KEYS_ID,
+    MOUSE_ID,
 };
+
 use esp32_nimble::{
     enums::*, utilities::mutex::Mutex, uuid128, BLEAdvertisementData, BLEDevice, BLEHIDDevice,
     NimbleProperties,
@@ -386,13 +388,15 @@ pub async fn ble_tx(
                         ble_keyboard.send_keyboard_report().await;
                     }
 
-                    // sent the new mouse report only if it contains information
+                    // in case the cursor is being moved
                     if ble_keyboard
                         .current_mouse_report
-                        .construct()
-                        .iter()
-                        .any(|element| *element != 0)
+                        .is_cursor_position_changed()
                     {
+                        ble_keyboard.send_mouse_report().await;
+                    }
+                    // in case a key has been pressed
+                    else if ble_keyboard.is_mouse_report_changed() {
                         ble_keyboard.send_mouse_report().await;
                     }
 

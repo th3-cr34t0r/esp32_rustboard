@@ -9,7 +9,7 @@ use esp32_nimble::BLEClient;
 use esp32_nimble::{hid::*, utilities::mutex::Mutex, BLECharacteristic, BLEServer};
 use zerocopy::{Immutable, IntoBytes};
 
-use crate::config::enums::{HidKeys, HidMouseKeys};
+use crate::mouse::MouseReport;
 
 #[cfg(feature = "master")]
 pub mod master;
@@ -133,81 +133,6 @@ struct KeyReport {
     modifiers: u8,
     reserved: u8,
     keys: [u8; 6],
-}
-
-#[derive(Default, Clone, Copy, PartialEq)]
-struct MouseReport {
-    buttons: u8,
-    x: u8,
-    y: u8,
-    v_wheel: u8,
-    h_wheel: u8,
-}
-
-impl MouseReport {
-    /// Store the struct in an array that is ready to be sent
-    fn construct(self) -> [u8; 5] {
-        [self.buttons, self.x, self.y, self.v_wheel, self.h_wheel]
-    }
-
-    /// Translate the HidKey to a mouse command
-    fn set_command(&mut self, valid_key: &HidKeys) {
-        match *valid_key {
-            HidKeys::MouseGoLeft => self.go_left(),
-            HidKeys::MouseGoDown => self.go_down(),
-            HidKeys::MouseGoUp => self.go_up(),
-            HidKeys::MouseGoRight => self.go_right(),
-            HidKeys::MouseLeftClick => self.click(HidMouseKeys::LeftClick),
-            HidKeys::MouseRightClick => self.click(HidMouseKeys::RightClick),
-            HidKeys::MouseScrollLeft => self.scroll_left(),
-            HidKeys::MouseScrollRight => self.scroll_right(),
-            HidKeys::MouseScrollUp => self.scroll_up(),
-            HidKeys::MouseScrollDown => self.scroll_down(),
-
-            _ => {} // do nothing
-        }
-    }
-
-    /// Reset the mouse info
-    fn reset_report(&mut self, valid_key: &HidKeys) {
-        match *valid_key {
-            HidKeys::MouseGoLeft | HidKeys::MouseGoRight => self.x = 0,
-            HidKeys::MouseGoDown | HidKeys::MouseGoUp => self.y = 0,
-            HidKeys::MouseLeftClick | HidKeys::MouseRightClick => self.buttons = 0,
-            HidKeys::MouseScrollUp | HidKeys::MouseScrollDown => self.v_wheel = 0,
-            HidKeys::MouseScrollLeft | HidKeys::MouseScrollRight => self.h_wheel = 0,
-
-            _ => {} // do nothing
-        }
-    }
-
-    fn go_left(&mut self) {
-        self.x = 250;
-    }
-    fn go_right(&mut self) {
-        self.x = 5;
-    }
-    fn go_up(&mut self) {
-        self.y = 250;
-    }
-    fn go_down(&mut self) {
-        self.y = 5;
-    }
-    fn click(&mut self, button: HidMouseKeys) {
-        self.buttons = button as u8;
-    }
-    fn scroll_left(&mut self) {
-        self.h_wheel = 255;
-    }
-    fn scroll_right(&mut self) {
-        self.h_wheel = 1;
-    }
-    fn scroll_up(&mut self) {
-        self.v_wheel = 255;
-    }
-    fn scroll_down(&mut self) {
-        self.v_wheel = 1;
-    }
 }
 
 pub struct BleKeyboardMaster {
