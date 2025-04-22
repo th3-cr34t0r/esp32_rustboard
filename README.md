@@ -10,14 +10,12 @@ This project aims to provide a customizable and efficient firmware solution for 
 - Bluetooth enabled
 - Layers (activated on hold)
 - Macros
-- Mouse controls
 - Sleep mode (reduced power draw when not in use)
 - MCU Radio strength can be adjusted
 
 ## Build related features
 - When compiling, the features flag can be called with the following keywords:
-   - master (left side), slave (right side) - (for which board to be build for)
-   - mouse (mouse controls)
+   - master(left side), slave(right side) (for which board to be build for)
    - dvorak (for dvorak keyboard layout)
    - qwerty (for qwerty keyboard layout)
    - debug (only should be use in development for console logs)
