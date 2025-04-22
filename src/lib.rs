@@ -2,7 +2,6 @@ pub mod ble;
 pub mod config;
 pub mod debounce;
 pub mod matrix;
-pub mod mouse;
 
 pub mod delay {
     use embassy_time::{Duration, Timer};
