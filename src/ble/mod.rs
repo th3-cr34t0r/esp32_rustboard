@@ -9,7 +9,7 @@ use esp32_nimble::BLEClient;
 use esp32_nimble::{hid::*, utilities::mutex::Mutex, BLECharacteristic, BLEServer};
 use zerocopy::{Immutable, IntoBytes};
 
-use crate::mouse::MouseReport;
+use crate::mouse::*;
 
 #[cfg(feature = "master")]
 pub mod master;
@@ -161,8 +161,6 @@ pub enum BleStatus {
 }
 
 pub struct DebounceCounter {
-    future_instant: Instant,
-    current_instant: Instant,
     previous_instant: Instant,
     debounce: Duration,
 }
@@ -170,19 +168,15 @@ pub struct DebounceCounter {
 impl DebounceCounter {
     pub fn new(debounce: Duration) -> Self {
         DebounceCounter {
-            future_instant: Instant::now(),
-            current_instant: Instant::now(),
             previous_instant: Instant::now(),
             debounce,
         }
     }
 
     pub fn is_debounced(&mut self) -> bool {
-        self.current_instant = Instant::now();
-        self.future_instant = self.previous_instant + self.debounce;
-
-        if self.current_instant >= self.future_instant {
-            self.previous_instant = self.current_instant;
+        if self.previous_instant.elapsed() >= self.debounce {
+            // previous is now the current
+            self.previous_instant = Instant::now();
             true
         } else {
             false
@@ -190,5 +184,14 @@ impl DebounceCounter {
     }
     pub fn reset_debounce(&mut self, debounce_duraiton: Duration) {
         self.previous_instant = Instant::now() + debounce_duraiton;
+    }
+}
+
+impl Default for DebounceCounter {
+    fn default() -> Self {
+        DebounceCounter {
+            previous_instant: Instant::now(),
+            debounce: Duration::from_millis(1),
+        }
     }
 }
