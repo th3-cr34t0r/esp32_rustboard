@@ -34,6 +34,7 @@ pub struct PinMatrix<'a> {
     pub rows: [PinDriver<'a, AnyIOPin, Output>; ROWS],
     pub cols: [PinDriver<'a, AnyIOPin, Input>; COLS],
     pub pressed_keys_array: [KeyPos; 6],
+    pub enter_sleep_debounce: DebounceCounter,
 }
 
 impl PinMatrix<'_> {
@@ -77,6 +78,15 @@ impl PinMatrix<'_> {
             rows,
             cols,
             pressed_keys_array: [KeyPos::new(255, 255); 6],
+            enter_sleep_debounce: DebounceCounter::new(SLEEP_DELAY_NOT_CONNECTED),
+        }
+    }
+
+    /// This function checks if the conditions for entering sleep mode are met
+    fn sleep_mode_if_conditions_met(&mut self) {
+        /* in case sleep is due */
+        if self.enter_sleep_debounce.is_debounced() {
+            self.enter_light_sleep_mode();
         }
     }
 
@@ -172,6 +182,8 @@ impl PinMatrix<'_> {
                     {
                         self.pressed_keys_array[index] = count;
                     }
+                    // reset the sleep delay on key press
+                    self.enter_sleep_debounce.reset_debounce(SLEEP_DELAY);
                 }
                 // increment col
                 count.col += 1;
@@ -190,15 +202,8 @@ impl PinMatrix<'_> {
         count.row = 0;
 
         // store the local pressed keys in the shared pressed keys hashmap
-        // if there are pressed keys
-        if self
-            .pressed_keys_array
-            .iter()
-            .any(|element| *element != KeyPos::new(255, 255))
-        {
-            if let Some(mut pressed_keys) = pressed_keys.try_lock() {
-                pressed_keys.store_key(&mut self.pressed_keys_array);
-            }
+        if let Some(mut pressed_keys) = pressed_keys.try_lock() {
+            pressed_keys.store_key(&mut self.pressed_keys_array);
         }
     }
 }
@@ -206,7 +211,6 @@ impl PinMatrix<'_> {
 #[derive(Default)]
 pub struct StoredKeys {
     pub index_map: FnvIndexMap<KeyPos, KeyInfo, PRESSED_KEYS_INDEXMAP_SIZE>,
-    pub debounce: DebounceCounter,
 }
 
 impl StoredKeys {
@@ -230,9 +234,6 @@ impl StoredKeys {
                     )
                     .unwrap();
 
-                // reset sleep delay
-                self.debounce.reset_debounce(SLEEP_DELAY);
-
                 *element = KeyPos::new(255, 255);
             }
         });
@@ -255,13 +256,7 @@ pub async fn scan_grid(
 
     loop {
         // check if sleep conditions are met
-        if let Some(mut pressed_keys) = pressed_keys.try_lock() {
-            // check if debouce elapsed
-            if pressed_keys.debounce.is_debounced() {
-                // inter sleep mode
-                matrix.enter_light_sleep_mode();
-            }
-        }
+        matrix.sleep_mode_if_conditions_met();
 
         // check and store the ble status, then release the lock
         if ble_status_debounce.is_debounced() {
