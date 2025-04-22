@@ -17,35 +17,30 @@ use esp_idf_sys::{
 pub const ROWS: usize = 4;
 pub const COLS: usize = 6;
 
-// User Config
-pub const LAYERS: usize = 3;
-pub const FAST_CURSOR_VALUE: u8 = 5;
-pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
-
-// Sleep related consts
-pub const SLEEP_DELAY: Duration = Duration::from_millis(600000); //10 minutes
-pub const SLEEP_DELAY_NOT_CONNECTED: Duration = Duration::from_millis(60000); //1 minute
-
-// Index map size
-pub const LAYER_INDEXMAP_SIZE: usize = 64; // usualy ROWS*COLS*2 rounded to the next highest 2^N number
-pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 32;
-
 #[cfg(feature = "master")]
 pub const COL_INIT: u8 = 0;
 #[cfg(feature = "master")]
 pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(20);
+#[cfg(feature = "master")]
+pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
+#[cfg(feature = "master")]
+pub const FAST_CURSOR_VALUE: u8 = 5;
 
 #[cfg(feature = "slave")]
 pub const COL_INIT: u8 = 6;
 #[cfg(feature = "slave")]
 pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(5);
+#[cfg(feature = "slave")]
+pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
 
-// Bit shift
-pub const BIT_SHIFT: u8 = 4;
-
-// BLE related consts
-pub const BLE_SLAVE_UUID: BleUuid = uuid128!("06984d74-0fdb-491e-9c4c-c25603a9bc34");
+pub const LAYERS: usize = 3;
 pub const BLE_STATUS_DEBOUNCE_DELAY: Duration = Duration::from_millis(500); //0.5 sec
+pub const SLEEP_DELAY: Duration = Duration::from_millis(600000); //10 minutes
+pub const SLEEP_DELAY_NOT_CONNECTED: Duration = Duration::from_millis(60000); //1 minute
+pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 32;
+pub const LAYER_INDEXMAP_SIZE: usize = 64;
+pub const BLE_SLAVE_UUID: BleUuid = uuid128!("06984d74-0fdb-491e-9c4c-c25603a9bc34");
+pub const BIT_SHIFT: u8 = 4;
 
 pub enum EspPowerLevel {
     Negative24,
