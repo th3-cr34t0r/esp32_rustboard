@@ -130,7 +130,6 @@ impl BleKeyboardMaster {
             .notify();
     }
 
-    #[cfg(feature = "mouse")]
     /// Send mouse report
     async fn send_mouse_report(&mut self) {
         // debug log
@@ -209,7 +208,6 @@ fn add_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer: &m
             ble_keyboard.current_keyboard_report.modifiers |= HidModifiers::get_modifier(valid_key);
         }
         KeyType::Mouse => {
-            #[cfg(feature = "mouse")]
             // set the mouse command to the mouse ble characteristic
             ble_keyboard.current_mouse_report.set_command(valid_key);
         }
@@ -390,7 +388,6 @@ pub async fn ble_tx(
                         ble_keyboard.send_keyboard_report().await;
                     }
 
-                    #[cfg(feature = "mouse")]
                     // in case the cursor is being moved
                     if ble_keyboard
                         .current_mouse_report
