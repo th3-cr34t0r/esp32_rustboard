@@ -1,7 +1,5 @@
-/*
-to build: cargo build --release
-to flash: espflash flash ./target/riscv32imc-esp-espidf/release/esp32_rustboard --monitor
-*/
+// to build: cargo build --release
+// to flash: espflash flash ./target/riscv32imc-esp-espidf/release/esp32_rustboard --monitor
 extern crate alloc;
 use alloc::sync::Arc;
 
