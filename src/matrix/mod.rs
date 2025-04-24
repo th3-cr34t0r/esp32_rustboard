@@ -1,8 +1,8 @@
-use crate::ble::DebounceCounter;
+use crate::ble::Debounce;
 use crate::config::user_config::*;
 use crate::delay::*;
 
-use embassy_time::Instant;
+use embassy_time::{Duration, Instant};
 use esp_idf_svc::hal::gpio::*;
 use esp_idf_svc::hal::peripherals::Peripherals;
 
@@ -11,10 +11,10 @@ use esp_idf_sys::{
     self as _, esp_bt_controller_disable, gpio_int_type_t_GPIO_INTR_HIGH_LEVEL,
     gpio_num_t_GPIO_NUM_10, gpio_num_t_GPIO_NUM_20, gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
 };
+use heapless::FnvIndexMap;
 
 pub use crate::ble::BleStatus;
 pub use crate::debounce::{KeyInfo, KeyState};
-pub use heapless::FnvIndexMap;
 
 extern crate alloc;
 use alloc::sync::Arc;
@@ -34,7 +34,6 @@ pub struct PinMatrix<'a> {
     pub rows: [PinDriver<'a, AnyIOPin, Output>; ROWS],
     pub cols: [PinDriver<'a, AnyIOPin, Input>; COLS],
     pub pressed_keys_array: [KeyPos; 6],
-    pub enter_sleep_debounce: DebounceCounter,
 }
 
 impl PinMatrix<'_> {
@@ -78,15 +77,6 @@ impl PinMatrix<'_> {
             rows,
             cols,
             pressed_keys_array: [KeyPos::new(255, 255); 6],
-            enter_sleep_debounce: DebounceCounter::new(SLEEP_DELAY_NOT_CONNECTED),
-        }
-    }
-
-    /// This function checks if the conditions for entering sleep mode are met
-    fn sleep_mode_if_conditions_met(&mut self) {
-        /* in case sleep is due */
-        if self.enter_sleep_debounce.is_debounced() {
-            self.enter_light_sleep_mode();
         }
     }
 
@@ -182,8 +172,6 @@ impl PinMatrix<'_> {
                     {
                         self.pressed_keys_array[index] = count;
                     }
-                    // reset the sleep delay on key press
-                    self.enter_sleep_debounce.reset_debounce(SLEEP_DELAY);
                 }
                 // increment col
                 count.col += 1;
@@ -203,19 +191,25 @@ impl PinMatrix<'_> {
 
         // store the local pressed keys in the shared pressed keys hashmap
         if let Some(mut pressed_keys) = pressed_keys.try_lock() {
-            pressed_keys.store_key(&mut self.pressed_keys_array);
+            pressed_keys.store_keys_local(&mut self.pressed_keys_array);
         }
     }
 }
 
-#[derive(Default)]
 pub struct StoredKeys {
     pub index_map: FnvIndexMap<KeyPos, KeyInfo, PRESSED_KEYS_INDEXMAP_SIZE>,
+    pub debounce: Debounce,
 }
 
 impl StoredKeys {
+    pub fn new(debounce: Duration) -> Self {
+        Self {
+            index_map: FnvIndexMap::new(),
+            debounce: Debounce::new(debounce),
+        }
+    }
     /// The main function for stornig the registered key in to the shared pressed keys hashmap
-    pub fn store_key(&mut self, pressed_keys_array: &mut [KeyPos; 6]) {
+    pub fn store_keys_local(&mut self, pressed_keys_array: &mut [KeyPos; 6]) {
         // Inserts a key-value pair into the map.
         // If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
         // If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
@@ -232,11 +226,40 @@ impl StoredKeys {
                             state: KeyState::Pressed,
                         },
                     )
-                    .unwrap();
+                    .expect("Not enough space to store the pressed keys.");
 
                 *element = KeyPos::new(255, 255);
             }
         });
+
+        // reset sleep debounce
+        self.debounce.reset_debounce(SLEEP_DEBOUNCE);
+    }
+
+    /// Store the received slave key report in the local pressed keys hashmap
+    pub fn store_keys_slave(&mut self, slave_key_report: &Arc<Mutex<[u8; 6]>>) {
+        // iter trough the received key report
+        slave_key_report.lock().iter().for_each(|element| {
+            // we don't want to store 0s
+            if *element != 0 {
+                // add the key_pos and the key_info to the hashmap
+                self.index_map
+                    .insert(
+                        KeyPos {
+                            row: *element >> BIT_SHIFT,
+                            col: *element & 0x0F,
+                        },
+                        KeyInfo {
+                            pressed_time: Instant::now(),
+                            state: KeyState::Pressed,
+                        },
+                    )
+                    .expect("Not enough space to store the slave pressed keys.");
+            }
+        });
+
+        // reset sleep debounce
+        self.debounce.reset_debounce(SLEEP_DEBOUNCE);
     }
 }
 
@@ -252,12 +275,15 @@ pub async fn scan_grid(
     let mut ble_status_local: BleStatus = BleStatus::NotConnected;
 
     // ble status debounce variable
-    let mut ble_status_debounce: DebounceCounter = DebounceCounter::new(BLE_STATUS_DEBOUNCE_DELAY);
+    let mut ble_status_debounce: Debounce = Debounce::new(BLE_STATUS_DEBOUNCE_DELAY);
 
     loop {
-        // check if sleep conditions are met
-        matrix.sleep_mode_if_conditions_met();
-
+        // // check if sleep conditions are met
+        if let Some(mut pressed_keys) = pressed_keys.try_lock() {
+            if pressed_keys.debounce.is_debounced() {
+                matrix.enter_light_sleep_mode();
+            }
+        }
         // check and store the ble status, then release the lock
         if ble_status_debounce.is_debounced() {
             if let Some(ble_status) = ble_status.try_lock() {

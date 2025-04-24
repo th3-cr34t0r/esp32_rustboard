@@ -1,15 +1,16 @@
 pub mod dvorak;
 pub mod qwerty;
 
+use std::collections::HashMap;
+
 use crate::{
     config::{enums::*, user_config::*},
     matrix::KeyPos,
 };
-use heapless::FnvIndexMap;
 
 #[derive(Default)]
 pub struct Layout {
-    pub keymap: [FnvIndexMap<KeyPos, HidKeys, LAYER_INDEXMAP_SIZE>; LAYERS],
+    pub keymap: [HashMap<KeyPos, HidKeys>; LAYERS],
 }
 
 impl Layout {

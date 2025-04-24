@@ -1,17 +1,20 @@
 extern crate alloc;
 
 use alloc::sync::Arc;
-use embassy_time::Instant;
 
 use crate::ble::BleStatus;
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
 use crate::config::layout::Layout;
 use crate::config::user_config::*;
-use crate::debounce::{KeyInfo, KeyState};
+use crate::debounce::KeyState;
 use crate::delay::*;
 use crate::matrix::{KeyPos, StoredKeys};
+use crate::mouse::*;
 
-use super::{BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID};
+use super::{
+    BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID, MOUSE_ID,
+};
+
 use esp32_nimble::{
     enums::*, utilities::mutex::Mutex, uuid128, BLEAdvertisementData, BLEDevice, BLEHIDDevice,
     NimbleProperties,
@@ -24,19 +27,20 @@ use heapless::Vec;
 use zerocopy::IntoBytes;
 
 impl BleKeyboardMaster {
-    pub async fn new() -> Self {
+    async fn new() -> Self {
         let device = BLEDevice::take();
 
         // creating server
         device
             .security()
-            .set_auth(AuthReq::Bond)
+            .set_auth(AuthReq::all())
             .set_io_cap(SecurityIOCap::NoInputNoOutput)
             .resolve_rpa();
 
         let server = device.get_server();
         let ble_advertising = device.get_advertising();
 
+        // ------------------ SLAVE CHARACTERISTIC INIT ----------------------
         server.on_connect(|server, desc| {
             log::info!("Client connected: {:?}", desc);
 
@@ -47,37 +51,36 @@ impl BleKeyboardMaster {
             }
         });
 
-        // create ble client characteristic
         let service = server.create_service(uuid128!("fafafafa-fafa-fafa-fafa-fafafafafafa"));
 
-        let slave_characteristic = service.lock().create_characteristic(
+        let input_slave = service.lock().create_characteristic(
             BLE_SLAVE_UUID,
             NimbleProperties::READ | NimbleProperties::WRITE | NimbleProperties::WRITE_NO_RSP,
         );
 
+        // ------------------ HID DEVICES INIT ----------------------
         let mut hid = BLEHIDDevice::new(server);
 
         let input_keyboard = hid.input_report(KEYBOARD_ID);
         let output_keyboard = hid.output_report(KEYBOARD_ID);
         let input_media_keys = hid.input_report(MEDIA_KEYS_ID);
+        let input_mouse = hid.input_report(MOUSE_ID);
 
         hid.manufacturer("Espressif");
         hid.pnp(0x02, 0x05ac, 0x820a, 0x0210);
         hid.hid_info(0x00, 0x01);
-
         hid.report_map(HID_REPORT_DISCRIPTOR);
-
         hid.set_battery_level(100);
 
+        // -------------- BLE START ADVERTIZING ------------------
         ble_advertising
             .lock()
             .scan_response(false)
             .set_data(
                 BLEAdvertisementData::new()
                     .name("Rustboard")
-                    .appearance(0x03C1)
-                    .add_service_uuid(hid.hid_service().lock().uuid())
-                    .add_service_uuid(slave_characteristic.lock().uuid()),
+                    .appearance(0x03C0)
+                    .add_service_uuid(hid.hid_service().lock().uuid()),
             )
             .unwrap();
 
@@ -91,27 +94,54 @@ impl BleKeyboardMaster {
 
         Self {
             server,
-            slave_characteristic,
+            input_slave,
             input_keyboard,
             output_keyboard,
             input_media_keys,
-            current_key_report: KeyReport::default(),
-            previous_key_report: KeyReport::default(),
+            input_mouse,
+            current_keyboard_report: KeyReport::default(),
+            previous_keyboard_report: KeyReport::default(),
+            current_mouse_report: MouseReport::default(),
+            previous_mouse_report: MouseReport::default(),
         }
     }
 
-    pub fn connected(&self) -> bool {
+    /// Get connected status
+    fn connected(&self) -> bool {
         self.server.connected_count() > 1
     }
 
-    pub async fn send_report(&mut self) {
+    /// Send keyboard report
+    async fn send_keyboard_report(&mut self) {
+        // log
+        #[cfg(feature = "debug")]
+        log::info!(
+            "ble_keyboard.current_keyboard_report.keys: {:?}",
+            self.current_keyboard_report.keys
+        );
         self.input_keyboard
             .lock()
-            .set_value(self.current_key_report.as_bytes())
+            .set_value(self.current_keyboard_report.as_bytes())
             .notify();
     }
 
-    pub fn set_ble_power_save(&mut self) {
+    /// Send mouse report
+    async fn send_mouse_report(&mut self) {
+        // debug log
+        #[cfg(feature = "debug")]
+        log::info!(
+            "ble_keyboard.current_mouse_report: {:?}",
+            self.current_mouse_report.construct()
+        );
+
+        self.input_mouse
+            .lock()
+            .set_value(self.current_mouse_report.construct().as_bytes())
+            .notify();
+    }
+
+    /// Set BLE Power-save mode
+    fn set_ble_power_save(&mut self) {
         // set power save
         unsafe {
             esp_idf_sys::esp_ble_tx_power_set(
@@ -129,9 +159,20 @@ impl BleKeyboardMaster {
         }
     }
 
-    fn is_key_report_changed(&mut self) -> bool {
-        if self.previous_key_report != self.current_key_report {
-            self.previous_key_report = self.current_key_report;
+    /// Check if keyboard report changed
+    fn is_keyboard_report_changed(&mut self) -> bool {
+        if self.previous_keyboard_report != self.current_keyboard_report {
+            self.previous_keyboard_report = self.current_keyboard_report;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Check if mouse report changed
+    fn is_mouse_report_changed(&mut self) -> bool {
+        if self.previous_mouse_report != self.current_mouse_report {
+            self.previous_mouse_report = self.current_mouse_report;
             true
         } else {
             false
@@ -153,30 +194,34 @@ fn add_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer: &m
             *layer = Layout::get_layer(valid_key);
 
             // release all keys
-            ble_keyboard.current_key_report.keys.fill(0);
+            ble_keyboard.current_keyboard_report.keys.fill(0);
 
             // release modifiers
-            ble_keyboard.current_key_report.modifiers = 0;
+            ble_keyboard.current_keyboard_report.modifiers = 0;
         }
         KeyType::Modifier => {
-            ble_keyboard.current_key_report.modifiers |= HidModifiers::get_modifier(valid_key);
+            ble_keyboard.current_keyboard_report.modifiers |= HidModifiers::get_modifier(valid_key);
+        }
+        KeyType::Mouse => {
+            // set the mouse command to the mouse ble characteristic
+            ble_keyboard.current_mouse_report.set_command(valid_key);
         }
         KeyType::Key => {
             // check if the key count is less than 6
             if !ble_keyboard
-                .current_key_report
+                .current_keyboard_report
                 .keys
                 .contains(&(*valid_key as u8))
             {
                 // find the first key slot in the array that is free
                 if let Some(index) = ble_keyboard
-                    .current_key_report
+                    .current_keyboard_report
                     .keys
                     .iter()
                     .position(|&value| value == 0)
                 {
                     // add the new key to that position
-                    ble_keyboard.current_key_report.keys[index] = *valid_key as u8
+                    ble_keyboard.current_keyboard_report.keys[index] = *valid_key as u8
                 }
             }
         }
@@ -197,56 +242,33 @@ fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer:
             *layer = 0;
 
             // release all keys
-            ble_keyboard.current_key_report.keys.fill(0);
+            ble_keyboard.current_keyboard_report.keys.fill(0);
 
             // release modifiers
-            ble_keyboard.current_key_report.modifiers = 0;
+            ble_keyboard.current_keyboard_report.modifiers = 0;
         }
         KeyType::Modifier => {
             // remove the modifier
-            ble_keyboard.current_key_report.modifiers &= !HidModifiers::get_modifier(valid_key);
+            ble_keyboard.current_keyboard_report.modifiers &=
+                !HidModifiers::get_modifier(valid_key);
+        }
+        KeyType::Mouse => {
+            // remove the mouse command from the mouse ble characteristic
+            ble_keyboard.current_mouse_report.reset_report(valid_key);
         }
         KeyType::Key => {
             // find the key slot of the released key
             if let Some(index) = ble_keyboard
-                .current_key_report
+                .current_keyboard_report
                 .keys
                 .iter()
                 .position(|&value| value == *valid_key as u8)
             {
                 // remove the key from the key slot
-                ble_keyboard.current_key_report.keys[index] = 0
+                ble_keyboard.current_keyboard_report.keys[index] = 0
             }
         }
     }
-}
-
-/// Store the received slave key report in the local pressed keys hashmap
-fn process_slave_key_report(
-    pressed_keys: &Arc<Mutex<StoredKeys>>,
-    slave_key_report: &Arc<Mutex<[u8; 6]>>,
-) {
-    // iter trough the received key report
-    slave_key_report.lock().iter().for_each(|element| {
-        // we don't want to store 0s
-        if *element != 0 {
-            // add the key_pos and the key_info to the hashmap
-            pressed_keys
-                .lock()
-                .index_map
-                .insert(
-                    KeyPos {
-                        row: *element >> BIT_SHIFT,
-                        col: *element & 0x0F,
-                    },
-                    KeyInfo {
-                        pressed_time: Instant::now(),
-                        state: KeyState::Pressed,
-                    },
-                )
-                .expect("Not enough space to store incoming slave data.");
-        }
-    });
 }
 
 pub async fn ble_tx(
@@ -271,7 +293,7 @@ pub async fn ble_tx(
     let slave_key_report: Arc<Mutex<[u8; 6]>> = Arc::new(Mutex::new([0; 6]));
 
     // on_write callback
-    ble_keyboard.slave_characteristic.lock().on_write({
+    ble_keyboard.input_slave.lock().on_write({
         let slave_key_report = Arc::clone(&slave_key_report);
         move |args| {
             let mut slave_key_report_locked = slave_key_report.lock();
@@ -296,11 +318,11 @@ pub async fn ble_tx(
                 *ble_status = BleStatus::Connected;
             }
 
-            // process slave key report
-            process_slave_key_report(pressed_keys, &slave_key_report);
-
             // try to lock the hashmap
             if let Some(mut pressed_keys) = pressed_keys.try_lock() {
+                // process slave key report
+                pressed_keys.store_keys_slave(&slave_key_report);
+
                 // check if there are pressed keys
                 if !pressed_keys.index_map.is_empty() {
                     // iter trough the pressed keys
@@ -328,16 +350,21 @@ pub async fn ble_tx(
                         }
                     }
 
-                    // log
-                    #[cfg(feature = "debug")]
-                    log::info!(
-                        "ble_keyboard.key_report.keys: {:?}",
-                        ble_keyboard.current_key_report.keys
-                    );
+                    // sent the new keyboard report only if it differes from the previous
+                    if ble_keyboard.is_keyboard_report_changed() {
+                        ble_keyboard.send_keyboard_report().await;
+                    }
 
-                    // sent the new report only if it differes from the previous
-                    if ble_keyboard.is_key_report_changed() {
-                        ble_keyboard.send_report().await;
+                    // in case the cursor is being moved
+                    if ble_keyboard
+                        .current_mouse_report
+                        .is_cursor_position_changed()
+                    {
+                        ble_keyboard.send_mouse_report().await;
+                    }
+                    // in case a key has been pressed
+                    else if ble_keyboard.is_mouse_report_changed() {
+                        ble_keyboard.send_mouse_report().await;
                     }
 
                     // remove the sent keys and empty the vec
