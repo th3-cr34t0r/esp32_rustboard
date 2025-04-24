@@ -1,13 +1,12 @@
 extern crate alloc;
 
 use alloc::sync::Arc;
-use embassy_time::Instant;
 
 use crate::ble::BleStatus;
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
 use crate::config::layout::Layout;
 use crate::config::user_config::*;
-use crate::debounce::{KeyInfo, KeyState};
+use crate::debounce::KeyState;
 use crate::delay::*;
 use crate::matrix::{KeyPos, StoredKeys};
 use crate::mouse::*;
@@ -276,34 +275,6 @@ fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer:
     }
 }
 
-/// Store the received slave key report in the local pressed keys hashmap
-fn process_slave_key_report(
-    pressed_keys: &Arc<Mutex<StoredKeys>>,
-    slave_key_report: &Arc<Mutex<[u8; 6]>>,
-) {
-    // iter trough the received key report
-    slave_key_report.lock().iter().for_each(|element| {
-        // we don't want to store 0s
-        if *element != 0 {
-            // add the key_pos and the key_info to the hashmap
-            pressed_keys
-                .lock()
-                .index_map
-                .insert(
-                    KeyPos {
-                        row: *element >> BIT_SHIFT,
-                        col: *element & 0x0F,
-                    },
-                    KeyInfo {
-                        pressed_time: Instant::now(),
-                        state: KeyState::Pressed,
-                    },
-                )
-                .expect("Not enough space to store incoming slave data.");
-        }
-    });
-}
-
 pub async fn ble_tx(
     pressed_keys: &Arc<Mutex<StoredKeys>>,
     ble_status: &Arc<Mutex<BleStatus>>,
@@ -351,11 +322,11 @@ pub async fn ble_tx(
                 *ble_status = BleStatus::Connected;
             }
 
-            // process slave key report
-            process_slave_key_report(pressed_keys, &slave_key_report);
-
             // try to lock the hashmap
             if let Some(mut pressed_keys) = pressed_keys.try_lock() {
+                // process slave key report
+                pressed_keys.store_keys_slave(&slave_key_report);
+
                 // check if there are pressed keys
                 if !pressed_keys.index_map.is_empty() {
                     // iter trough the pressed keys

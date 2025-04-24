@@ -160,16 +160,16 @@ pub enum BleStatus {
     NotConnected,
 }
 
-pub struct DebounceCounter {
+pub struct Debounce {
     future_instant: Instant,
     current_instant: Instant,
     previous_instant: Instant,
     debounce: Duration,
 }
 
-impl DebounceCounter {
+impl Debounce {
     pub fn new(debounce: Duration) -> Self {
-        DebounceCounter {
+        Debounce {
             future_instant: Instant::now(),
             current_instant: Instant::now(),
             previous_instant: Instant::now(),
