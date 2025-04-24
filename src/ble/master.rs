@@ -12,8 +12,7 @@ use crate::matrix::{KeyPos, StoredKeys};
 use crate::mouse::*;
 
 use super::{
-    BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR_KEYBOARD, KEYBOARD_ID, MEDIA_KEYS_ID,
-    MOUSE_ID,
+    BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID, MOUSE_ID,
 };
 
 use esp32_nimble::{
@@ -34,7 +33,7 @@ impl BleKeyboardMaster {
         // creating server
         device
             .security()
-            .set_auth(AuthReq::Bond)
+            .set_auth(AuthReq::all())
             .set_io_cap(SecurityIOCap::NoInputNoOutput)
             .resolve_rpa();
 
@@ -71,7 +70,7 @@ impl BleKeyboardMaster {
         hid.pnp(0x02, 0x05ac, 0x820a, 0x0210);
         hid.hid_info(0x00, 0x01);
 
-        hid.report_map(HID_REPORT_DISCRIPTOR_KEYBOARD);
+        hid.report_map(HID_REPORT_DISCRIPTOR);
 
         hid.set_battery_level(100);
 
@@ -82,9 +81,9 @@ impl BleKeyboardMaster {
             .set_data(
                 BLEAdvertisementData::new()
                     .name("Rustboard")
-                    .appearance(0x03C1)
+                    .appearance(0x03C0)
                     .add_service_uuid(input_slave.lock().uuid())
-                    .add_service_uuid(hid.hid_service().lock().uuid()), // .add_service_uuid(hid_mouse.hid_service().lock().uuid()),
+                    .add_service_uuid(hid.hid_service().lock().uuid()),
             )
             .unwrap();
 
