@@ -168,6 +168,7 @@ pub struct Debounce {
 }
 
 impl Debounce {
+    // construct the struckt
     pub fn new(debounce: Duration) -> Self {
         Debounce {
             future_instant: Instant::now(),
@@ -177,6 +178,7 @@ impl Debounce {
         }
     }
 
+    // check if debounced
     pub fn is_debounced(&mut self) -> bool {
         self.current_instant = Instant::now();
         self.future_instant = self.previous_instant + self.debounce;
@@ -188,6 +190,8 @@ impl Debounce {
             false
         }
     }
+
+    // reset the debounce with the init duration
     pub fn reset_debounce(&mut self, debounce_duraiton: Duration) {
         self.previous_instant = Instant::now() + debounce_duraiton;
     }
