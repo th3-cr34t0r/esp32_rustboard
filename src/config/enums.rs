@@ -191,10 +191,12 @@ pub enum HidKeys {
     MacroHash = 0xC6,
     MacroDollar = 0xC7,
     MacroModul = 0xC8,
-    MacroCaret = 0xCA,
-    MacroAmpersand = 0xCB,
-    MacroAsterix = 0xCC,
-    MacroSuperLock = 0xCD,
+    MacroCaret = 0xC9,
+    MacroAmpersand = 0xCA,
+    MacroAsterix = 0xCB,
+    MacroSuperLock = 0xCC,
+    MacroLeftBrace = 0xCD,
+    MacroRightBrace = 0xCE,
 
     // dummy mouse controls
     MouseGoLeft = 0xD0,
@@ -281,6 +283,16 @@ impl HidKeys {
                 vec.push(HidKeys::L).unwrap();
                 vec
             }
+            HidKeys::MacroLeftBrace => {
+                vec.push(HidKeys::ModifierShift).unwrap();
+                vec.push(HidKeys::LeftBracket).unwrap();
+                vec
+            }
+            HidKeys::MacroRightBrace => {
+                vec.push(HidKeys::ModifierShift).unwrap();
+                vec.push(HidKeys::RightBracket).unwrap();
+                vec
+            }
             _ => vec,
         }
     }
@@ -309,7 +321,9 @@ impl KeyType {
             | HidKeys::MacroCaret
             | HidKeys::MacroAmpersand
             | HidKeys::MacroAsterix
-            | HidKeys::MacroSuperLock => KeyType::Macro,
+            | HidKeys::MacroSuperLock
+            | HidKeys::MacroLeftBrace
+            | HidKeys::MacroRightBrace => KeyType::Macro,
 
             HidKeys::Layer1
             | HidKeys::Layer2
