@@ -1,7 +1,20 @@
 use crate::config::{
     enums::{HidKeys, HidMouseKeys},
-    user_config::FAST_CURSOR_VALUE,
+    user_config::{CURSOR_PARAM_FAST, CURSOR_PARAM_NORMAL, CURSOR_PARAM_SLOW},
 };
+
+#[derive(Clone, Copy, PartialEq)]
+enum CursorSpeed {
+    Fast,
+    Normal,
+    Slow,
+}
+
+impl Default for CursorSpeed {
+    fn default() -> Self {
+        CursorSpeed::Normal
+    }
+}
 
 #[derive(Default, Clone, Copy, PartialEq)]
 pub struct MouseReport {
@@ -10,7 +23,7 @@ pub struct MouseReport {
     y: u8,
     v_wheel: u8,
     h_wheel: u8,
-    fast_cursor: bool,
+    speed: CursorSpeed,
 }
 
 impl MouseReport {
@@ -32,7 +45,9 @@ impl MouseReport {
             HidKeys::MouseScrollRight => self.scroll_right(),
             HidKeys::MouseScrollUp => self.scroll_up(),
             HidKeys::MouseScrollDown => self.scroll_down(),
-            HidKeys::MouseFastCursor => self.fast_cursor = true,
+            HidKeys::MouseCursorFast => self.speed = CursorSpeed::Fast,
+            HidKeys::MouseCursorNormal => self.speed = CursorSpeed::Normal,
+            HidKeys::MouseCursorSlow => self.speed = CursorSpeed::Slow,
 
             _ => {} // do nothing
         }
@@ -46,7 +61,7 @@ impl MouseReport {
             HidKeys::MouseLeftClick | HidKeys::MouseRightClick => self.buttons = 0,
             HidKeys::MouseScrollUp | HidKeys::MouseScrollDown => self.v_wheel = 0,
             HidKeys::MouseScrollLeft | HidKeys::MouseScrollRight => self.h_wheel = 0,
-            HidKeys::MouseFastCursor => self.fast_cursor = false,
+            HidKeys::MouseCursorFast | HidKeys::MouseCursorSlow => self.speed = CursorSpeed::Normal,
 
             _ => {} // do nothing
         }
@@ -62,28 +77,31 @@ impl MouseReport {
     }
 
     fn go_left(&mut self) {
-        match self.fast_cursor {
-            true => self.x = 255 - FAST_CURSOR_VALUE,
-            false => self.x = 255,
+        match self.speed {
+            CursorSpeed::Fast => self.x = 255 - CURSOR_PARAM_FAST,
+            CursorSpeed::Normal => self.x = 255 - CURSOR_PARAM_NORMAL,
+            CursorSpeed::Slow => self.x = 255 - CURSOR_PARAM_SLOW,
         }
     }
     fn go_right(&mut self) {
-        match self.fast_cursor {
-            true => self.x = 1 + FAST_CURSOR_VALUE,
-            false => self.x = 1,
+        match self.speed {
+            CursorSpeed::Fast => self.x = 0 + CURSOR_PARAM_FAST,
+            CursorSpeed::Normal => self.x = 0 + CURSOR_PARAM_NORMAL,
+            CursorSpeed::Slow => self.x = 0 + CURSOR_PARAM_SLOW,
         }
     }
     fn go_up(&mut self) {
-        self.y = 250;
-        match self.fast_cursor {
-            true => self.y = 255 - FAST_CURSOR_VALUE,
-            false => self.y = 255,
+        match self.speed {
+            CursorSpeed::Fast => self.y = 255 - CURSOR_PARAM_FAST,
+            CursorSpeed::Normal => self.y = 255 - CURSOR_PARAM_NORMAL,
+            CursorSpeed::Slow => self.y = 255 - CURSOR_PARAM_SLOW,
         }
     }
     fn go_down(&mut self) {
-        match self.fast_cursor {
-            true => self.y = 1 + FAST_CURSOR_VALUE,
-            false => self.y = 1,
+        match self.speed {
+            CursorSpeed::Fast => self.y = 0 + CURSOR_PARAM_FAST,
+            CursorSpeed::Normal => self.y = 0 + CURSOR_PARAM_NORMAL,
+            CursorSpeed::Slow => self.y = 0 + CURSOR_PARAM_SLOW,
         }
     }
     fn click(&mut self, button: HidMouseKeys) {

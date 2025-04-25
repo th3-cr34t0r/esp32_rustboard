@@ -209,7 +209,9 @@ pub enum HidKeys {
     MouseScrollRight = 0xD7,
     MouseScrollUp = 0xD8,
     MouseScrollDown = 0xD9,
-    MouseFastCursor = 0xDA,
+    MouseCursorFast = 0xDA,
+    MouseCursorNormal = 0xDB,
+    MouseCursorSlow = 0xDC,
 }
 
 impl HidKeys {
@@ -346,7 +348,9 @@ impl KeyType {
             | HidKeys::MouseScrollRight
             | HidKeys::MouseScrollUp
             | HidKeys::MouseScrollDown
-            | HidKeys::MouseFastCursor => KeyType::Mouse,
+            | HidKeys::MouseCursorFast
+            | HidKeys::MouseCursorNormal
+            | HidKeys::MouseCursorSlow => KeyType::Mouse,
 
             _ => KeyType::Key,
         }
