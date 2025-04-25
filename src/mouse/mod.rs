@@ -85,9 +85,9 @@ impl MouseReport {
     }
     fn go_right(&mut self) {
         match self.speed {
-            CursorSpeed::Fast => self.x = 0 + CURSOR_PARAM_FAST,
-            CursorSpeed::Normal => self.x = 0 + CURSOR_PARAM_NORMAL,
-            CursorSpeed::Slow => self.x = 0 + CURSOR_PARAM_SLOW,
+            CursorSpeed::Fast => self.x = 1 + CURSOR_PARAM_FAST,
+            CursorSpeed::Normal => self.x = 1 + CURSOR_PARAM_NORMAL,
+            CursorSpeed::Slow => self.x = 1 + CURSOR_PARAM_SLOW,
         }
     }
     fn go_up(&mut self) {
@@ -99,9 +99,9 @@ impl MouseReport {
     }
     fn go_down(&mut self) {
         match self.speed {
-            CursorSpeed::Fast => self.y = 0 + CURSOR_PARAM_FAST,
-            CursorSpeed::Normal => self.y = 0 + CURSOR_PARAM_NORMAL,
-            CursorSpeed::Slow => self.y = 0 + CURSOR_PARAM_SLOW,
+            CursorSpeed::Fast => self.y = 1 + CURSOR_PARAM_FAST,
+            CursorSpeed::Normal => self.y = 1 + CURSOR_PARAM_NORMAL,
+            CursorSpeed::Slow => self.y = 1 + CURSOR_PARAM_SLOW,
         }
     }
     fn click(&mut self, button: HidMouseKeys) {

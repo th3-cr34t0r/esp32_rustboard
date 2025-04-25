@@ -33,7 +33,7 @@ pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
 
 pub const CURSOR_PARAM_FAST: u8 = 6;
 pub const CURSOR_PARAM_NORMAL: u8 = 2;
-pub const CURSOR_PARAM_SLOW: u8 = 1;
+pub const CURSOR_PARAM_SLOW: u8 = 0;
 
 pub const LAYERS: usize = 3;
 pub const BLE_STATUS_DEBOUNCE_DELAY: Duration = Duration::from_millis(500); //0.5 sec
