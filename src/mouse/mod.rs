@@ -53,8 +53,8 @@ impl MouseReport {
         }
     }
 
-    /// Reset the mouse info
-    pub fn reset_report(&mut self, valid_key: &HidKeys) {
+    /// Reset last pressed mouse key
+    pub fn reset_keypress(&mut self, valid_key: &HidKeys) {
         match *valid_key {
             HidKeys::MouseGoLeft | HidKeys::MouseGoRight => self.x = 0,
             HidKeys::MouseGoDown | HidKeys::MouseGoUp => self.y = 0,
@@ -65,6 +65,14 @@ impl MouseReport {
 
             _ => {} // do nothing
         }
+    }
+    // Reset mouse report
+    pub fn reset_report(&mut self) {
+        self.buttons = 0;
+        self.x = 0;
+        self.y = 0;
+        self.v_wheel = 0;
+        self.h_wheel = 0;
     }
 
     /// check if cursor position is changed
