@@ -243,6 +243,7 @@ fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer:
 
             // release all keys
             ble_keyboard.current_keyboard_report.keys.fill(0);
+            ble_keyboard.current_mouse_report.reset_report();
 
             // release modifiers
             ble_keyboard.current_keyboard_report.modifiers = 0;
@@ -254,7 +255,7 @@ fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer:
         }
         KeyType::Mouse => {
             // remove the mouse command from the mouse ble characteristic
-            ble_keyboard.current_mouse_report.reset_report(valid_key);
+            ble_keyboard.current_mouse_report.reset_keypress(valid_key);
         }
         KeyType::Key => {
             // find the key slot of the released key
