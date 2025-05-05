@@ -11,6 +11,8 @@ use crate::delay::*;
 use crate::matrix::{KeyPos, StoredKeys};
 use crate::mouse::*;
 
+use crate::config::user_config::master::ESP_POWER_LEVEL;
+
 use super::{
     BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID, MOUSE_ID,
 };

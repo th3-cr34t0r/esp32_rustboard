@@ -3,6 +3,8 @@ use crate::debounce::KeyState;
 use crate::delay::delay_ms;
 use crate::matrix::{KeyPos, StoredKeys};
 
+use crate::config::user_config::slave::ESP_POWER_LEVEL;
+
 extern crate alloc;
 use super::{BleKeyboardSlave, BleStatus};
 use alloc::sync::Arc;

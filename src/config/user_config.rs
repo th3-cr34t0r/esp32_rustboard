@@ -16,34 +16,46 @@ use esp_idf_sys::{
 //USER CONFIGURABLE PARAMETERS
 pub const ROWS: usize = 4;
 pub const COLS: usize = 6;
-
-#[cfg(feature = "master")]
-pub const COL_INIT: u8 = 0;
-#[cfg(feature = "master")]
-pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(20);
-#[cfg(feature = "master")]
-pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
-
-#[cfg(feature = "slave")]
-pub const COL_INIT: u8 = 6;
-#[cfg(feature = "slave")]
-pub const DEBOUNCE_DELAY: Duration = Duration::from_millis(5);
-#[cfg(feature = "slave")]
-pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
+pub const LAYERS: usize = 3;
 
 // Cursor parameters
 pub const CURSOR_PARAM_FAST: u8 = 6;
 pub const CURSOR_PARAM_NORMAL: u8 = 2;
 pub const CURSOR_PARAM_SLOW: u8 = 0;
 
-pub const LAYERS: usize = 3;
-pub const BLE_STATUS_DEBOUNCE_DELAY: Duration = Duration::from_millis(500); //0.5 sec
-pub const SLEEP_DEBOUNCE: Duration = Duration::from_millis(600000); //10 minutes
-pub const SLEEP_DELAY_NOT_CONNECTED: Duration = Duration::from_millis(60000); //1 minute
+// Debounce related params
+pub const BLE_STATUS_DEBOUNCE: Duration = Duration::from_millis(500); //0.5 sec
+pub const ENTER_SLEEP_DEBOUNCE: Duration = Duration::from_millis(600000); //10 minutes
+
+// Indexmap sizes
 pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 32;
 pub const LAYER_INDEXMAP_SIZE: usize = 64;
+
+// BLE slave characteristic uuid
 pub const BLE_SLAVE_UUID: BleUuid = uuid128!("06984d74-0fdb-491e-9c4c-c25603a9bc34");
 pub const BIT_SHIFT: u8 = 4;
+
+#[cfg(feature = "master")]
+pub mod master {
+    use embassy_time::Duration;
+
+    use super::EspPowerLevel;
+
+    pub const COL_INIT: u8 = 0;
+    pub const KEY_DEBOUNCE: Duration = Duration::from_millis(20);
+    pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
+}
+
+#[cfg(feature = "slave")]
+pub mod slave {
+    use embassy_time::Duration;
+
+    use super::EspPowerLevel;
+
+    pub const COL_INIT: u8 = 6;
+    pub const KEY_DEBOUNCE: Duration = Duration::from_millis(5);
+    pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
+}
 
 pub enum EspPowerLevel {
     Negative24,
