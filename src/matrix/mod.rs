@@ -229,11 +229,11 @@ impl StoredKeys {
                     .expect("Not enough space to store the pressed keys.");
 
                 *element = KeyPos::new(255, 255);
+
+                // reset sleep debounce
+                self.debounce.reset_debounce(SLEEP_DEBOUNCE);
             }
         });
-
-        // reset sleep debounce
-        self.debounce.reset_debounce(SLEEP_DEBOUNCE);
     }
 
     /// Store the received slave key report in the local pressed keys hashmap
@@ -255,11 +255,11 @@ impl StoredKeys {
                         },
                     )
                     .expect("Not enough space to store the slave pressed keys.");
+
+                // reset sleep debounce
+                self.debounce.reset_debounce(SLEEP_DEBOUNCE);
             }
         });
-
-        // reset sleep debounce
-        self.debounce.reset_debounce(SLEEP_DEBOUNCE);
     }
 }
 

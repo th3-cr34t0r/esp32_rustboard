@@ -332,14 +332,14 @@ pub async fn ble_tx(
                         match key_info.state {
                             KeyState::Pressed => {
                                 // get the pressed key
-                                if let Some(valid_key) = layout.keymap[layer].get(&key_pos) {
+                                if let Some(valid_key) = layout.keymap[layer].get(key_pos) {
                                     add_keys(&mut ble_keyboard, valid_key, &mut layer);
                                 }
                             }
                             // check if the key is calculated for debounce
                             KeyState::Released => {
                                 // get the mapped key from the hashmap
-                                if let Some(valid_key) = layout.keymap[layer].get(&key_pos) {
+                                if let Some(valid_key) = layout.keymap[layer].get(key_pos) {
                                     remove_keys(&mut ble_keyboard, valid_key, &mut layer);
                                 }
 

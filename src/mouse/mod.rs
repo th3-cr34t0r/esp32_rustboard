@@ -3,17 +3,12 @@ use crate::config::{
     user_config::{CURSOR_PARAM_FAST, CURSOR_PARAM_NORMAL, CURSOR_PARAM_SLOW},
 };
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Default, Clone, Copy, PartialEq)]
 enum CursorSpeed {
     Fast,
+    #[default]
     Normal,
     Slow,
-}
-
-impl Default for CursorSpeed {
-    fn default() -> Self {
-        CursorSpeed::Normal
-    }
 }
 
 #[derive(Default, Clone, Copy, PartialEq)]
@@ -77,11 +72,7 @@ impl MouseReport {
 
     /// check if cursor position is changed
     pub fn is_cursor_position_changed(&mut self) -> bool {
-        if self.x | self.y != 0 {
-            true
-        } else {
-            false
-        }
+        self.x | self.y != 0
     }
 
     fn go_left(&mut self) {
@@ -112,9 +103,12 @@ impl MouseReport {
             CursorSpeed::Slow => self.y = 1 + CURSOR_PARAM_SLOW,
         }
     }
+
+    // Method for sending the key pressed
     fn click(&mut self, button: HidMouseKeys) {
         self.buttons = button as u8;
     }
+
     fn scroll_left(&mut self) {
         self.h_wheel = 255;
     }
@@ -122,9 +116,9 @@ impl MouseReport {
         self.h_wheel = 1;
     }
     fn scroll_up(&mut self) {
-        self.v_wheel = 255;
+        self.v_wheel = 240;
     }
     fn scroll_down(&mut self) {
-        self.v_wheel = 1;
+        self.v_wheel = 15;
     }
 }
