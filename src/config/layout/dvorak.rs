@@ -24,7 +24,7 @@
 //   0 |_____|_____|_____|__[__|__]__|_____|              0 |_____|_____|_____|_____|_____|_____|
 //   1 |_____|_____|_____|M_lcl|M_rcl|_____|              1 |_____|M_lft|M_dwn|M_up_|M_rgt|_____|
 //   2 |_____|_____|_____|_____|_____|_____|              2 |_____|_____|_____|_____|_____|_____|
-//   3                   |LYR_1|SPACE|FASTC|              3 |_TAB_|ENTER|LYR_2|
+//   3                   |_____|CSLOW|CFAST|              3 |_____|_____|LYR_2|
 // //*********************************************************************************************
 //
 use crate::config::{enums::*, layout::*};
@@ -152,8 +152,8 @@ pub fn layout() -> Layout {
         (1, 10, HidKeys::MouseGoRight),
         (1, 11, HidKeys::MouseScrollRight),
         (2, 8, HidKeys::MouseScrollDown),
-        (3, 4, HidKeys::Space),
-        (3, 5, HidKeys::MouseFastCursor),
+        (3, 4, HidKeys::MouseCursorSlow),
+        (3, 5, HidKeys::MouseCursorFast),
         (3, 8, HidKeys::Layer2),
     ];
 

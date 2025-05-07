@@ -3,7 +3,7 @@
 extern crate alloc;
 use alloc::sync::Arc;
 
-use esp32_rustboard::config::user_config::SLEEP_DEBOUNCE;
+use esp32_rustboard::config::user_config::ENTER_SLEEP_DEBOUNCE;
 use esp32_rustboard::matrix::StoredKeys;
 use esp32_rustboard::*;
 use esp_idf_hal::task::block_on;
@@ -22,7 +22,7 @@ fn main() -> anyhow::Result<()> {
 
     // initialize keys pressed hashmap
     let pressed_keys: Arc<Mutex<StoredKeys>> =
-        Arc::new(Mutex::new(StoredKeys::new(SLEEP_DEBOUNCE)));
+        Arc::new(Mutex::new(StoredKeys::new(ENTER_SLEEP_DEBOUNCE)));
 
     // ble connection information shared variable
     let ble_status: Arc<Mutex<BleStatus>> = Arc::new(Mutex::new(BleStatus::Connected));

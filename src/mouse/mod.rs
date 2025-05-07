@@ -1,7 +1,15 @@
 use crate::config::{
     enums::{HidKeys, HidMouseKeys},
-    user_config::FAST_CURSOR_VALUE,
+    user_config::{CURSOR_PARAM_FAST, CURSOR_PARAM_NORMAL, CURSOR_PARAM_SLOW},
 };
+
+#[derive(Default, Clone, Copy, PartialEq)]
+enum CursorSpeed {
+    Fast,
+    #[default]
+    Normal,
+    Slow,
+}
 
 #[derive(Default, Clone, Copy, PartialEq)]
 pub struct MouseReport {
@@ -10,7 +18,7 @@ pub struct MouseReport {
     y: u8,
     v_wheel: u8,
     h_wheel: u8,
-    fast_cursor: bool,
+    speed: CursorSpeed,
 }
 
 impl MouseReport {
@@ -32,63 +40,75 @@ impl MouseReport {
             HidKeys::MouseScrollRight => self.scroll_right(),
             HidKeys::MouseScrollUp => self.scroll_up(),
             HidKeys::MouseScrollDown => self.scroll_down(),
-            HidKeys::MouseFastCursor => self.fast_cursor = true,
+            HidKeys::MouseCursorFast => self.speed = CursorSpeed::Fast,
+            HidKeys::MouseCursorNormal => self.speed = CursorSpeed::Normal,
+            HidKeys::MouseCursorSlow => self.speed = CursorSpeed::Slow,
 
             _ => {} // do nothing
         }
     }
 
-    /// Reset the mouse info
-    pub fn reset_report(&mut self, valid_key: &HidKeys) {
+    /// Reset last pressed mouse key
+    pub fn reset_keypress(&mut self, valid_key: &HidKeys) {
         match *valid_key {
             HidKeys::MouseGoLeft | HidKeys::MouseGoRight => self.x = 0,
             HidKeys::MouseGoDown | HidKeys::MouseGoUp => self.y = 0,
             HidKeys::MouseLeftClick | HidKeys::MouseRightClick => self.buttons = 0,
             HidKeys::MouseScrollUp | HidKeys::MouseScrollDown => self.v_wheel = 0,
             HidKeys::MouseScrollLeft | HidKeys::MouseScrollRight => self.h_wheel = 0,
-            HidKeys::MouseFastCursor => self.fast_cursor = false,
+            HidKeys::MouseCursorFast | HidKeys::MouseCursorSlow => self.speed = CursorSpeed::Normal,
 
             _ => {} // do nothing
         }
     }
+    // Reset mouse report
+    pub fn reset_report(&mut self) {
+        self.buttons = 0;
+        self.x = 0;
+        self.y = 0;
+        self.v_wheel = 0;
+        self.h_wheel = 0;
+    }
 
     /// check if cursor position is changed
     pub fn is_cursor_position_changed(&mut self) -> bool {
-        if self.x | self.y != 0 {
-            true
-        } else {
-            false
-        }
+        (self.x | self.y != 0) || (self.v_wheel | self.h_wheel != 0)
     }
 
     fn go_left(&mut self) {
-        match self.fast_cursor {
-            true => self.x = 255 - FAST_CURSOR_VALUE,
-            false => self.x = 255,
+        match self.speed {
+            CursorSpeed::Fast => self.x = 255 - CURSOR_PARAM_FAST,
+            CursorSpeed::Normal => self.x = 255 - CURSOR_PARAM_NORMAL,
+            CursorSpeed::Slow => self.x = 255 - CURSOR_PARAM_SLOW,
         }
     }
     fn go_right(&mut self) {
-        match self.fast_cursor {
-            true => self.x = 1 + FAST_CURSOR_VALUE,
-            false => self.x = 1,
+        match self.speed {
+            CursorSpeed::Fast => self.x = 1 + CURSOR_PARAM_FAST,
+            CursorSpeed::Normal => self.x = 1 + CURSOR_PARAM_NORMAL,
+            CursorSpeed::Slow => self.x = 1 + CURSOR_PARAM_SLOW,
         }
     }
     fn go_up(&mut self) {
-        self.y = 250;
-        match self.fast_cursor {
-            true => self.y = 255 - FAST_CURSOR_VALUE,
-            false => self.y = 255,
+        match self.speed {
+            CursorSpeed::Fast => self.y = 255 - CURSOR_PARAM_FAST,
+            CursorSpeed::Normal => self.y = 255 - CURSOR_PARAM_NORMAL,
+            CursorSpeed::Slow => self.y = 255 - CURSOR_PARAM_SLOW,
         }
     }
     fn go_down(&mut self) {
-        match self.fast_cursor {
-            true => self.y = 1 + FAST_CURSOR_VALUE,
-            false => self.y = 1,
+        match self.speed {
+            CursorSpeed::Fast => self.y = 1 + CURSOR_PARAM_FAST,
+            CursorSpeed::Normal => self.y = 1 + CURSOR_PARAM_NORMAL,
+            CursorSpeed::Slow => self.y = 1 + CURSOR_PARAM_SLOW,
         }
     }
+
+    // Method for sending the key pressed
     fn click(&mut self, button: HidMouseKeys) {
         self.buttons = button as u8;
     }
+
     fn scroll_left(&mut self) {
         self.h_wheel = 255;
     }

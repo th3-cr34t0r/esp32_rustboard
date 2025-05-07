@@ -11,6 +11,8 @@ use crate::delay::*;
 use crate::matrix::{KeyPos, StoredKeys};
 use crate::mouse::*;
 
+use crate::config::user_config::master::ESP_POWER_LEVEL;
+
 use super::{
     BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID, MOUSE_ID,
 };
@@ -243,6 +245,7 @@ fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer:
 
             // release all keys
             ble_keyboard.current_keyboard_report.keys.fill(0);
+            ble_keyboard.current_mouse_report.reset_report();
 
             // release modifiers
             ble_keyboard.current_keyboard_report.modifiers = 0;
@@ -254,7 +257,7 @@ fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer:
         }
         KeyType::Mouse => {
             // remove the mouse command from the mouse ble characteristic
-            ble_keyboard.current_mouse_report.reset_report(valid_key);
+            ble_keyboard.current_mouse_report.reset_keypress(valid_key);
         }
         KeyType::Key => {
             // find the key slot of the released key
@@ -331,14 +334,14 @@ pub async fn ble_tx(
                         match key_info.state {
                             KeyState::Pressed => {
                                 // get the pressed key
-                                if let Some(valid_key) = layout.keymap[layer].get(&key_pos) {
+                                if let Some(valid_key) = layout.keymap[layer].get(key_pos) {
                                     add_keys(&mut ble_keyboard, valid_key, &mut layer);
                                 }
                             }
                             // check if the key is calculated for debounce
                             KeyState::Released => {
                                 // get the mapped key from the hashmap
-                                if let Some(valid_key) = layout.keymap[layer].get(&key_pos) {
+                                if let Some(valid_key) = layout.keymap[layer].get(key_pos) {
                                     remove_keys(&mut ble_keyboard, valid_key, &mut layer);
                                 }
 
@@ -359,11 +362,8 @@ pub async fn ble_tx(
                     if ble_keyboard
                         .current_mouse_report
                         .is_cursor_position_changed()
+                        || ble_keyboard.is_mouse_report_changed()
                     {
-                        ble_keyboard.send_mouse_report().await;
-                    }
-                    // in case a key has been pressed
-                    else if ble_keyboard.is_mouse_report_changed() {
                         ble_keyboard.send_mouse_report().await;
                     }
 
