@@ -72,7 +72,7 @@ impl MouseReport {
 
     /// check if cursor position is changed
     pub fn is_cursor_position_changed(&mut self) -> bool {
-        self.x | self.y != 0
+        (self.x | self.y != 0) || (self.v_wheel | self.h_wheel != 0)
     }
 
     fn go_left(&mut self) {
@@ -116,9 +116,9 @@ impl MouseReport {
         self.h_wheel = 1;
     }
     fn scroll_up(&mut self) {
-        self.v_wheel = 240;
+        self.v_wheel = 255;
     }
     fn scroll_down(&mut self) {
-        self.v_wheel = 15;
+        self.v_wheel = 1;
     }
 }

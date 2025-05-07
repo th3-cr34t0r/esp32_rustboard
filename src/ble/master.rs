@@ -362,11 +362,8 @@ pub async fn ble_tx(
                     if ble_keyboard
                         .current_mouse_report
                         .is_cursor_position_changed()
+                        || ble_keyboard.is_mouse_report_changed()
                     {
-                        ble_keyboard.send_mouse_report().await;
-                    }
-                    // in case a key has been pressed
-                    else if ble_keyboard.is_mouse_report_changed() {
                         ble_keyboard.send_mouse_report().await;
                     }
 
