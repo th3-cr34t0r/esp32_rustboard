@@ -34,6 +34,7 @@ pub const LAYER_INDEXMAP_SIZE: usize = 64;
 // BLE slave characteristic uuid
 pub const BLE_SLAVE_UUID: BleUuid = uuid128!("06984d74-0fdb-491e-9c4c-c25603a9bc34");
 pub const BIT_SHIFT: u8 = 4;
+pub const MASTER_BLE_MAC: &str = "E4:B0:63:22:EB:EA";
 
 #[cfg(feature = "master")]
 pub mod master {
