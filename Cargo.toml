@@ -23,6 +23,7 @@ master = [] # left half of the keyboard
 slave = [] # right half of the keyboard
 debug = []
 dvorak = []
+dvorak_coral = []
 qwerty = []
 
 pio = ["esp-idf-svc/pio"]
