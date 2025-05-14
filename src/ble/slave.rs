@@ -30,7 +30,7 @@ impl BleKeyboardSlave {
 
         client
             .connect(
-                &BLEAddress::from_str("EC:DA:3B:BD:D7:B6", esp32_nimble::BLEAddressType::Public)
+                &BLEAddress::from_str(MASTER_BLE_MAC, esp32_nimble::BLEAddressType::Public)
                     .unwrap(),
             )
             .await

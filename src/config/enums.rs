@@ -197,6 +197,7 @@ pub enum HidKeys {
     MacroSuperLock = 0xCC,
     MacroLeftBrace = 0xCD,
     MacroRightBrace = 0xCE,
+    MacroPipe = 0xDD,
 
     // dummy mouse controls
     MouseGoLeft = 0xD0,
@@ -295,6 +296,11 @@ impl HidKeys {
                 vec.push(HidKeys::RightBracket).unwrap();
                 vec
             }
+            HidKeys::MacroPipe => {
+                vec.push(HidKeys::ModifierShift).unwrap();
+                vec.push(HidKeys::BackSlash).unwrap();
+                vec
+            }
             _ => vec,
         }
     }
@@ -325,7 +331,8 @@ impl KeyType {
             | HidKeys::MacroAsterix
             | HidKeys::MacroSuperLock
             | HidKeys::MacroLeftBrace
-            | HidKeys::MacroRightBrace => KeyType::Macro,
+            | HidKeys::MacroRightBrace
+            | HidKeys::MacroPipe => KeyType::Macro,
 
             HidKeys::Layer1
             | HidKeys::Layer2

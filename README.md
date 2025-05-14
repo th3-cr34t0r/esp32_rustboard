@@ -18,6 +18,7 @@ This project aims to provide a customizable and efficient firmware solution for 
 - When compiling, the features flag can be called with the following keywords:
    - master(left side), slave(right side) (for which board to be build for)
    - dvorak (for dvorak keyboard layout)
+   - dvorak_coral (modified verison of the standard layout for coral version model)
    - qwerty (for qwerty keyboard layout)
    - debug (only should be use in development for console logs)
 
