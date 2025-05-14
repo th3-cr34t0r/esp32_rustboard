@@ -10,6 +10,7 @@ This project aims to provide a customizable and efficient firmware solution for 
 - Bluetooth enabled
 - Layers (activated on hold)
 - Macros
+- Mouse support
 - Sleep mode (reduced power draw when not in use)
 - MCU Radio strength can be adjusted
 
