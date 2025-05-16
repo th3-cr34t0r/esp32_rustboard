@@ -1,6 +1,4 @@
 use embassy_time::Duration;
-use esp32_nimble::utilities::BleUuid;
-use esp32_nimble::uuid128;
 
 use esp_idf_sys::{
     esp_power_level_t_ESP_PWR_LVL_N0, esp_power_level_t_ESP_PWR_LVL_N12,
@@ -31,20 +29,18 @@ pub const ENTER_SLEEP_DEBOUNCE: Duration = Duration::from_millis(600000); //10 m
 pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 32;
 pub const LAYER_INDEXMAP_SIZE: usize = 64;
 
-// BLE slave characteristic uuid
-pub const BLE_SLAVE_UUID: BleUuid = uuid128!("06984d74-0fdb-491e-9c4c-c25603a9bc34");
 pub const BIT_SHIFT: u8 = 4;
-pub const MASTER_BLE_MAC: &str = "E4:B0:63:22:EB:EA";
 
 #[cfg(feature = "master")]
 pub mod master {
-    use embassy_time::Duration;
-
     use super::EspPowerLevel;
+    use embassy_time::Duration;
+    use esp32_nimble::{utilities::BleUuid, uuid128};
 
     pub const COL_INIT: u8 = 0;
     pub const KEY_DEBOUNCE: Duration = Duration::from_millis(20);
     pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
+    pub const BLE_SLAVE_UUID: BleUuid = uuid128!("06984d74-0fdb-491e-9c4c-c25603a9bc34");
 }
 
 #[cfg(feature = "slave")]
@@ -56,6 +52,7 @@ pub mod slave {
     pub const COL_INIT: u8 = 6;
     pub const KEY_DEBOUNCE: Duration = Duration::from_millis(5);
     pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
+    pub const MASTER_BLE_MAC: &str = "E4:B0:63:22:EB:EA";
 }
 
 pub enum EspPowerLevel {
