@@ -1,18 +1,11 @@
 use embassy_time::Duration;
-
-use esp_idf_sys::{
-    esp_power_level_t_ESP_PWR_LVL_N0, esp_power_level_t_ESP_PWR_LVL_N12,
-    esp_power_level_t_ESP_PWR_LVL_N15, esp_power_level_t_ESP_PWR_LVL_N18,
-    esp_power_level_t_ESP_PWR_LVL_N21, esp_power_level_t_ESP_PWR_LVL_N24,
-    esp_power_level_t_ESP_PWR_LVL_N3, esp_power_level_t_ESP_PWR_LVL_N6,
-    esp_power_level_t_ESP_PWR_LVL_N9, esp_power_level_t_ESP_PWR_LVL_P12,
-    esp_power_level_t_ESP_PWR_LVL_P15, esp_power_level_t_ESP_PWR_LVL_P18,
-    esp_power_level_t_ESP_PWR_LVL_P21, esp_power_level_t_ESP_PWR_LVL_P3,
-    esp_power_level_t_ESP_PWR_LVL_P6, esp_power_level_t_ESP_PWR_LVL_P9,
-};
+use esp32_nimble::{utilities::BleUuid, uuid128};
 
 //USER CONFIGURABLE PARAMETERS
+
+// Rows per half
 pub const ROWS: usize = 4;
+// Cols per half
 pub const COLS: usize = 6;
 pub const LAYERS: usize = 3;
 
@@ -30,69 +23,27 @@ pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 32;
 pub const LAYER_INDEXMAP_SIZE: usize = 64;
 
 pub const BIT_SHIFT: u8 = 4;
+pub const BLE_SLAVE_UUID: BleUuid = uuid128!("06984d74-0fdb-491e-9c4c-c25603a9bc34");
 
 #[cfg(feature = "master")]
 pub mod master {
-    use super::EspPowerLevel;
+    use crate::EspPowerLevel;
     use embassy_time::Duration;
-    use esp32_nimble::{utilities::BleUuid, uuid128};
 
     pub const COL_INIT: u8 = 0;
     pub const KEY_DEBOUNCE: Duration = Duration::from_millis(20);
     pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
-    pub const BLE_SLAVE_UUID: BleUuid = uuid128!("06984d74-0fdb-491e-9c4c-c25603a9bc34");
 }
 
 #[cfg(feature = "slave")]
 pub mod slave {
+    use crate::EspPowerLevel;
     use embassy_time::Duration;
 
-    use super::EspPowerLevel;
+    use super::COLS;
 
-    pub const COL_INIT: u8 = 6;
+    pub const COL_INIT: u8 = COLS as u8;
     pub const KEY_DEBOUNCE: Duration = Duration::from_millis(5);
     pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
     pub const MASTER_BLE_MAC: &str = "E4:B0:63:22:EB:EA";
-}
-
-pub enum EspPowerLevel {
-    Negative24,
-    Negative21,
-    Negative18,
-    Negative15,
-    Negative12,
-    Negative9,
-    Negative6,
-    Negative3,
-    Negative0,
-    Positive3,
-    Positive6,
-    Positive9,
-    Positive12,
-    Positive15,
-    Positive18,
-    Positive21,
-}
-
-impl EspPowerLevel {
-    pub fn convert(self) -> u32 {
-        match self {
-            EspPowerLevel::Negative24 => esp_power_level_t_ESP_PWR_LVL_N24,
-            EspPowerLevel::Negative21 => esp_power_level_t_ESP_PWR_LVL_N21,
-            EspPowerLevel::Negative18 => esp_power_level_t_ESP_PWR_LVL_N18,
-            EspPowerLevel::Negative15 => esp_power_level_t_ESP_PWR_LVL_N15,
-            EspPowerLevel::Negative12 => esp_power_level_t_ESP_PWR_LVL_N12,
-            EspPowerLevel::Negative9 => esp_power_level_t_ESP_PWR_LVL_N9,
-            EspPowerLevel::Negative6 => esp_power_level_t_ESP_PWR_LVL_N6,
-            EspPowerLevel::Negative3 => esp_power_level_t_ESP_PWR_LVL_N3,
-            EspPowerLevel::Negative0 => esp_power_level_t_ESP_PWR_LVL_N0,
-            EspPowerLevel::Positive3 => esp_power_level_t_ESP_PWR_LVL_P3,
-            EspPowerLevel::Positive6 => esp_power_level_t_ESP_PWR_LVL_P6,
-            EspPowerLevel::Positive9 => esp_power_level_t_ESP_PWR_LVL_P9,
-            EspPowerLevel::Positive12 => esp_power_level_t_ESP_PWR_LVL_P12,
-            EspPowerLevel::Positive15 => esp_power_level_t_ESP_PWR_LVL_P15,
-            EspPowerLevel::Positive18 => esp_power_level_t_ESP_PWR_LVL_P18,
-            EspPowerLevel::Positive21 => esp_power_level_t_ESP_PWR_LVL_P21,
-        }
-    }
 }

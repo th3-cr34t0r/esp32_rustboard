@@ -5,12 +5,13 @@ use alloc::sync::Arc;
 use crate::ble::BleStatus;
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
 use crate::config::layout::Layout;
+use crate::config::user_config::BLE_SLAVE_UUID;
 use crate::debounce::KeyState;
 use crate::delay::*;
 use crate::matrix::{KeyPos, StoredKeys};
 use crate::mouse::*;
 
-use crate::config::user_config::master::{BLE_SLAVE_UUID, ESP_POWER_LEVEL};
+use crate::config::user_config::master::ESP_POWER_LEVEL;
 
 use super::{
     BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID, MOUSE_ID,
