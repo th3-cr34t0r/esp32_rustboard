@@ -5,7 +5,7 @@ use alloc::sync::Arc;
 use crate::ble::BleStatus;
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
 use crate::config::layout::Layout;
-use crate::config::user_config::*;
+use crate::config::user_config::BLE_SLAVE_UUID;
 use crate::debounce::KeyState;
 use crate::delay::*;
 use crate::matrix::{KeyPos, StoredKeys};
