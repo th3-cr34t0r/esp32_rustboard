@@ -164,7 +164,7 @@ pub fn layout() -> Layout {
         (2, 8, HidKeys::MouseScrollDown),
         (3, 4, HidKeys::MouseCursorSlow),
         (3, 5, HidKeys::MouseCursorFast),
-        (3, 8, HidKeys::Layer2),
+        (3, 1, HidKeys::Layer2),
     ];
 
     for (row, col, key) in layer_keymap {
