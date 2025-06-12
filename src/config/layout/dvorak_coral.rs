@@ -5,8 +5,8 @@
 //   0 |_ESC_|__'__|__,__|__.__|__p__|__y__|                   |__f__|__g__|__c__|__r__|__l__|__/__|
 //   1 |_BSP_|__a__|__o__|__e__|__u__|__i__|                   |__d__|__h__|__t__|__n__|__s__|__-__|
 //   2 |_CTL_|__;__|__q__|__j__|__k__|__x__|                   |__b__|__m__|__w__|__v__|__z__|__=__|
-//   3             |LYR_2|_SUP_|                                           |__[__|__]__|
-//                             |_ALT_|                               |LYR_1|
+//   3             |LYR_2|_ALT_|                                           |__[__|__]__|
+//                             |_SUP_|                               |LYR_1|
 //                                   |SPACE|                   |ENTER|
 //                                         |SHIFT|       |_TAB_|
 //                   (1)   (2)   (3)   (4)   (5)           (6)   (7)  (8)   (9)   (10)
@@ -17,8 +17,8 @@
 //   0 |_ESC_|_____|__7__|__8__|__9__|_PScr|                   |__!__|__@__|__#__|__$__|__%__|__^__|
 //   1 |_BSP_|_DOT_|__4__|__5__|__6__|_DEL_|                   |__&__|_left|_down|__up_|right|__*__|
 //   2 |_CTL_|__0__|__1__|__2__|__3__|S_LCK|                   |__\__|__|__|_____|_____|_____|__`__|
-//   3             |_____|_SUP_|                                           |__(__|__)__|
-//                             |_ALT_|                               |LYR_1|
+//   3             |_____|_ALT_|                                           |__(__|__)__|
+//                             |_SUP_|                               |LYR_1|
 //                                   |SPACE|                   |ENTER|
 //                                         |SHIFT|       |_TAB_|
 //                   (1)   (2)   (3)   (4)   (5)           (6)   (7)  (8)   (9)   (10)
@@ -80,8 +80,8 @@ pub fn layout() -> Layout {
         (2, 10, HidKeys::Z),
         (2, 11, HidKeys::Equal),
         (3, 1, HidKeys::Layer2),
-        (3, 2, HidKeys::ModifierSuper),
-        (3, 3, HidKeys::ModifierAlt),
+        (3, 2, HidKeys::ModifierAlt),
+        (3, 3, HidKeys::ModifierSuper),
         (3, 4, HidKeys::Space),
         (3, 5, HidKeys::ModifierShift),
         (3, 6, HidKeys::Tab),
@@ -132,8 +132,8 @@ pub fn layout() -> Layout {
         (2, 6, HidKeys::BackSlash),
         (2, 7, HidKeys::MacroPipe),
         (2, 11, HidKeys::Grave),
-        (3, 2, HidKeys::ModifierSuper),
-        (3, 3, HidKeys::ModifierAlt),
+        (3, 2, HidKeys::ModifierAlt),
+        (3, 3, HidKeys::ModifierSuper),
         (3, 4, HidKeys::Space),
         (3, 5, HidKeys::ModifierShift),
         (3, 6, HidKeys::Tab),
