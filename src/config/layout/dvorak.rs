@@ -6,28 +6,73 @@
 //   0 |_ESC_|__'__|__,__|__.__|__p__|__y__|              0 |__f__|__g__|__c__|__r__|__l__|__/__|
 //   1 |_BSP_|__a__|__o__|__e__|__u__|__i__|              1 |__d__|__h__|__t__|__n__|__s__|__-__|
 //   2 |_CTL_|__;__|__q__|__j__|__k__|__x__|              2 |__b__|__m__|__w__|__v__|__z__|__=__|
-//   3                   |LYR_1|SPACE|SHIFT|              3 |_TAB_|ENTER|LYR_2|
+//   3                   |_ALT_|SPACE|SHIFT|              3 |_TAB_|ENTER|LYR_1|
 //
 //*********************************************************************************************
 // LAYER 1:
 //
 //X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
 //   0 |_ESC_|_SUP_|__7__|__8__|__9__|_PScr|              0 |__@__|__(__|__)__|__$__|__%__|__^__|
-//   1 |_BSP_|_ALT_|__4__|__5__|__6__|_DEL_|              1 |__&__|_left|_down|__up_|right|__*__|
+//   1 |_BSP_|LYR_2|__4__|__5__|__6__|_DEL_|              1 |__&__|_left|_down|__up_|right|__*__|
 //   2 |_CTL_|__0__|__1__|__2__|__3__|S_LCK|              2 |__\__|__{__|__}__|__!__|__#__|__`__|
-//   3                   |LYR_1|SPACE|SHIFT|              3 |_TAB_|ENTER|LYR_2|
+//   3                   |_ALT_|SPACE|SHIFT|              3 |_TAB_|ENTER|LYR_1|
 //
 //*********************************************************************************************
 // LAYER 2:
 //
 //X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
 //   0 |_____|_____|_____|__[__|__]__|_____|              0 |_____|_____|_____|_____|_____|_____|
-//   1 |_____|_____|_____|M_lcl|M_rcl|_____|              1 |_____|M_lft|M_dwn|M_up_|M_rgt|_____|
+//   1 |_____|LYR_2|_____|M_lcl|M_rcl|_____|              1 |_____|M_lft|M_dwn|M_up_|M_rgt|_____|
 //   2 |_____|_____|_____|_____|_____|_____|              2 |_____|_____|_____|_____|_____|_____|
-//   3                   |_____|CSLOW|CFAST|              3 |_____|_____|LYR_2|
+//   3                   |_____|CSLOW|CFAST|              3 |_____|_____|_____|
 // //*********************************************************************************************
 //
-use crate::config::{enums::*, layout::*};
+use crate::{
+    config::{enums::*, layout::*},
+    matrix::PinMatrix,
+};
+use esp_idf_hal::{
+    gpio::{IOPin, PinDriver},
+    prelude::Peripherals,
+};
+
+pub fn provide_pin_layout() -> PinMatrix<'static> {
+    let peripherals = Peripherals::take().expect("Not able to init peripherals.");
+
+    let rows = [
+        PinDriver::output(peripherals.pins.gpio0.downgrade())
+            .expect("Not able to set port as output."),
+        PinDriver::output(peripherals.pins.gpio1.downgrade())
+            .expect("Not able to set port as output."),
+        PinDriver::output(peripherals.pins.gpio2.downgrade())
+            .expect("Not able to set port as output."),
+        PinDriver::output(peripherals.pins.gpio3.downgrade())
+            .expect("Not able to set port as output."),
+    ];
+
+    let cols = [
+        PinDriver::input(peripherals.pins.gpio21.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio20.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio10.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio7.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio6.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio5.downgrade())
+            .expect("Not able to set port as input."),
+    ];
+
+    let pressed_keys_array = [KeyPos::new(255, 255); 6];
+
+    PinMatrix {
+        rows,
+        cols,
+        pressed_keys_array,
+    }
+}
 
 pub fn layout() -> Layout {
     let mut layout = Layout::default();
@@ -70,12 +115,12 @@ pub fn layout() -> Layout {
         (2, 9, HidKeys::V),
         (2, 10, HidKeys::Z),
         (2, 11, HidKeys::Equal),
-        (3, 3, HidKeys::Layer1),
+        (3, 3, HidKeys::ModifierAlt),
         (3, 4, HidKeys::Space),
         (3, 5, HidKeys::ModifierShift),
         (3, 6, HidKeys::Tab),
         (3, 7, HidKeys::Enter),
-        (3, 8, HidKeys::Layer2),
+        (3, 8, HidKeys::Layer1),
     ];
 
     for (row, col, key) in layer_keymap {
@@ -100,7 +145,7 @@ pub fn layout() -> Layout {
         (0, 10, HidKeys::MacroModul),
         (0, 11, HidKeys::MacroCaret),
         (1, 0, HidKeys::BackSpace),
-        (1, 1, HidKeys::ModifierAlt),
+        (1, 1, HidKeys::Layer2),
         (1, 2, HidKeys::Num4),
         (1, 3, HidKeys::Num5),
         (1, 4, HidKeys::Num6),
@@ -123,12 +168,12 @@ pub fn layout() -> Layout {
         (2, 9, HidKeys::MacroExclamationMark),
         (2, 10, HidKeys::MacroHash),
         (2, 11, HidKeys::Grave),
-        (3, 3, HidKeys::Layer1),
+        (3, 3, HidKeys::ModifierAlt),
         (3, 4, HidKeys::Space),
         (3, 5, HidKeys::ModifierShift),
         (3, 6, HidKeys::Tab),
         (3, 7, HidKeys::Enter),
-        (3, 8, HidKeys::Layer2),
+        (3, 8, HidKeys::Layer1),
     ];
 
     for (row, col, key) in layer_keymap {
@@ -143,6 +188,7 @@ pub fn layout() -> Layout {
         (0, 3, HidKeys::LeftBracket),
         (0, 4, HidKeys::RightBracket),
         (0, 8, HidKeys::MouseScrollUp),
+        (1, 1, HidKeys::Layer2),
         (1, 3, HidKeys::MouseLeftClick),
         (1, 4, HidKeys::MouseRightClick),
         (1, 6, HidKeys::MouseScrollLeft),
@@ -154,7 +200,6 @@ pub fn layout() -> Layout {
         (2, 8, HidKeys::MouseScrollDown),
         (3, 4, HidKeys::MouseCursorSlow),
         (3, 5, HidKeys::MouseCursorFast),
-        (3, 8, HidKeys::Layer2),
     ];
 
     for (row, col, key) in layer_keymap {

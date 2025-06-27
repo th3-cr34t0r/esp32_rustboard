@@ -36,7 +36,52 @@
 //                   (1)   (2)   (3)   (4)   (5)           (6)   (7)  (8)   (9)   (10)
 //**************************************************************************************************
 //
-use crate::config::{enums::*, layout::*};
+use crate::{
+    config::{enums::*, layout::*},
+    matrix::PinMatrix,
+};
+use esp_idf_hal::{
+    gpio::{IOPin, PinDriver},
+    prelude::Peripherals,
+};
+
+pub fn provide_pin_layout() -> PinMatrix<'static> {
+    let peripherals = Peripherals::take().expect("Not able to init peripherals.");
+
+    let rows = [
+        PinDriver::output(peripherals.pins.gpio12.downgrade())
+            .expect("Not able to set port as output."),
+        PinDriver::output(peripherals.pins.gpio18.downgrade())
+            .expect("Not able to set port as output."),
+        PinDriver::output(peripherals.pins.gpio19.downgrade())
+            .expect("Not able to set port as output."),
+        PinDriver::output(peripherals.pins.gpio20.downgrade())
+            .expect("Not able to set port as output."),
+    ];
+
+    let cols = [
+        PinDriver::input(peripherals.pins.gpio4.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio5.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio7.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio6.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio10.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio3.downgrade())
+            .expect("Not able to set port as input."),
+    ];
+
+    let pressed_keys_array = [KeyPos::new(255, 255); 6];
+
+    PinMatrix {
+        rows,
+        cols,
+        pressed_keys_array,
+    }
+}
 
 pub fn layout() -> Layout {
     let mut layout = Layout::default();

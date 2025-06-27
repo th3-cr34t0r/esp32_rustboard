@@ -10,7 +10,6 @@ use crate::config::user_config::slave::COL_INIT;
 
 use embassy_time::{Duration, Instant};
 use esp_idf_svc::hal::gpio::*;
-use esp_idf_svc::hal::peripherals::Peripherals;
 
 use esp32_nimble::utilities::mutex::Mutex;
 use esp_idf_sys::{
@@ -24,6 +23,12 @@ pub use crate::debounce::{KeyInfo, KeyState};
 
 extern crate alloc;
 use alloc::sync::Arc;
+
+#[cfg(feature = "dvorak")]
+use crate::config::layout::dvorak;
+
+#[cfg(feature = "dvorak_coral")]
+use crate::config::layout::dvorak_coral;
 
 #[derive(PartialOrd, Ord, Eq, Hash, PartialEq, Clone, Copy, Debug)]
 pub struct KeyPos {
@@ -44,46 +49,19 @@ pub struct PinMatrix<'a> {
 
 impl PinMatrix<'_> {
     pub fn new() -> PinMatrix<'static> {
-        let peripherals = Peripherals::take().expect("Not able to init peripherals.");
+        #[cfg(feature = "dvorak")]
+        let mut pin_matrix = dvorak::provide_pin_layout();
 
-        let rows = [
-            PinDriver::output(peripherals.pins.gpio12.downgrade())
-                .expect("Not able to set port as output."),
-            PinDriver::output(peripherals.pins.gpio18.downgrade())
-                .expect("Not able to set port as output."),
-            PinDriver::output(peripherals.pins.gpio19.downgrade())
-                .expect("Not able to set port as output."),
-            PinDriver::output(peripherals.pins.gpio20.downgrade())
-                .expect("Not able to set port as output."),
-        ];
-
-        let mut cols = [
-            PinDriver::input(peripherals.pins.gpio4.downgrade())
-                .expect("Not able to set port as input."),
-            PinDriver::input(peripherals.pins.gpio5.downgrade())
-                .expect("Not able to set port as input."),
-            PinDriver::input(peripherals.pins.gpio7.downgrade())
-                .expect("Not able to set port as input."),
-            PinDriver::input(peripherals.pins.gpio6.downgrade())
-                .expect("Not able to set port as input."),
-            PinDriver::input(peripherals.pins.gpio10.downgrade())
-                .expect("Not able to set port as input."),
-            PinDriver::input(peripherals.pins.gpio3.downgrade())
-                .expect("Not able to set port as input."),
-        ];
+        #[cfg(feature = "dvorak_coral")]
+        let mut pin_matrix = dvorak_coral::provide_pin_layout();
 
         // set input ports to proper pull and interrupt type
-
-        for col in cols.iter_mut() {
+        for col in pin_matrix.cols.iter_mut() {
             col.set_pull(Pull::Down).ok();
             col.set_interrupt_type(InterruptType::AnyEdge).ok();
         }
 
-        PinMatrix {
-            rows,
-            cols,
-            pressed_keys_array: [KeyPos::new(255, 255); 6],
-        }
+        pin_matrix
     }
 
     /// Enables interrupt on pins for wakeup
