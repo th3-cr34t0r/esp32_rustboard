@@ -12,16 +12,16 @@
 // LAYER 1:
 //
 //X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
-//   0 |_ESC_|_SUP_|__7__|__8__|__9__|_PScr|              0 |__@__|__(__|__)__|__$__|__%__|__^__|
-//   1 |_BSP_|LYR_2|__4__|__5__|__6__|_DEL_|              1 |__&__|_left|_down|__up_|right|__*__|
-//   2 |_CTL_|__0__|__1__|__2__|__3__|S_LCK|              2 |__\__|__{__|__}__|__!__|__#__|__`__|
+//   0 |_ESC_|_SUP_|__7__|__8__|__9__|_PScr|              0 |_____|__(__|__)__|_____|_____|_____|
+//   1 |_BSP_|LYR_2|__4__|__5__|__6__|_DEL_|              1 |_____|_left|_down|__up_|right|_____|
+//   2 |_CTL_|__0__|__1__|__2__|__3__|S_LCK|              2 |__\__|__[__|__]__|__`__|_____|_____|
 //   3                   |_ALT_|SPACE|SHIFT|              3 |_TAB_|ENTER|LYR_1|
 //
 //*********************************************************************************************
 // LAYER 2:
 //
 //X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
-//   0 |_____|_____|_____|__[__|__]__|_____|              0 |_____|_____|_____|_____|_____|_____|
+//   0 |_____|_____|_____|_____|_____|_____|              0 |_____|_____|_____|_____|_____|_____|
 //   1 |_____|LYR_2|_____|M_lcl|M_rcl|_____|              1 |_____|M_lft|M_dwn|M_up_|M_rgt|_____|
 //   2 |_____|_____|_____|_____|_____|_____|              2 |_____|_____|_____|_____|_____|_____|
 //   3                   |_____|CSLOW|CFAST|              3 |_____|_____|_____|
@@ -35,6 +35,8 @@ use esp_idf_hal::{
     gpio::{IOPin, PinDriver},
     prelude::Peripherals,
 };
+
+pub static KB_NAME: &str = "Rustboard";
 
 pub fn provide_pin_layout() -> PinMatrix<'static> {
     let peripherals = Peripherals::take().expect("Not able to init peripherals.");
@@ -138,24 +140,18 @@ pub fn layout() -> Layout {
         (0, 3, HidKeys::Num8),
         (0, 4, HidKeys::Num9),
         (0, 5, HidKeys::Pscreen),
-        (0, 6, HidKeys::MacroAt),
         (0, 7, HidKeys::MacroLeftParenthesis),
         (0, 8, HidKeys::MacroRightParenthesis),
-        (0, 9, HidKeys::MacroDollar),
-        (0, 10, HidKeys::MacroModul),
-        (0, 11, HidKeys::MacroCaret),
         (1, 0, HidKeys::BackSpace),
         (1, 1, HidKeys::Layer2),
         (1, 2, HidKeys::Num4),
         (1, 3, HidKeys::Num5),
         (1, 4, HidKeys::Num6),
         (1, 5, HidKeys::Delete),
-        (1, 6, HidKeys::MacroAmpersand),
         (1, 7, HidKeys::ArrowLeft),
         (1, 8, HidKeys::ArrowDown),
         (1, 9, HidKeys::ArrowUp),
         (1, 10, HidKeys::ArrowRight),
-        (1, 11, HidKeys::MacroAsterix),
         (2, 0, HidKeys::ModifierControl),
         (2, 1, HidKeys::Num0),
         (2, 2, HidKeys::Num1),
@@ -163,11 +159,9 @@ pub fn layout() -> Layout {
         (2, 4, HidKeys::Num3),
         (2, 5, HidKeys::MacroSuperLock),
         (2, 6, HidKeys::BackSlash),
-        (2, 7, HidKeys::MacroLeftBrace),
-        (2, 8, HidKeys::MacroRightBrace),
-        (2, 9, HidKeys::MacroExclamationMark),
-        (2, 10, HidKeys::MacroHash),
-        (2, 11, HidKeys::Grave),
+        (2, 7, HidKeys::LeftBracket),
+        (2, 8, HidKeys::RightBracket),
+        (2, 9, HidKeys::Grave),
         (3, 3, HidKeys::ModifierAlt),
         (3, 4, HidKeys::Space),
         (3, 5, HidKeys::ModifierShift),
@@ -185,8 +179,6 @@ pub fn layout() -> Layout {
 
     // LAYER 2 LAYOUT
     let layer_keymap = [
-        (0, 3, HidKeys::LeftBracket),
-        (0, 4, HidKeys::RightBracket),
         (0, 8, HidKeys::MouseScrollUp),
         (1, 1, HidKeys::Layer2),
         (1, 3, HidKeys::MouseLeftClick),
