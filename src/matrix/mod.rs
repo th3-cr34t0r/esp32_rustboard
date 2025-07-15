@@ -221,7 +221,7 @@ impl PinMatrix<'_> {
                     self.col_4.wait_for_high(),
                     self.col_5.wait_for_high(),
                 ]),
-                delay_us(250),
+                delay_us(1000),
             )
             .await
             {
