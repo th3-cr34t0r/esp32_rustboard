@@ -21,6 +21,7 @@ opt-level = "z"
 default = ["embassy", "esp-idf-svc/native"]
 master = [] # left half of the keyboard
 slave = [] # right half of the keyboard
+async-scan = [] # async wait for button press
 debug = []
 dvorak = []
 dvorak_coral = []
