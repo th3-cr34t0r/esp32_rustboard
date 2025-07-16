@@ -3,10 +3,10 @@ use crate::config::user_config::*;
 use crate::delay::*;
 
 #[cfg(feature = "master")]
-use crate::config::user_config::master::COL_INIT;
+use crate::config::user_config::master::COL_OFFSET;
 
 #[cfg(feature = "slave")]
-use crate::config::user_config::slave::COL_INIT;
+use crate::config::user_config::slave::COL_OFFSET;
 
 use embassy_time::{Duration, Instant};
 use esp_idf_svc::hal::gpio::*;
@@ -202,7 +202,8 @@ impl PinMatrix<'_> {
         // initialize counts
 
         use embassy_futures::select::{select, select_array, Either};
-        let mut count: KeyPos = KeyPos::new(0, COL_INIT);
+
+        let mut count: KeyPos = KeyPos::new(0, COL_OFFSET);
 
         // check rows and cols
         for row in self.rows.iter_mut() {
@@ -231,7 +232,8 @@ impl PinMatrix<'_> {
                         .iter()
                         .position(|&element| element == KeyPos::new(255, 255))
                     {
-                        count.col = selected_col as u8;
+                        count.col = selected_col as u8 + COL_OFFSET;
+
                         self.pressed_keys_array[index] = count;
                     }
                 }
@@ -262,7 +264,7 @@ impl PinMatrix<'_> {
     /// Each row is set to high, then each col is checked if it is high or not
     async fn standard_scan(&mut self, pressed_keys: &Arc<Mutex<StoredKeys>>) {
         // initialize counts
-        let mut count: KeyPos = KeyPos::new(0, COL_INIT);
+        let mut count: KeyPos = KeyPos::new(0, COL_OFFSET);
 
         // check rows and cols
         for row in self.rows.iter_mut() {
@@ -296,7 +298,7 @@ impl PinMatrix<'_> {
             count.row += 1;
 
             // reset col count
-            count.col = COL_INIT;
+            count.col = COL_OFFSET;
         }
 
         // reset row count

@@ -30,7 +30,7 @@ pub mod master {
     use crate::EspPowerLevel;
     use embassy_time::Duration;
 
-    pub const COL_INIT: u8 = 0;
+    pub const COL_OFFSET: u8 = 0;
     pub const KEY_DEBOUNCE: Duration = Duration::from_millis(20);
     pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
 }
@@ -42,8 +42,8 @@ pub mod slave {
 
     use super::COLS;
 
-    pub const COL_INIT: u8 = COLS as u8;
-    pub const KEY_DEBOUNCE: Duration = Duration::from_millis(5);
+    pub const COL_OFFSET: u8 = COLS as u8;
+    pub const KEY_DEBOUNCE: Duration = Duration::from_millis(20);
     pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
     pub const MASTER_BLE_MAC: &str = "E4:B0:63:22:EB:EA";
 }
