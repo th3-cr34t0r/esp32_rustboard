@@ -37,6 +37,7 @@ use esp_idf_hal::{
 };
 
 pub static KB_NAME: &str = "Rustboard";
+pub const MASTER_BLE_MAC: &str = "EC:DA:3B:BD:D7:B6";
 
 pub fn provide_pin_layout() -> PinMatrix<'static> {
     let peripherals = Peripherals::take().expect("Not able to init peripherals.");

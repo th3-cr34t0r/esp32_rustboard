@@ -43,7 +43,6 @@ pub mod slave {
     use super::COLS;
 
     pub const COL_OFFSET: u8 = COLS as u8;
-    pub const KEY_DEBOUNCE: Duration = Duration::from_millis(20);
+    pub const KEY_DEBOUNCE: Duration = Duration::from_millis(10);
     pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
-    pub const MASTER_BLE_MAC: &str = "E4:B0:63:22:EB:EA";
 }
