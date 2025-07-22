@@ -150,6 +150,8 @@ impl PinMatrix<'_> {
 
             // delay so pin can propagate
             delay_us(1).await;
+
+            // new scope so cols are accessable as mut
             {
                 let mut futures: Vec<_, COLS> = self
                     .cols
@@ -164,6 +166,7 @@ impl PinMatrix<'_> {
                 .await
                 {
                     Either::First((Ok(_), _)) => {
+                        // set flag in case a col pin is interupted
                         is_pressed = true;
                     }
                     Either::First((Err(_), _)) => {}
@@ -187,8 +190,10 @@ impl PinMatrix<'_> {
                             self.pressed_keys_array[index] = count;
                         }
                     }
+                    // increment col
                     count.col += 1;
                 }
+                // reset flag
                 is_pressed = false;
             }
 
