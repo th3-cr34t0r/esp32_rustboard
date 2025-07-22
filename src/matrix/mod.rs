@@ -43,23 +43,7 @@ impl KeyPos {
 }
 pub struct PinMatrix<'a> {
     pub rows: [PinDriver<'a, AnyIOPin, Output>; ROWS],
-
-    #[cfg(feature = "async-scan")]
-    pub col_0: PinDriver<'a, AnyIOPin, Input>,
-    #[cfg(feature = "async-scan")]
-    pub col_1: PinDriver<'a, AnyIOPin, Input>,
-    #[cfg(feature = "async-scan")]
-    pub col_2: PinDriver<'a, AnyIOPin, Input>,
-    #[cfg(feature = "async-scan")]
-    pub col_3: PinDriver<'a, AnyIOPin, Input>,
-    #[cfg(feature = "async-scan")]
-    pub col_4: PinDriver<'a, AnyIOPin, Input>,
-    #[cfg(feature = "async-scan")]
-    pub col_5: PinDriver<'a, AnyIOPin, Input>,
-
-    #[cfg(not(feature = "async-scan"))]
     pub cols: [PinDriver<'a, AnyIOPin, Input>; COLS],
-
     pub pressed_keys_array: [KeyPos; 6],
 }
 
@@ -71,44 +55,6 @@ impl PinMatrix<'_> {
         #[cfg(feature = "dvorak_coral")]
         let mut pin_matrix = dvorak_coral::provide_pin_layout();
 
-        #[cfg(feature = "async-scan")]
-        {
-            // set input ports to proper pull and interrupt type
-            pin_matrix.col_0.set_pull(Pull::Down).ok();
-            pin_matrix
-                .col_0
-                .set_interrupt_type(InterruptType::AnyEdge)
-                .ok();
-
-            pin_matrix.col_1.set_pull(Pull::Down).ok();
-            pin_matrix
-                .col_1
-                .set_interrupt_type(InterruptType::AnyEdge)
-                .ok();
-
-            pin_matrix.col_2.set_pull(Pull::Down).ok();
-            pin_matrix
-                .col_2
-                .set_interrupt_type(InterruptType::AnyEdge)
-                .ok();
-            pin_matrix.col_3.set_pull(Pull::Down).ok();
-            pin_matrix
-                .col_3
-                .set_interrupt_type(InterruptType::AnyEdge)
-                .ok();
-            pin_matrix.col_4.set_pull(Pull::Down).ok();
-            pin_matrix
-                .col_4
-                .set_interrupt_type(InterruptType::AnyEdge)
-                .ok();
-            pin_matrix.col_5.set_pull(Pull::Down).ok();
-            pin_matrix
-                .col_5
-                .set_interrupt_type(InterruptType::AnyEdge)
-                .ok();
-        }
-
-        #[cfg(not(feature = "async-scan"))]
         // set input ports to proper pull and interrupt type
         for col in pin_matrix.cols.iter_mut() {
             col.set_pull(Pull::Down).ok();
@@ -118,17 +64,6 @@ impl PinMatrix<'_> {
         pin_matrix
     }
 
-    #[cfg(feature = "async-scan")]
-    /// Enables interrupt on pins for wakeup
-    fn set_col_enable_sleep_interrupts(&mut self) {
-        self.col_0.enable_interrupt().ok();
-        self.col_1.enable_interrupt().ok();
-        self.col_2.enable_interrupt().ok();
-        self.col_3.enable_interrupt().ok();
-        self.col_4.enable_interrupt().ok();
-        self.col_5.enable_interrupt().ok();
-    }
-    #[cfg(not(feature = "async-scan"))]
     /// Enables interrupt on pins for wakeup
     fn set_col_enable_sleep_interrupts(&mut self) {
         for col in self.cols.iter_mut() {
@@ -201,7 +136,8 @@ impl PinMatrix<'_> {
     async fn async_scan(&mut self, pressed_keys: &Arc<Mutex<StoredKeys>>) {
         // initialize counts
 
-        use embassy_futures::select::{select, select_array, Either};
+        use embassy_futures::select::{select, select_slice, Either};
+        use heapless::Vec;
 
         let mut count: KeyPos = KeyPos::new(0, COL_OFFSET);
 
@@ -213,27 +149,22 @@ impl PinMatrix<'_> {
             // delay so pin can propagate
             delay_us(10).await;
 
-            match select(
-                select_array([
-                    self.col_0.wait_for_high(),
-                    self.col_1.wait_for_high(),
-                    self.col_2.wait_for_high(),
-                    self.col_3.wait_for_high(),
-                    self.col_4.wait_for_high(),
-                    self.col_5.wait_for_high(),
-                ]),
-                delay_us(1000),
-            )
-            .await
-            {
+            let mut futures: Vec<_, COLS> = self
+                .cols
+                .iter_mut()
+                .map(|col| col.wait_for_high())
+                .collect();
+
+            match select(select_slice(futures.as_mut_slice()), delay_us(1000)).await {
                 Either::First((Ok(_), selected_col)) => {
+                    // store the pressed key
                     if let Some(index) = self
                         .pressed_keys_array
                         .iter()
                         .position(|&element| element == KeyPos::new(255, 255))
                     {
+                        // assign the col offset
                         count.col = selected_col as u8 + COL_OFFSET;
-
                         self.pressed_keys_array[index] = count;
                     }
                 }

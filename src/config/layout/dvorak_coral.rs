@@ -62,26 +62,6 @@ pub fn provide_pin_layout() -> PinMatrix<'static> {
             .expect("Not able to set port as output."),
     ];
 
-    #[cfg(feature = "async-scan")]
-    let col_0 = PinDriver::input(peripherals.pins.gpio4.downgrade())
-        .expect("Not able to set port as input.");
-    #[cfg(feature = "async-scan")]
-    let col_1 = PinDriver::input(peripherals.pins.gpio5.downgrade())
-        .expect("Not able to set port as input.");
-    #[cfg(feature = "async-scan")]
-    let col_2 = PinDriver::input(peripherals.pins.gpio7.downgrade())
-        .expect("Not able to set port as input.");
-    #[cfg(feature = "async-scan")]
-    let col_3 = PinDriver::input(peripherals.pins.gpio6.downgrade())
-        .expect("Not able to set port as input.");
-    #[cfg(feature = "async-scan")]
-    let col_4 = PinDriver::input(peripherals.pins.gpio10.downgrade())
-        .expect("Not able to set port as input.");
-    #[cfg(feature = "async-scan")]
-    let col_5 = PinDriver::input(peripherals.pins.gpio3.downgrade())
-        .expect("Not able to set port as input.");
-
-    #[cfg(not(feature = "async-scan"))]
     let cols = [
         PinDriver::input(peripherals.pins.gpio4.downgrade())
             .expect("Not able to set port as input."),
@@ -101,23 +81,7 @@ pub fn provide_pin_layout() -> PinMatrix<'static> {
 
     PinMatrix {
         rows,
-
-        #[cfg(feature = "async-scan")]
-        col_0,
-        #[cfg(feature = "async-scan")]
-        col_1,
-        #[cfg(feature = "async-scan")]
-        col_2,
-        #[cfg(feature = "async-scan")]
-        col_3,
-        #[cfg(feature = "async-scan")]
-        col_4,
-        #[cfg(feature = "async-scan")]
-        col_5,
-
-        #[cfg(not(feature = "async-scan"))]
         cols,
-
         pressed_keys_array,
     }
 }
