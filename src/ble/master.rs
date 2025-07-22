@@ -32,7 +32,7 @@ use zerocopy::IntoBytes;
 use crate::config::layout::dvorak::KB_NAME;
 
 #[allow(unused_imports)]
-#[cfg(feature = "dvorak_coral")]
+#[cfg(feature = "dvorak-coral")]
 use crate::config::layout::dvorak_coral::KB_NAME;
 
 impl BleKeyboardMaster {

@@ -24,12 +24,6 @@ pub use crate::debounce::{KeyInfo, KeyState};
 extern crate alloc;
 use alloc::sync::Arc;
 
-#[cfg(feature = "dvorak")]
-use crate::config::layout::dvorak;
-
-#[cfg(feature = "dvorak_coral")]
-use crate::config::layout::dvorak_coral;
-
 #[derive(PartialOrd, Ord, Eq, Hash, PartialEq, Clone, Copy, Debug)]
 pub struct KeyPos {
     pub row: u8,
@@ -50,9 +44,15 @@ pub struct PinMatrix<'a> {
 impl PinMatrix<'_> {
     pub fn new() -> PinMatrix<'static> {
         #[cfg(feature = "dvorak")]
+        use crate::config::layout::dvorak;
+
+        #[cfg(feature = "dvorak-coral")]
+        use crate::config::layout::dvorak_coral;
+
+        #[cfg(feature = "dvorak")]
         let mut pin_matrix = dvorak::provide_pin_layout();
 
-        #[cfg(feature = "dvorak_coral")]
+        #[cfg(feature = "dvorak-coral")]
         let mut pin_matrix = dvorak_coral::provide_pin_layout();
 
         // set input ports to proper pull and interrupt type
@@ -136,10 +136,12 @@ impl PinMatrix<'_> {
     async fn async_scan(&mut self, pressed_keys: &Arc<Mutex<StoredKeys>>) {
         // initialize counts
 
+        use crate::config::user_config::ASYNC_ROW_WAIT;
         use embassy_futures::select::{select, select_slice, Either};
         use heapless::Vec;
 
         let mut count: KeyPos = KeyPos::new(0, COL_OFFSET);
+        let mut is_pressed: bool = false;
 
         // check rows and cols
         for row in self.rows.iter_mut() {
@@ -147,31 +149,47 @@ impl PinMatrix<'_> {
             row.set_high().unwrap();
 
             // delay so pin can propagate
-            delay_us(10).await;
+            delay_us(1).await;
+            {
+                let mut futures: Vec<_, COLS> = self
+                    .cols
+                    .iter_mut()
+                    .map(|col| col.wait_for_high())
+                    .collect();
 
-            let mut futures: Vec<_, COLS> = self
-                .cols
-                .iter_mut()
-                .map(|col| col.wait_for_high())
-                .collect();
-
-            match select(select_slice(futures.as_mut_slice()), delay_us(1000)).await {
-                Either::First((Ok(_), selected_col)) => {
-                    // store the pressed key
-                    if let Some(index) = self
-                        .pressed_keys_array
-                        .iter()
-                        .position(|&element| element == KeyPos::new(255, 255))
-                    {
-                        // assign the col offset
-                        count.col = selected_col as u8 + COL_OFFSET;
-                        self.pressed_keys_array[index] = count;
+                match select(
+                    select_slice(futures.as_mut_slice()),
+                    delay_us(ASYNC_ROW_WAIT),
+                )
+                .await
+                {
+                    Either::First((Ok(_), _)) => {
+                        is_pressed = true;
+                    }
+                    Either::First((Err(_), _)) => {}
+                    Either::Second(()) => {
+                        // time is up, continue with the next row
                     }
                 }
-                Either::First((Err(_), _)) => {}
-                Either::Second(()) => {
-                    // time is up, continue with the next row
+            }
+
+            // check flag
+            if is_pressed {
+                // check col pins
+                for col in self.cols.iter() {
+                    if col.is_high() {
+                        // store the pressed key
+                        if let Some(index) = self
+                            .pressed_keys_array
+                            .iter()
+                            .position(|&element| element == KeyPos::new(255, 255))
+                        {
+                            self.pressed_keys_array[index] = count;
+                        }
+                    }
+                    count.col += 1;
                 }
+                is_pressed = false;
             }
 
             // set row to low
@@ -179,6 +197,9 @@ impl PinMatrix<'_> {
 
             // increment row
             count.row += 1;
+
+            // reset col count
+            count.col = COL_OFFSET;
         }
 
         // reset row count

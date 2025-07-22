@@ -18,6 +18,9 @@ pub const CURSOR_PARAM_SLOW: u8 = 0;
 pub const BLE_STATUS_DEBOUNCE: Duration = Duration::from_millis(500); //0.5 sec
 pub const ENTER_SLEEP_DEBOUNCE: Duration = Duration::from_millis(600000); //10 minutes
 
+#[cfg(feature = "async-scan")]
+pub const ASYNC_ROW_WAIT: u64 = 1000;
+
 // Indexmap sizes
 pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 32;
 pub const LAYER_INDEXMAP_SIZE: usize = 64;

@@ -20,7 +20,7 @@ impl Layout {
         #[cfg(feature = "dvorak")]
         return dvorak::layout();
 
-        #[cfg(feature = "dvorak_coral")]
+        #[cfg(feature = "dvorak-coral")]
         return dvorak_coral::layout();
 
         #[cfg(feature = "qwerty")]

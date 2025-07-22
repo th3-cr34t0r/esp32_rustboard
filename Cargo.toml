@@ -24,7 +24,7 @@ slave = [] # right half of the keyboard
 async-scan = [] # async wait for button press
 debug = []
 dvorak = []
-dvorak_coral = []
+dvorak-coral = []
 qwerty = []
 
 pio = ["esp-idf-svc/pio"]
