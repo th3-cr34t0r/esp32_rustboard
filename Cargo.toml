@@ -1,6 +1,6 @@
 [package]
 name = "esp32_rustboard"
-version = "0.4.2"
+version = "0.4.3"
 authors = ["th3-cr34t0r"]
 edition = "2021"
 resolver = "2"
@@ -21,9 +21,11 @@ opt-level = "z"
 default = ["embassy", "esp-idf-svc/native"]
 master = [] # left half of the keyboard
 slave = [] # right half of the keyboard
+async-scan = [] # async wait for button press
 debug = []
 dvorak = []
-dvorak_coral = []
+dvorak-coral = []
+dvorak-rosewood = []
 qwerty = []
 
 pio = ["esp-idf-svc/pio"]

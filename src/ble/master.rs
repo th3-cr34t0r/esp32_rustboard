@@ -28,6 +28,17 @@ use esp_idf_sys::{
 use heapless::Vec;
 use zerocopy::IntoBytes;
 
+#[cfg(feature = "dvorak")]
+use crate::config::layout::dvorak::KB_NAME;
+
+#[allow(unused_imports)]
+#[cfg(feature = "dvorak-coral")]
+use crate::config::layout::dvorak_coral::KB_NAME;
+
+#[allow(unused_imports)]
+#[cfg(feature = "dvorak-rosewood")]
+use crate::config::layout::dvorak_rosewood::KB_NAME;
+
 impl BleKeyboardMaster {
     async fn new() -> Self {
         let device = BLEDevice::take();
@@ -80,7 +91,7 @@ impl BleKeyboardMaster {
             .scan_response(false)
             .set_data(
                 BLEAdvertisementData::new()
-                    .name("Rustboard")
+                    .name(KB_NAME)
                     .appearance(0x03C0)
                     .add_service_uuid(hid.hid_service().lock().uuid()),
             )

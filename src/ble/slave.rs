@@ -3,7 +3,7 @@ use crate::debounce::KeyState;
 use crate::delay::delay_ms;
 use crate::matrix::{KeyPos, StoredKeys};
 
-use crate::config::user_config::slave::{ESP_POWER_LEVEL, MASTER_BLE_MAC};
+use crate::config::user_config::slave::ESP_POWER_LEVEL;
 
 extern crate alloc;
 use super::{BleKeyboardSlave, BleStatus};
@@ -15,6 +15,17 @@ use esp_idf_sys::{
 };
 use heapless::Vec;
 use zerocopy::IntoByteSlice;
+
+#[cfg(feature = "dvorak")]
+use crate::config::layout::dvorak::MASTER_BLE_MAC;
+
+#[allow(unused_imports)]
+#[cfg(feature = "dvorak-coral")]
+use crate::config::layout::dvorak_coral::MASTER_BLE_MAC;
+
+#[allow(unused_imports)]
+#[cfg(feature = "dvorak-rosewood")]
+use crate::config::layout::dvorak_rosewood::MASTER_BLE_MAC;
 
 impl BleKeyboardSlave {
     pub async fn new() -> Self {

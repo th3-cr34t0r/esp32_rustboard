@@ -18,6 +18,9 @@ pub const CURSOR_PARAM_SLOW: u8 = 0;
 pub const BLE_STATUS_DEBOUNCE: Duration = Duration::from_millis(500); //0.5 sec
 pub const ENTER_SLEEP_DEBOUNCE: Duration = Duration::from_millis(600000); //10 minutes
 
+#[cfg(feature = "async-scan")]
+pub const ASYNC_ROW_WAIT: u64 = 1000;
+
 // Indexmap sizes
 pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 32;
 pub const LAYER_INDEXMAP_SIZE: usize = 64;
@@ -30,7 +33,7 @@ pub mod master {
     use crate::EspPowerLevel;
     use embassy_time::Duration;
 
-    pub const COL_INIT: u8 = 0;
+    pub const COL_OFFSET: u8 = 0;
     pub const KEY_DEBOUNCE: Duration = Duration::from_millis(20);
     pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
 }
@@ -42,8 +45,7 @@ pub mod slave {
 
     use super::COLS;
 
-    pub const COL_INIT: u8 = COLS as u8;
-    pub const KEY_DEBOUNCE: Duration = Duration::from_millis(5);
+    pub const COL_OFFSET: u8 = COLS as u8;
+    pub const KEY_DEBOUNCE: Duration = Duration::from_millis(10);
     pub const ESP_POWER_LEVEL: EspPowerLevel = EspPowerLevel::Negative0;
-    pub const MASTER_BLE_MAC: &str = "E4:B0:63:22:EB:EA";
 }

@@ -3,14 +3,13 @@ use crate::config::user_config::*;
 use crate::delay::*;
 
 #[cfg(feature = "master")]
-use crate::config::user_config::master::COL_INIT;
+use crate::config::user_config::master::COL_OFFSET;
 
 #[cfg(feature = "slave")]
-use crate::config::user_config::slave::COL_INIT;
+use crate::config::user_config::slave::COL_OFFSET;
 
 use embassy_time::{Duration, Instant};
 use esp_idf_svc::hal::gpio::*;
-use esp_idf_svc::hal::peripherals::Peripherals;
 
 use esp32_nimble::utilities::mutex::Mutex;
 use esp_idf_sys::{
@@ -44,46 +43,33 @@ pub struct PinMatrix<'a> {
 
 impl PinMatrix<'_> {
     pub fn new() -> PinMatrix<'static> {
-        let peripherals = Peripherals::take().expect("Not able to init peripherals.");
+        #[cfg(feature = "dvorak")]
+        use crate::config::layout::dvorak;
 
-        let rows = [
-            PinDriver::output(peripherals.pins.gpio12.downgrade())
-                .expect("Not able to set port as output."),
-            PinDriver::output(peripherals.pins.gpio18.downgrade())
-                .expect("Not able to set port as output."),
-            PinDriver::output(peripherals.pins.gpio19.downgrade())
-                .expect("Not able to set port as output."),
-            PinDriver::output(peripherals.pins.gpio20.downgrade())
-                .expect("Not able to set port as output."),
-        ];
+        #[cfg(feature = "dvorak")]
+        #[allow(unused_mut, unused_variables)]
+        let mut pin_matrix = dvorak::provide_pin_layout();
 
-        let mut cols = [
-            PinDriver::input(peripherals.pins.gpio4.downgrade())
-                .expect("Not able to set port as input."),
-            PinDriver::input(peripherals.pins.gpio5.downgrade())
-                .expect("Not able to set port as input."),
-            PinDriver::input(peripherals.pins.gpio7.downgrade())
-                .expect("Not able to set port as input."),
-            PinDriver::input(peripherals.pins.gpio6.downgrade())
-                .expect("Not able to set port as input."),
-            PinDriver::input(peripherals.pins.gpio10.downgrade())
-                .expect("Not able to set port as input."),
-            PinDriver::input(peripherals.pins.gpio3.downgrade())
-                .expect("Not able to set port as input."),
-        ];
+        #[cfg(feature = "dvorak-coral")]
+        use crate::config::layout::dvorak_coral;
+
+        #[cfg(feature = "dvorak-coral")]
+        #[allow(unused_mut, unused_variables)]
+        let mut pin_matrix = dvorak_coral::provide_pin_layout();
+
+        #[cfg(feature = "dvorak-rosewood")]
+        use crate::config::layout::dvorak_rosewood;
+
+        #[cfg(feature = "dvorak-rosewood")]
+        let mut pin_matrix = dvorak_rosewood::provide_pin_layout();
 
         // set input ports to proper pull and interrupt type
-
-        for col in cols.iter_mut() {
+        for col in pin_matrix.cols.iter_mut() {
             col.set_pull(Pull::Down).ok();
             col.set_interrupt_type(InterruptType::AnyEdge).ok();
         }
 
-        PinMatrix {
-            rows,
-            cols,
-            pressed_keys_array: [KeyPos::new(255, 255); 6],
-        }
+        pin_matrix
     }
 
     /// Enables interrupt on pins for wakeup
@@ -152,11 +138,98 @@ impl PinMatrix<'_> {
         }
     }
 
+    #[cfg(feature = "async-scan")]
+    /// This is the standard scan mode
+    /// Each row is set to high, then each col is checked if it is high or not
+    async fn async_scan(&mut self, pressed_keys: &Arc<Mutex<StoredKeys>>) {
+        // initialize counts
+
+        use crate::config::user_config::ASYNC_ROW_WAIT;
+        use embassy_futures::select::{select, select_slice, Either};
+        use heapless::Vec;
+
+        let mut count: KeyPos = KeyPos::new(0, COL_OFFSET);
+        let mut is_pressed: bool = false;
+
+        // check rows and cols
+        for row in self.rows.iter_mut() {
+            // set row to high
+            row.set_high().unwrap();
+
+            // delay so pin can propagate
+            delay_us(1).await;
+
+            // new scope so cols are accessable as mut
+            {
+                let mut futures: Vec<_, COLS> = self
+                    .cols
+                    .iter_mut()
+                    .map(|col| col.wait_for_high())
+                    .collect();
+
+                match select(
+                    select_slice(futures.as_mut_slice()),
+                    delay_us(ASYNC_ROW_WAIT),
+                )
+                .await
+                {
+                    Either::First((Ok(_), _)) => {
+                        // set flag in case a col pin is interupted
+                        is_pressed = true;
+                    }
+                    Either::First((Err(_), _)) => {}
+                    Either::Second(()) => {
+                        // time is up, continue with the next row
+                    }
+                }
+            }
+
+            // check flag
+            if is_pressed {
+                // check col pins
+                for col in self.cols.iter() {
+                    if col.is_high() {
+                        // store the pressed key
+                        if let Some(index) = self
+                            .pressed_keys_array
+                            .iter()
+                            .position(|&element| element == KeyPos::new(255, 255))
+                        {
+                            self.pressed_keys_array[index] = count;
+                        }
+                    }
+                    // increment col
+                    count.col += 1;
+                }
+                // reset flag
+                is_pressed = false;
+            }
+
+            // set row to low
+            row.set_low().unwrap();
+
+            // increment row
+            count.row += 1;
+
+            // reset col count
+            count.col = COL_OFFSET;
+        }
+
+        // reset row count
+        count.row = 0;
+
+        // store the local pressed keys in the shared pressed keys hashmap
+        if let Some(mut pressed_keys) = pressed_keys.try_lock() {
+            pressed_keys.store_keys_local(&mut self.pressed_keys_array);
+        }
+    }
+
+    #[cfg(not(feature = "async-scan"))]
     /// This is the standard scan mode
     /// Each row is set to high, then each col is checked if it is high or not
     async fn standard_scan(&mut self, pressed_keys: &Arc<Mutex<StoredKeys>>) {
         // initialize counts
-        let mut count: KeyPos = KeyPos::new(0, COL_INIT);
+        let mut count: KeyPos = KeyPos::new(0, COL_OFFSET);
 
         // check rows and cols
         for row in self.rows.iter_mut() {
@@ -182,6 +255,7 @@ impl PinMatrix<'_> {
                 // increment col
                 count.col += 1;
             }
+
             // set row to low
             row.set_low().unwrap();
 
@@ -189,7 +263,7 @@ impl PinMatrix<'_> {
             count.row += 1;
 
             // reset col count
-            count.col = COL_INIT;
+            count.col = COL_OFFSET;
         }
 
         // reset row count
@@ -300,6 +374,10 @@ pub async fn scan_grid(
         // if a connection is established, run the key matrix
         match ble_status_local {
             BleStatus::Connected => {
+                #[cfg(feature = "async-scan")]
+                matrix.async_scan(pressed_keys).await;
+
+                #[cfg(not(feature = "async-scan"))]
                 matrix.standard_scan(pressed_keys).await;
             }
             BleStatus::NotConnected => {

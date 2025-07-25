@@ -1,5 +1,6 @@
 pub mod dvorak;
 pub mod dvorak_coral;
+pub mod dvorak_rosewood;
 pub mod qwerty;
 
 use std::collections::HashMap;
@@ -20,8 +21,11 @@ impl Layout {
         #[cfg(feature = "dvorak")]
         return dvorak::layout();
 
-        #[cfg(feature = "dvorak_coral")]
+        #[cfg(feature = "dvorak-coral")]
         return dvorak_coral::layout();
+
+        #[cfg(feature = "dvorak-rosewood")]
+        return dvorak_rosewood::layout();
 
         #[cfg(feature = "qwerty")]
         return qwerty::layout();
