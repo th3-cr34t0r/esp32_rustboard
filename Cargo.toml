@@ -25,6 +25,7 @@ async-scan = [] # async wait for button press
 debug = []
 dvorak = []
 dvorak-coral = []
+dvorak-rosewood = []
 qwerty = []
 
 pio = ["esp-idf-svc/pio"]

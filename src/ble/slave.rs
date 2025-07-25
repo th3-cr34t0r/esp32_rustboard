@@ -19,8 +19,13 @@ use zerocopy::IntoByteSlice;
 #[cfg(feature = "dvorak")]
 use crate::config::layout::dvorak::MASTER_BLE_MAC;
 
+#[allow(unused_imports)]
 #[cfg(feature = "dvorak-coral")]
 use crate::config::layout::dvorak_coral::MASTER_BLE_MAC;
+
+#[allow(unused_imports)]
+#[cfg(feature = "dvorak-rosewood")]
+use crate::config::layout::dvorak_rosewood::MASTER_BLE_MAC;
 
 impl BleKeyboardSlave {
     pub async fn new() -> Self {

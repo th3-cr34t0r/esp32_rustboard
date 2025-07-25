@@ -35,6 +35,10 @@ use crate::config::layout::dvorak::KB_NAME;
 #[cfg(feature = "dvorak-coral")]
 use crate::config::layout::dvorak_coral::KB_NAME;
 
+#[allow(unused_imports)]
+#[cfg(feature = "dvorak-rosewood")]
+use crate::config::layout::dvorak_rosewood::KB_NAME;
+
 impl BleKeyboardMaster {
     async fn new() -> Self {
         let device = BLEDevice::take();
