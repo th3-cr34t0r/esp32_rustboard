@@ -2,6 +2,7 @@ pub mod dvorak;
 pub mod dvorak_coral;
 pub mod dvorak_rosewood;
 pub mod qwerty;
+pub mod colemakdh;
 
 use std::collections::HashMap;
 
@@ -29,6 +30,9 @@ impl Layout {
 
         #[cfg(feature = "qwerty")]
         return qwerty::layout();
+        
+        #[cfg(feature = "colemakdh-rosewood")]
+        return colemakdh::layout();
     }
 
     /// get the layer number

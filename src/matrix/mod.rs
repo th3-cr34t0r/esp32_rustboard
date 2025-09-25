@@ -63,6 +63,12 @@ impl PinMatrix<'_> {
         #[cfg(feature = "dvorak-rosewood")]
         let mut pin_matrix = dvorak_rosewood::provide_pin_layout();
 
+        #[cfg(feature = "colemakdh-rosewood")]
+        use crate::config::layout::colemakdh;
+
+        #[cfg(feature = "colemakdh-rosewood")]
+        let mut pin_matrix = colemakdh::provide_pin_layout();
+        
         // set input ports to proper pull and interrupt type
         for col in pin_matrix.cols.iter_mut() {
             col.set_pull(Pull::Down).ok();
