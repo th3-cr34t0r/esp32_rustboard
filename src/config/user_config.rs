@@ -10,7 +10,7 @@ pub const MASTER_BLE_MAC: &str = "E4:B0:63:22:EB:EA"; //Rustboard_Rosewood
 
 //Rows/Cols per half
 pub const ROWS: usize = 4;
-pub const COLS: usize = 5;
+pub const COLS: usize = 6;
 
 pub const LAYERS: usize = 3;
 
