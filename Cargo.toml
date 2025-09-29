@@ -27,7 +27,7 @@ dvorak = []
 dvorak-coral = []
 dvorak-rosewood = []
 qwerty = []
-colemakdh-rosewood = []
+colemakdh = []
 
 pio = ["esp-idf-svc/pio"]
 alloc = ["esp-idf-svc/alloc"]

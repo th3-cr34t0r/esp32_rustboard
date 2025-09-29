@@ -45,10 +45,7 @@ use esp_idf_hal::{
     prelude::Peripherals,
 };
 
-pub static KB_NAME: &str = "Rustboard Coral";
-pub const MASTER_BLE_MAC: &str = "E4:B0:63:22:EB:EA";
-
-pub fn provide_pin_layout() -> PinMatrix<'static> {
+pub fn provide_pin_matrix() -> PinMatrix<'static> {
     let peripherals = Peripherals::take().expect("Not able to init peripherals.");
 
     let rows = [

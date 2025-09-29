@@ -5,7 +5,7 @@ use alloc::sync::Arc;
 use crate::ble::BleStatus;
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
 use crate::config::layout::Layout;
-use crate::config::user_config::BLE_SLAVE_UUID;
+use crate::config::user_config::{BLE_SLAVE_UUID, KB_NAME};
 use crate::debounce::KeyState;
 use crate::delay::*;
 use crate::matrix::{KeyPos, StoredKeys};
@@ -27,21 +27,6 @@ use esp_idf_sys::{
 };
 use heapless::Vec;
 use zerocopy::IntoBytes;
-
-#[cfg(feature = "dvorak")]
-use crate::config::layout::dvorak::KB_NAME;
-
-#[allow(unused_imports)]
-#[cfg(feature = "dvorak-coral")]
-use crate::config::layout::dvorak_coral::KB_NAME;
-
-#[allow(unused_imports)]
-#[cfg(feature = "dvorak-rosewood")]
-use crate::config::layout::dvorak_rosewood::KB_NAME;
-
-#[allow(unused_imports)]
-#[cfg(feature = "colemakdh-rosewood")]
-use crate::config::layout::colemakdh::KB_NAME;
 
 impl BleKeyboardMaster {
     async fn new() -> Self {
