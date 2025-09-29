@@ -18,16 +18,7 @@
 //   3                   |_ALT_|_SPC_|_SFT_|              3 |_TAB_|_ENT_|_LYR_|
 //
 //*********************************************************************************************
-//
-// LAYER 2:
-//
-//X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
-//   0 |_____|_____|_____|_____|_____|_____|              0 |_____|_____|_____|_____|_____|_____|
-//   1 |_____|_____|_____|M_lcl|M_rcl|_____|              1 |_____|M_lft|M_dwn|M_up_|M_rgt|_____|
-//   2 |_____|_____|_____|_____|_____|_____|              2 |_____|_____|_____|_____|_____|_____|
-//   3                   |_____|CSLOW|CFAST|              3 |_____|_____|LYR_2|
-// //*********************************************************************************************
-//
+
 use crate::config::{enums::*, layout::*};
 
 pub fn layout() -> Layout {
@@ -134,32 +125,6 @@ pub fn layout() -> Layout {
 
     for (row, col, key) in layer_keymap {
         if let Some(_value) = layout.keymap[1].insert(KeyPos { row, col }, key) {
-            #[cfg(feature = "debug")]
-            log::info!("Value already present: {:?}", _value);
-        };
-    }
-
-    // LAYER 2 LAYOUT
-    let layer_keymap = [
-        (0, 3, HidKeys::LeftBracket),
-        (0, 4, HidKeys::RightBracket),
-        (0, 8, HidKeys::MouseScrollUp),
-        (1, 3, HidKeys::MouseLeftClick),
-        (1, 4, HidKeys::MouseRightClick),
-        (1, 6, HidKeys::MouseScrollLeft),
-        (1, 7, HidKeys::MouseGoLeft),
-        (1, 8, HidKeys::MouseGoDown),
-        (1, 9, HidKeys::MouseGoUp),
-        (1, 10, HidKeys::MouseGoRight),
-        (1, 11, HidKeys::MouseScrollRight),
-        (2, 8, HidKeys::MouseScrollDown),
-        (3, 4, HidKeys::MouseCursorSlow),
-        (3, 5, HidKeys::MouseCursorFast),
-        (3, 8, HidKeys::Layer2),
-    ];
-
-    for (row, col, key) in layer_keymap {
-        if let Some(_value) = layout.keymap[2].insert(KeyPos { row, col }, key) {
             #[cfg(feature = "debug")]
             log::info!("Value already present: {:?}", _value);
         };

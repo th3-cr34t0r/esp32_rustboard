@@ -1,6 +1,7 @@
 use crate::ble::Debounce;
 use crate::config::user_config::*;
 use crate::delay::*;
+use core::pin::pin;
 
 #[cfg(feature = "master")]
 use crate::config::user_config::master::COL_OFFSET;
@@ -43,9 +44,8 @@ pub struct PinMatrix<'a> {
 
 impl PinMatrix<'_> {
     pub fn new() -> PinMatrix<'static> {
-
         let mut pin_matrix = crate::config::user_config::provide_kb_matrix();
-        
+
         // set input ports to proper pull and interrupt type
         for col in pin_matrix.cols.iter_mut() {
             col.set_pull(Pull::Down).ok();
@@ -151,7 +151,7 @@ impl PinMatrix<'_> {
                     .collect();
 
                 match select(
-                    select_slice(futures.as_mut_slice()),
+                    select_slice(pin!(futures.as_mut_slice())),
                     delay_us(ASYNC_ROW_WAIT),
                 )
                 .await

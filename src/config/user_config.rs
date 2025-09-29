@@ -1,47 +1,53 @@
+use crate::matrix::PinMatrix;
 use embassy_time::Duration;
 use esp32_nimble::{utilities::BleUuid, uuid128};
-use crate::matrix::PinMatrix;
 
 //USER CONFIGURABLE PARAMETERS
 
 pub static KB_NAME: &str = "Rustboard_5x3";
-pub const MASTER_BLE_MAC: &str = "EC:DA:3B:BD:D7:B6";//OG_Rustboard
-// pub const MASTER_BLE_MAC: &str = "E4:B0:63:22:EB:EA";//Rustboard_Rosewood
+pub const MASTER_BLE_MAC: &str = "EC:DA:3B:BD:D7:B6"; //OG_Rustboard
+                                                      // pub const MASTER_BLE_MAC: &str = "E4:B0:63:22:EB:EA";//Rustboard_Rosewood
 
 //Rows/Cols per half
 pub const ROWS: usize = 4;
 pub const COLS: usize = 5;
 
-pub const LAYERS: usize = 2;
+pub const LAYERS: usize = 3;
 
-pub fn provide_kb_matrix() -> PinMatrix<'static>{
-    let mut pin_matrix;
-    
-    #[cfg(feature = "dvorak")]
-    use crate::config::layout::dvorak;
+pub fn provide_kb_matrix() -> PinMatrix<'static> {
+    let pin_matrix;
 
+    // Dvorak Layouts Start
     #[cfg(feature = "dvorak")]
-    #[allow(unused_mut, unused_variables)]
-    pin_matrix = dvorak::provide_pin_matrix();
+    {
+        use crate::config::layout::dvorak;
+        pin_matrix = dvorak::provide_pin_matrix();
+    }
 
     #[cfg(feature = "dvorak-coral")]
-    use crate::config::layout::dvorak_coral;
-
-    #[cfg(feature = "dvorak-coral")]
-    #[allow(unused_mut, unused_variables)]
-    pin_matrix = dvorak_coral::provide_pin_matrix();
-
-    #[cfg(feature = "dvorak-rosewood")]
-    use crate::config::layout::dvorak_rosewood;
+    {
+        use crate::config::layout::dvorak_coral;
+        pin_matrix = dvorak_coral::provide_pin_matrix();
+    }
 
     #[cfg(feature = "dvorak-rosewood")]
-    pin_matrix = dvorak_rosewood::provide_pin_matrix();
+    {
+        use crate::config::layout::dvorak_rosewood;
+        pin_matrix = dvorak_rosewood::provide_pin_matrix();
+    }
 
-    #[cfg(feature = "colemakdh")]
-    use crate::config::layout::colemakdh;
+    #[cfg(feature = "dvorak-5x3")]
+    {
+        use crate::config::layout::dvorak_5x3;
+        pin_matrix = dvorak_5x3::provide_pin_matrix();
+    }
 
+    // Colemak Layouts Start
     #[cfg(feature = "colemakdh")]
-    pin_matrix = colemakdh::provide_pin_matrix();
+    {
+        use crate::config::layout::colemakdh;
+        pin_matrix = provide_pin_matrix();
+    }
 
     pin_matrix
 }

@@ -1,8 +1,20 @@
-pub mod dvorak;
-pub mod dvorak_coral;
-pub mod dvorak_rosewood;
-pub mod qwerty;
+#[cfg(feature = "colemakdh")]
 pub mod colemakdh;
+
+#[cfg(feature = "dvorak")]
+pub mod dvorak;
+
+#[cfg(feature = "dvorak-5x3")]
+pub mod dvorak_5x3;
+
+#[cfg(feature = "dvorak-coral")]
+pub mod dvorak_coral;
+
+#[cfg(feature = "dvorak-rosewood")]
+pub mod dvorak_rosewood;
+
+#[cfg(feature = "qwerty")]
+pub mod qwerty;
 
 use std::collections::HashMap;
 
@@ -19,6 +31,9 @@ pub struct Layout {
 impl Layout {
     /// initializes the Layers struct with the compiled layout
     pub fn init() -> Layout {
+        #[cfg(feature = "qwerty")]
+        return qwerty::layout();
+
         #[cfg(feature = "dvorak")]
         return dvorak::layout();
 
@@ -28,10 +43,10 @@ impl Layout {
         #[cfg(feature = "dvorak-rosewood")]
         return dvorak_rosewood::layout();
 
-        #[cfg(feature = "qwerty")]
-        return qwerty::layout();
-        
-        #[cfg(feature = "colemakdh-rosewood")]
+        #[cfg(feature = "dvorak-5x3")]
+        return dvorak_5x3::layout();
+
+        #[cfg(feature = "colemakdh")]
         return colemakdh::layout();
     }
 
