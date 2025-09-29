@@ -5,8 +5,8 @@ use esp32_nimble::{utilities::BleUuid, uuid128};
 //USER CONFIGURABLE PARAMETERS
 
 pub static KB_NAME: &str = "Rustboard_5x3";
-pub const MASTER_BLE_MAC: &str = "EC:DA:3B:BD:D7:B6"; //OG_Rustboard
-                                                      // pub const MASTER_BLE_MAC: &str = "E4:B0:63:22:EB:EA";//Rustboard_Rosewood
+// pub const MASTER_BLE_MAC: &str = "EC:DA:3B:BD:D7:B6"; //OG_Rustboard
+pub const MASTER_BLE_MAC: &str = "E4:B0:63:22:EB:EA"; //Rustboard_Rosewood
 
 //Rows/Cols per half
 pub const ROWS: usize = 4;
