@@ -1,6 +1,6 @@
 [package]
 name = "esp32_rustboard"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["th3-cr34t0r"]
 edition = "2021"
 resolver = "2"
@@ -26,7 +26,9 @@ debug = []
 dvorak = []
 dvorak-coral = []
 dvorak-rosewood = []
+dvorak-5x3= []
 qwerty = []
+colemakdh = []
 
 pio = ["esp-idf-svc/pio"]
 alloc = ["esp-idf-svc/alloc"]

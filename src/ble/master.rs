@@ -5,7 +5,7 @@ use alloc::sync::Arc;
 use crate::ble::BleStatus;
 use crate::config::enums::{HidKeys, HidModifiers, KeyType};
 use crate::config::layout::Layout;
-use crate::config::user_config::BLE_SLAVE_UUID;
+use crate::config::user_config::{BLE_SLAVE_UUID, KB_NAME};
 use crate::debounce::KeyState;
 use crate::delay::*;
 use crate::matrix::{KeyPos, StoredKeys};
@@ -27,17 +27,6 @@ use esp_idf_sys::{
 };
 use heapless::Vec;
 use zerocopy::IntoBytes;
-
-#[cfg(feature = "dvorak")]
-use crate::config::layout::dvorak::KB_NAME;
-
-#[allow(unused_imports)]
-#[cfg(feature = "dvorak-coral")]
-use crate::config::layout::dvorak_coral::KB_NAME;
-
-#[allow(unused_imports)]
-#[cfg(feature = "dvorak-rosewood")]
-use crate::config::layout::dvorak_rosewood::KB_NAME;
 
 impl BleKeyboardMaster {
     async fn new() -> Self {
@@ -99,7 +88,7 @@ impl BleKeyboardMaster {
 
         ble_advertising.lock().start().unwrap();
 
-        // on esp32-c3, advertising stops when a device is boded.
+        // on esp32-c3, advertising stops when a device is bonded.
         ble_advertising.lock().on_complete(|_| {
             ble_advertising.lock().start().unwrap();
             log::info!("bonded_addresses: {:?}", device.bonded_addresses());

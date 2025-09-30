@@ -3,13 +3,17 @@ use esp32_nimble::{utilities::BleUuid, uuid128};
 
 //USER CONFIGURABLE PARAMETERS
 
-// Rows per half
+pub static KB_NAME: &str = "Rustboard_5x3";
+// pub const MASTER_BLE_MAC: &str = "EC:DA:3B:BD:D7:B6"; //OG_Rustboard
+pub const MASTER_BLE_MAC: &str = "E4:B0:63:22:EB:EA"; //Rustboard_Rosewood
+
+//Rows/Cols per half
 pub const ROWS: usize = 4;
-// Cols per half
 pub const COLS: usize = 6;
+
 pub const LAYERS: usize = 3;
 
-// Cursor parameters
+//Cursor parameters
 pub const CURSOR_PARAM_FAST: u8 = 6;
 pub const CURSOR_PARAM_NORMAL: u8 = 2;
 pub const CURSOR_PARAM_SLOW: u8 = 0;
@@ -21,7 +25,7 @@ pub const ENTER_SLEEP_DEBOUNCE: Duration = Duration::from_millis(600000); //10 m
 #[cfg(feature = "async-scan")]
 pub const ASYNC_ROW_WAIT: u64 = 1000;
 
-// Indexmap sizes
+//Indexmap sizes
 pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 32;
 pub const LAYER_INDEXMAP_SIZE: usize = 64;
 
