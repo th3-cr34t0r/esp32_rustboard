@@ -1,4 +1,5 @@
 use crate::ble::Debounce;
+use crate::config::layout::provide_kb_matrix;
 use crate::config::user_config::*;
 use crate::delay::*;
 use core::pin::pin;
@@ -44,7 +45,7 @@ pub struct PinMatrix<'a> {
 
 impl PinMatrix<'_> {
     pub fn new() -> PinMatrix<'static> {
-        let mut pin_matrix = crate::config::user_config::provide_kb_matrix();
+        let mut pin_matrix = provide_kb_matrix();
 
         // set input ports to proper pull and interrupt type
         for col in pin_matrix.cols.iter_mut() {

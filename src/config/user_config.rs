@@ -1,4 +1,3 @@
-use crate::matrix::PinMatrix;
 use embassy_time::Duration;
 use esp32_nimble::{utilities::BleUuid, uuid128};
 
@@ -13,44 +12,6 @@ pub const ROWS: usize = 4;
 pub const COLS: usize = 6;
 
 pub const LAYERS: usize = 3;
-
-pub fn provide_kb_matrix() -> PinMatrix<'static> {
-    let pin_matrix;
-
-    // Dvorak Layouts Start
-    #[cfg(feature = "dvorak")]
-    {
-        use crate::config::layout::dvorak;
-        pin_matrix = dvorak::provide_pin_matrix();
-    }
-
-    #[cfg(feature = "dvorak-coral")]
-    {
-        use crate::config::layout::dvorak_coral;
-        pin_matrix = dvorak_coral::provide_pin_matrix();
-    }
-
-    #[cfg(feature = "dvorak-rosewood")]
-    {
-        use crate::config::layout::dvorak_rosewood;
-        pin_matrix = dvorak_rosewood::provide_pin_matrix();
-    }
-
-    #[cfg(feature = "dvorak-5x3")]
-    {
-        use crate::config::layout::dvorak_5x3;
-        pin_matrix = dvorak_5x3::provide_pin_matrix();
-    }
-
-    // Colemak Layouts Start
-    #[cfg(feature = "colemakdh")]
-    {
-        use crate::config::layout::colemakdh;
-        pin_matrix = provide_pin_matrix();
-    }
-
-    pin_matrix
-}
 
 //Cursor parameters
 pub const CURSOR_PARAM_FAST: u8 = 6;

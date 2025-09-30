@@ -88,7 +88,7 @@ impl BleKeyboardMaster {
 
         ble_advertising.lock().start().unwrap();
 
-        // on esp32-c3, advertising stops when a device is boded.
+        // on esp32-c3, advertising stops when a device is bonded.
         ble_advertising.lock().on_complete(|_| {
             ble_advertising.lock().start().unwrap();
             log::info!("bonded_addresses: {:?}", device.bonded_addresses());
