@@ -11,8 +11,8 @@
 // LAYER 1:
 //
 //X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
-//   0 |_____|_ESC_|__7__|__8__|__9__|_PScr|              0 |__-__|__(__|__)__|__=__|_SLCK|_____|
-//   1 |_____|_BSP_|__4__|__5__|__6__|_DEL_|              1 |__/__|_left|_down|__up_|right|_____|
+//   0 |_____|_ESC_|__7__|__8__|__9__|_PScr|              0 |__-__|__(__|__)__|__=__|__/__|_____|
+//   1 |_____|_BSP_|__4__|__5__|__6__|_DEL_|              1 |_SLCK|_left|_down|__up_|right|_____|
 //   2 |_____|__0__|__1__|__2__|__3__|_ALT_|              2 |__\__|__[__|__]__|__`__|__;__|_____|
 //   3                   |_SUP_|SPACE|SHIFT|              3 |_TAB_|ENTER|LYR_1|
 //
@@ -122,17 +122,17 @@ pub fn layout() -> Layout {
         (0, 3, HidKeys::Num8),
         (0, 4, HidKeys::Num9),
         (0, 5, HidKeys::Pscreen),
-        (0, 6, HidKeys::Minus),
+        (0, 6, HidKeys::MacroSuperLock),
         (0, 7, HidKeys::MacroLeftParenthesis),
         (0, 8, HidKeys::MacroRightParenthesis),
         (0, 9, HidKeys::Equal),
-        (0, 10, HidKeys::MacroSuperLock),
+        (0, 10, HidKeys::ForwardSlash),
         (1, 1, HidKeys::BackSpace),
         (1, 2, HidKeys::Num4),
         (1, 3, HidKeys::Num5),
         (1, 4, HidKeys::Num6),
         (1, 5, HidKeys::Delete),
-        (1, 6, HidKeys::ForwardSlash),
+        (1, 6, HidKeys::Minus),
         (1, 7, HidKeys::ArrowLeft),
         (1, 8, HidKeys::ArrowDown),
         (1, 9, HidKeys::ArrowUp),
