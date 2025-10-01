@@ -26,7 +26,7 @@ pub const ENTER_SLEEP_DEBOUNCE: Duration = Duration::from_millis(600000); //10 m
 pub const ASYNC_ROW_WAIT: u64 = 1000;
 
 //Indexmap sizes
-pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 32;
+pub const PRESSED_KEYS_ARRAY_SIZE: usize = 32;
 pub const LAYER_INDEXMAP_SIZE: usize = 64;
 
 pub const BIT_SHIFT: u8 = 4;

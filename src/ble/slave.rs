@@ -3,7 +3,7 @@ use crate::config::user_config::slave::ESP_POWER_LEVEL;
 use crate::config::user_config::*;
 use crate::delay::delay_ms;
 use crate::key_provision::key_provision;
-use crate::matrix::{KeyPos, StoredKeys};
+use crate::matrix::{KeyPos, StoredMatrixKeys};
 
 extern crate alloc;
 use super::{BleKeyboardSlave, BleStatus};
@@ -91,7 +91,7 @@ impl BleKeyboardSlave {
 }
 
 pub async fn ble_tx(
-    pressed_keys: &Arc<Mutex<StoredKeys>>,
+    pressed_keys: &Arc<Mutex<StoredMatrixKeys>>,
     ble_status: &Arc<Mutex<BleStatus>>,
 ) -> ! {
     // construct ble slave

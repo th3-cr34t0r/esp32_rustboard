@@ -10,7 +10,7 @@ use crate::{
         layout::Layout,
         user_config::BIT_SHIFT,
     },
-    matrix::{KeyPos, KeyState, StoredKeys},
+    matrix::{KeyPos, KeyState, StoredMatrixKeys},
     mouse::MouseKeyReport,
 };
 
@@ -148,7 +148,7 @@ fn remove_keys_slave(keyboard_key_report: &mut KeyboardKeyReport, key: &KeyPos) 
 /// Pnrovides the pressed key from the layout
 #[warn(unused_variables)]
 pub async fn key_provision(
-    pressed_keys: &Arc<Mutex<StoredKeys>>,
+    pressed_keys: &Arc<Mutex<StoredMatrixKeys>>,
     #[cfg(feature = "split")]
     #[cfg(feature = "master")]
     slave_key_report: &Arc<Mutex<[u8; 6]>>,
@@ -166,9 +166,9 @@ pub async fn key_provision(
         pressed_keys.store_keys_slave(&slave_key_report);
 
         // check if there are pressed keys
-        if !pressed_keys.index_map.is_empty() {
+        if !pressed_keys.keys_vec.is_empty() {
             // iter trough the pressed keys
-            for (key_pos, key_info) in pressed_keys.index_map.iter_mut() {
+            for (key_pos, key_info) in pressed_keys.keys_vec.iter_mut() {
                 // check the key debounce state
                 match key_info.state {
                     KeyState::Pressed => {
@@ -210,7 +210,7 @@ pub async fn key_provision(
 
             // remove the sent keys and empty the vec
             while let Some(key) = pressed_keys_to_remove.pop() {
-                pressed_keys.index_map.remove(&key).unwrap();
+                pressed_keys.keys_vec.remove(&key).unwrap();
             }
         }
     }

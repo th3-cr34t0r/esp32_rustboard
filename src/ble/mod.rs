@@ -178,8 +178,8 @@ impl Debounce {
         }
     }
 
-    // check if debounced
-    pub fn is_debounced(&mut self) -> bool {
+    // check if elapsed
+    pub fn elapsed(&mut self) -> bool {
         self.current_instant = Instant::now();
         self.future_instant = self.previous_instant + self.debounce;
 
@@ -192,7 +192,7 @@ impl Debounce {
     }
 
     // reset the debounce with the init duration
-    pub fn reset_debounce(&mut self, debounce_duraiton: Duration) {
+    pub fn reset(&mut self, debounce_duraiton: Duration) {
         self.previous_instant = Instant::now() + debounce_duraiton;
     }
 }

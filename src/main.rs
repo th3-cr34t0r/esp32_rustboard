@@ -8,7 +8,7 @@ use esp32_nimble::utilities::mutex::Mutex;
 use esp32_rustboard::ble::BleStatus;
 use esp32_rustboard::config::user_config::ENTER_SLEEP_DEBOUNCE;
 use esp32_rustboard::debounce::calculate_debounce;
-use esp32_rustboard::matrix::{scan_grid, StoredKeys};
+use esp32_rustboard::matrix::{scan_grid, StoredMatrixKeys};
 use esp_idf_hal::task::block_on;
 
 fn main() -> anyhow::Result<()> {
@@ -18,8 +18,8 @@ fn main() -> anyhow::Result<()> {
     esp_idf_svc::log::EspLogger::initialize_default();
 
     // initialize keys pressed hashmap
-    let pressed_keys: Arc<Mutex<StoredKeys>> =
-        Arc::new(Mutex::new(StoredKeys::new(ENTER_SLEEP_DEBOUNCE)));
+    let pressed_keys: Arc<Mutex<StoredMatrixKeys>> =
+        Arc::new(Mutex::new(StoredMatrixKeys::new(ENTER_SLEEP_DEBOUNCE)));
 
     // ble connection information shared variable
     let ble_status: Arc<Mutex<BleStatus>> = Arc::new(Mutex::new(BleStatus::Connected));

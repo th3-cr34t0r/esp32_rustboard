@@ -8,7 +8,7 @@ use crate::config::user_config::master::ESP_POWER_LEVEL;
 use crate::config::user_config::{BLE_SLAVE_UUID, KB_NAME};
 use crate::delay::*;
 use crate::key_provision::key_provision;
-use crate::matrix::{KeyPos, StoredKeys};
+use crate::matrix::{KeyPos, StoredMatrixKeys};
 
 use super::{
     BleKeyboardMaster, KeyboardKeyReport, MouseKeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID,
@@ -181,7 +181,7 @@ impl BleKeyboardMaster {
 }
 
 pub async fn ble_tx(
-    pressed_keys: &Arc<Mutex<StoredKeys>>,
+    pressed_keys: &Arc<Mutex<StoredMatrixKeys>>,
     ble_status: &Arc<Mutex<BleStatus>>,
 ) -> ! {
     // init ble

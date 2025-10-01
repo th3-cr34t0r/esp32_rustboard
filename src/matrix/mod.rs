@@ -125,7 +125,7 @@ impl PinMatrix<'_> {
     #[cfg(feature = "async-scan")]
     /// This is the standard scan mode
     /// Each row is set to high, then each col is checked if it is high or not
-    async fn async_scan(&mut self, pressed_keys: &Arc<Mutex<StoredKeys>>) {
+    async fn async_scan(&mut self, pressed_keys: &Arc<Mutex<StoredMatrixKeys>>) {
         // initialize counts
 
         use crate::config::user_config::ASYNC_ROW_WAIT;
@@ -211,7 +211,7 @@ impl PinMatrix<'_> {
     #[cfg(not(feature = "async-scan"))]
     /// This is the standard scan mode
     /// Each row is set to high, then each col is checked if it is high or not
-    async fn standard_scan(&mut self, pressed_keys: &Arc<Mutex<StoredKeys>>) {
+    async fn standard_scan(&mut self, pressed_keys: &Arc<Mutex<StoredMatrixKeys>>) {
         // initialize counts
         let mut count: KeyPos = KeyPos::new(0, COL_OFFSET);
 
@@ -260,16 +260,16 @@ impl PinMatrix<'_> {
     }
 }
 
-pub struct StoredKeys {
-    pub index_map: FnvIndexMap<KeyPos, KeyInfo, PRESSED_KEYS_INDEXMAP_SIZE>,
-    pub debounce: Debounce,
+pub struct StoredMatrixKeys {
+    pub keys_vec: FnvIndexMap<KeyPos, KeyInfo, PRESSED_KEYS_ARRAY_SIZE>,
+    pub sleep_condition: Debounce,
 }
 
-impl StoredKeys {
+impl StoredMatrixKeys {
     pub fn new(debounce: Duration) -> Self {
         Self {
-            index_map: FnvIndexMap::new(),
-            debounce: Debounce::new(debounce),
+            keys_vec: FnvIndexMap::new(),
+            sleep_condition: Debounce::new(debounce),
         }
     }
     /// The main function for stornig the registered key in to the shared pressed keys hashmap
@@ -279,7 +279,7 @@ impl StoredKeys {
         // If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
         pressed_keys_array.iter_mut().for_each(|element| {
             if *element != KeyPos::new(255, 255) {
-                self.index_map
+                self.keys_vec
                     .insert(
                         KeyPos {
                             row: element.row,
@@ -295,7 +295,7 @@ impl StoredKeys {
                 *element = KeyPos::new(255, 255);
 
                 // reset sleep debounce
-                self.debounce.reset_debounce(ENTER_SLEEP_DEBOUNCE);
+                self.sleep_condition.reset(ENTER_SLEEP_DEBOUNCE);
             }
         });
     }
@@ -307,7 +307,7 @@ impl StoredKeys {
             // we don't want to store 0s
             if *element != 0 {
                 // add the key_pos and the key_info to the hashmap
-                self.index_map
+                self.keys_vec
                     .insert(
                         KeyPos {
                             row: *element >> BIT_SHIFT,
@@ -321,7 +321,7 @@ impl StoredKeys {
                     .expect("Not enough space to store the slave pressed keys.");
 
                 // reset sleep debounce
-                self.debounce.reset_debounce(ENTER_SLEEP_DEBOUNCE);
+                self.sleep_condition.reset(ENTER_SLEEP_DEBOUNCE);
             }
         });
     }
@@ -329,7 +329,7 @@ impl StoredKeys {
 
 /// The main matrix scan function
 pub async fn scan_grid(
-    pressed_keys: &Arc<Mutex<StoredKeys>>,
+    pressed_keys: &Arc<Mutex<StoredMatrixKeys>>,
     ble_status: &Arc<Mutex<BleStatus>>,
 ) -> ! {
     // construct the matrix
@@ -344,12 +344,12 @@ pub async fn scan_grid(
     loop {
         // // check if sleep conditions are met
         if let Some(mut pressed_keys) = pressed_keys.try_lock() {
-            if pressed_keys.debounce.is_debounced() {
+            if pressed_keys.sleep_condition.elapsed() {
                 matrix.enter_light_sleep_mode();
             }
         }
         // check and store the ble status, then release the lock
-        if ble_status_debounce.is_debounced() {
+        if ble_status_debounce.elapsed() {
             if let Some(ble_status) = ble_status.try_lock() {
                 ble_status_local = *ble_status;
             }

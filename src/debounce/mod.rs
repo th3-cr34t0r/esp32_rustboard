@@ -1,4 +1,4 @@
-use crate::{delay::delay_ms, matrix::StoredKeys};
+use crate::{delay::delay_ms, matrix::StoredMatrixKeys};
 use embassy_time::Instant;
 
 #[cfg(feature = "master")]
@@ -23,13 +23,13 @@ pub struct KeyInfo {
     pub state: KeyState,
 }
 
-pub async fn calculate_debounce(pressed_keys: &Arc<Mutex<StoredKeys>>) -> ! {
+pub async fn calculate_debounce(pressed_keys: &Arc<Mutex<StoredMatrixKeys>>) -> ! {
     loop {
         // try to get a lock on keys_pressed
         if let Some(mut pressed_keys) = pressed_keys.try_lock() {
             // itter throught the pressed keys
             pressed_keys
-                .index_map
+                .keys_vec
                 .iter_mut()
                 .for_each(|(_key_pos, key_info)| {
                     // check if the key has passed the debounce delay or has been released
