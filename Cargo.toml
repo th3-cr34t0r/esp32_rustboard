@@ -19,15 +19,17 @@ opt-level = "z"
 
 [features]
 default = ["embassy", "esp-idf-svc/native"]
-master = [] # left half of the keyboard
-slave = [] # right half of the keyboard
+split = [] # in case of a split setup
+master = [] # main keyboard / left half of the keyboard
+slave = [] # in case of split setup - right half of the keyboard
 async-scan = [] # async wait for button press
 debug = []
+# layouts
+qwerty = []
 dvorak = []
 dvorak-coral = []
 dvorak-rosewood = []
 dvorak-5x3= []
-qwerty = []
 colemakdh = []
 
 pio = ["esp-idf-svc/pio"]

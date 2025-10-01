@@ -9,7 +9,7 @@ use esp32_nimble::BLEClient;
 use esp32_nimble::{hid::*, utilities::mutex::Mutex, BLECharacteristic, BLEServer};
 use zerocopy::{Immutable, IntoBytes};
 
-use crate::mouse::MouseReport;
+use crate::mouse::MouseKeyReport;
 
 #[cfg(feature = "master")]
 pub mod master;
@@ -129,10 +129,10 @@ const HID_REPORT_DISCRIPTOR: &[u8] = hid!(
 
 #[derive(Default, PartialEq, Clone, Copy, IntoBytes, Immutable)]
 #[repr(packed, C)]
-struct KeyReport {
-    modifiers: u8,
-    reserved: u8,
-    keys: [u8; 6],
+pub struct KeyboardKeyReport {
+    pub modifiers: u8,
+    pub reserved: u8,
+    pub keys: [u8; 6],
 }
 
 pub struct BleKeyboardMaster {
@@ -142,10 +142,10 @@ pub struct BleKeyboardMaster {
     output_keyboard: Arc<Mutex<BLECharacteristic>>,
     input_media_keys: Arc<Mutex<BLECharacteristic>>,
     input_mouse: Arc<Mutex<BLECharacteristic>>,
-    current_keyboard_report: KeyReport,
-    previous_keyboard_report: KeyReport,
-    current_mouse_report: MouseReport,
-    previous_mouse_report: MouseReport,
+    current_keyboard_report: KeyboardKeyReport,
+    previous_keyboard_report: KeyboardKeyReport,
+    current_mouse_report: MouseKeyReport,
+    previous_mouse_report: MouseKeyReport,
 }
 
 pub struct BleKeyboardSlave {

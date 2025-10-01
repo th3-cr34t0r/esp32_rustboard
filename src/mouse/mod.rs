@@ -12,7 +12,7 @@ enum CursorSpeed {
 }
 
 #[derive(Default, Clone, Copy, PartialEq)]
-pub struct MouseReport {
+pub struct MouseKeyReport {
     buttons: u8,
     x: u8,
     y: u8,
@@ -21,7 +21,7 @@ pub struct MouseReport {
     speed: CursorSpeed,
 }
 
-impl MouseReport {
+impl MouseKeyReport {
     /// Store the struct in an array that is ready to be sent
     pub fn construct(self) -> [u8; 5] {
         [self.buttons, self.x, self.y, self.v_wheel, self.h_wheel]
