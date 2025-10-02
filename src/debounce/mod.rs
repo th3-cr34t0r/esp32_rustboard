@@ -11,16 +11,25 @@ extern crate alloc;
 use alloc::sync::Arc;
 use esp32_nimble::utilities::mutex::Mutex;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum KeyState {
-    Pressed,
     Released,
+    Pressed,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct KeyInfo {
     pub pressed_time: Instant,
     pub state: KeyState,
+}
+
+impl Default for KeyInfo {
+    fn default() -> Self {
+        Self {
+            pressed_time: Instant::now(),
+            state: KeyState::Released,
+        }
+    }
 }
 
 pub async fn calculate_debounce(pressed_keys: &Arc<Mutex<StoredMatrixKeys>>) -> ! {
@@ -29,7 +38,7 @@ pub async fn calculate_debounce(pressed_keys: &Arc<Mutex<StoredMatrixKeys>>) -> 
         if let Some(mut pressed_keys) = pressed_keys.try_lock() {
             // itter throught the pressed keys
             pressed_keys
-                .keys_vec
+                .keys_array
                 .iter_mut()
                 .for_each(|(_key_pos, key_info)| {
                     // check if the key has passed the debounce delay or has been released

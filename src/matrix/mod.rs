@@ -18,7 +18,6 @@ use esp_idf_sys::{
     self as _, esp_bt_controller_disable, gpio_int_type_t_GPIO_INTR_HIGH_LEVEL,
     gpio_num_t_GPIO_NUM_10, gpio_num_t_GPIO_NUM_20, gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
 };
-use heapless::FnvIndexMap;
 
 pub use crate::ble::BleStatus;
 pub use crate::debounce::{KeyInfo, KeyState};
@@ -37,6 +36,13 @@ impl KeyPos {
         KeyPos { row, col }
     }
 }
+
+impl Default for KeyPos {
+    fn default() -> Self {
+        Self { row: 255, col: 255 }
+    }
+}
+
 pub struct PinMatrix<'a> {
     pub rows: [PinDriver<'a, AnyIOPin, Output>; ROWS],
     pub cols: [PinDriver<'a, AnyIOPin, Input>; COLS],
@@ -261,15 +267,15 @@ impl PinMatrix<'_> {
 }
 
 pub struct StoredMatrixKeys {
-    pub keys_vec: FnvIndexMap<KeyPos, KeyInfo, PRESSED_KEYS_ARRAY_SIZE>,
+    pub keys_array: [(KeyPos, KeyInfo); PRESSED_KEYS_ARRAY_SIZE],
     pub sleep_condition: Debounce,
 }
 
 impl StoredMatrixKeys {
-    pub fn new(debounce: Duration) -> Self {
+    pub fn new(sleep_timeout: Duration) -> Self {
         Self {
-            keys_vec: FnvIndexMap::new(),
-            sleep_condition: Debounce::new(debounce),
+            keys_array: [(KeyPos::default(), KeyInfo::default()); PRESSED_KEYS_ARRAY_SIZE],
+            sleep_condition: Debounce::new(sleep_timeout),
         }
     }
     /// The main function for stornig the registered key in to the shared pressed keys hashmap
@@ -278,21 +284,36 @@ impl StoredMatrixKeys {
         // If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
         // If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
         pressed_keys_array.iter_mut().for_each(|element| {
-            if *element != KeyPos::new(255, 255) {
-                self.keys_vec
-                    .insert(
-                        KeyPos {
-                            row: element.row,
-                            col: element.col,
-                        },
-                        KeyInfo {
+            if *element != KeyPos::default() {
+                let mut is_contained = false;
+
+                self.keys_array.iter_mut().for_each(|key_entry| {
+                    if key_entry.0 == *element {
+                        key_entry.1 = KeyInfo {
                             pressed_time: Instant::now(),
                             state: KeyState::Pressed,
-                        },
-                    )
-                    .expect("Not enough space to store the pressed keys.");
+                        };
+                        is_contained = true;
+                    }
+                });
 
-                *element = KeyPos::new(255, 255);
+                if !is_contained {
+                    if let Some(index) = self
+                        .keys_array
+                        .iter()
+                        .position(|key_entry| key_entry.0 == KeyPos::default())
+                    {
+                        self.keys_array[index] = (
+                            *element,
+                            KeyInfo {
+                                pressed_time: Instant::now(),
+                                state: KeyState::Pressed,
+                            },
+                        );
+                    }
+                }
+
+                *element = KeyPos::default();
 
                 // reset sleep debounce
                 self.sleep_condition.reset(ENTER_SLEEP_DEBOUNCE);
@@ -306,19 +327,37 @@ impl StoredMatrixKeys {
         slave_key_report.lock().iter().for_each(|element| {
             // we don't want to store 0s
             if *element != 0 {
-                // add the key_pos and the key_info to the hashmap
-                self.keys_vec
-                    .insert(
-                        KeyPos {
-                            row: *element >> BIT_SHIFT,
-                            col: *element & 0x0F,
-                        },
-                        KeyInfo {
+                let mut is_contained = false;
+                let slave_element = KeyPos {
+                    row: *element >> BIT_SHIFT,
+                    col: *element & 0x0F,
+                };
+
+                self.keys_array.iter_mut().for_each(|key_entry| {
+                    if key_entry.0 == slave_element {
+                        key_entry.1 = KeyInfo {
                             pressed_time: Instant::now(),
                             state: KeyState::Pressed,
-                        },
-                    )
-                    .expect("Not enough space to store the slave pressed keys.");
+                        };
+                        is_contained = true;
+                    }
+                });
+
+                if !is_contained {
+                    if let Some(index) = self
+                        .keys_array
+                        .iter()
+                        .position(|key_entry| key_entry.0 == KeyPos::default())
+                    {
+                        self.keys_array[index] = (
+                            slave_element,
+                            KeyInfo {
+                                pressed_time: Instant::now(),
+                                state: KeyState::Pressed,
+                            },
+                        );
+                    }
+                }
 
                 // reset sleep debounce
                 self.sleep_condition.reset(ENTER_SLEEP_DEBOUNCE);

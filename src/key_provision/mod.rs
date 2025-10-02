@@ -10,7 +10,7 @@ use crate::{
         layout::Layout,
         user_config::BIT_SHIFT,
     },
-    matrix::{KeyPos, KeyState, StoredMatrixKeys},
+    matrix::{KeyInfo, KeyPos, KeyState, StoredMatrixKeys},
     mouse::MouseKeyReport,
 };
 
@@ -166,9 +166,9 @@ pub async fn key_provision(
         pressed_keys.store_keys_slave(&slave_key_report);
 
         // check if there are pressed keys
-        if !pressed_keys.keys_vec.is_empty() {
+        if !pressed_keys.keys_array.is_empty() {
             // iter trough the pressed keys
-            for (key_pos, key_info) in pressed_keys.keys_vec.iter_mut() {
+            for (key_pos, key_info) in pressed_keys.keys_array.iter_mut() {
                 // check the key debounce state
                 match key_info.state {
                     KeyState::Pressed => {
@@ -210,7 +210,14 @@ pub async fn key_provision(
 
             // remove the sent keys and empty the vec
             while let Some(key) = pressed_keys_to_remove.pop() {
-                pressed_keys.keys_vec.remove(&key).unwrap();
+                if let Some(index) = pressed_keys
+                    .keys_array
+                    .iter()
+                    .position(|&element| element.0 == key)
+                {
+                    pressed_keys.keys_array[index] = (KeyPos::default(), KeyInfo::default());
+                    // pressed_keys.keys_array.remove(&key).unwrap();
+                }
             }
         }
     }

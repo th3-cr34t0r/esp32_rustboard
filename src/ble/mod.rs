@@ -169,12 +169,12 @@ pub struct Debounce {
 
 impl Debounce {
     // construct the struckt
-    pub fn new(debounce: Duration) -> Self {
+    pub fn new(timeout: Duration) -> Self {
         Debounce {
             future_instant: Instant::now(),
             current_instant: Instant::now(),
             previous_instant: Instant::now(),
-            debounce,
+            debounce: timeout,
         }
     }
 
