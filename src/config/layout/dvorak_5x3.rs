@@ -11,8 +11,8 @@
 // LAYER 1:
 //
 //X \ Y|  0  |  1  |  2  |  3  |  4  |  5  |           X \ Y|  6  |  7  |  8  |  9  |  10 |  11 |
-//   0 |_____|_ESC_|__7__|__8__|__9__|_PScr|              0 |__-__|__(__|__)__|__=__|__/__|_____|
-//   1 |_____|_BSP_|__4__|__5__|__6__|_DEL_|              1 |_SLCK|_left|_down|__up_|right|_____|
+//   0 |_____|_ESC_|__7__|__8__|__9__|_PScr|              0 |_SLCK|__(__|__)__|__=__|__/__|_____|
+//   1 |_____|_BSP_|__4__|__5__|__6__|_DEL_|              1 |__-__|_left|_down|__up_|right|_____|
 //   2 |_____|__0__|__1__|__2__|__3__|_ALT_|              2 |__\__|__[__|__]__|__`__|__;__|_____|
 //   3                   |_SUP_|SPACE|SHIFT|              3 |_TAB_|ENTER|LYR_1|
 //
@@ -20,7 +20,7 @@
 
 use crate::{
     config::{enums::*, layout::*},
-    matrix::PinMatrix,
+    matrix::{KeyPos, PinMatrix},
 };
 use esp_idf_hal::{
     gpio::{IOPin, PinDriver},
@@ -64,104 +64,28 @@ pub fn provide_pin_matrix() -> PinMatrix<'static> {
         pressed_keys_array,
     }
 }
-
+#[rustfmt::skip]
 pub fn layout() -> Layout {
     let mut layout = Layout::default();
 
-    // LAYER 0 LAYOUT
-    let layer_keymap = [
-        (0, 1, HidKeys::Quote),
-        (0, 2, HidKeys::Comma),
-        (0, 3, HidKeys::Period),
-        (0, 4, HidKeys::P),
-        (0, 5, HidKeys::Y),
-        (0, 6, HidKeys::F),
-        (0, 7, HidKeys::G),
-        (0, 8, HidKeys::C),
-        (0, 9, HidKeys::R),
-        (0, 10, HidKeys::L),
-        (1, 1, HidKeys::A),
-        (1, 2, HidKeys::O),
-        (1, 3, HidKeys::E),
-        (1, 4, HidKeys::U),
-        (1, 5, HidKeys::I),
-        (1, 6, HidKeys::D),
-        (1, 7, HidKeys::H),
-        (1, 8, HidKeys::T),
-        (1, 9, HidKeys::N),
-        (1, 10, HidKeys::S),
-        (2, 1, HidKeys::ModifierControl),
-        (2, 2, HidKeys::Q),
-        (2, 3, HidKeys::J),
-        (2, 4, HidKeys::K),
-        (2, 5, HidKeys::X),
-        (2, 6, HidKeys::B),
-        (2, 7, HidKeys::M),
-        (2, 8, HidKeys::W),
-        (2, 9, HidKeys::V),
-        (2, 10, HidKeys::Z),
-        (3, 3, HidKeys::ModifierSuper),
-        (3, 4, HidKeys::Space),
-        (3, 5, HidKeys::ModifierShift),
-        (3, 6, HidKeys::Tab),
-        (3, 7, HidKeys::Enter),
-        (3, 8, HidKeys::Layer1),
+    layout.keymap = [
+        [
+            /* LAYER 0 */
+            /***********/
+            /*  ROW 0  */ [Kc::Undf, Kc::Qte,   Kc::Com,  Kc::Per,   Kc::P,    Kc::Y,     Kc::F,   Kc::G,    Kc::C,  Kc::R,    Kc::L,    Kc::Undf],
+            /*  ROW 1  */ [Kc::Undf, Kc::A,     Kc::O,    Kc::E,     Kc::U,    Kc::I,     Kc::D,   Kc::H,    Kc::T,  Kc::N,    Kc::S,    Kc::Undf],
+            /*  ROW 2  */ [Kc::Undf, Kc::ModCo, Kc::Q,    Kc::J,     Kc::K,    Kc::X,     Kc::B,   Kc::M,    Kc::W,  Kc::V,    Kc::Z,    Kc::Undf],
+            /*  ROW 3  */ [Kc::Undf, Kc::Undf,  Kc::Undf, Kc::ModSu, Kc::Spac, Kc::ModSh, Kc::Tab, Kc::Entr, Kc::L1, Kc::Undf, Kc::Undf, Kc::Undf],
+        ],
+        [
+            /* LAYER 1 */
+            /***********/
+            /*  ROW 0  */ [Kc::Undf, Kc::Esc,   Kc::N7,   Kc::N8,    Kc::N9,   Kc::Pscr,  Kc::MaSL, Kc::MaLP, Kc::MaRP, Kc::Eq,   Kc::Fsl,  Kc::Undf],
+            /*  ROW 1  */ [Kc::Undf, Kc::Bksp,  Kc::N4,   Kc::N5,    Kc::N6,   Kc::Del,   Kc::Mns,  Kc::ArL,  Kc::ArD,  Kc::ArU,  Kc::ArR,  Kc::Undf],
+            /*  ROW 2  */ [Kc::Undf, Kc::N0,    Kc::N1,   Kc::N2,    Kc::N3,   Kc::ModAl,  Kc::Bksl, Kc::Lbrk, Kc::Rbrk, Kc::Grav, Kc::Scn,  Kc::Undf],
+            /*  ROW 3  */ [Kc::Undf, Kc::Undf,  Kc::Undf, Kc::ModSu, Kc::Spac, Kc::ModSh, Kc::Tab,  Kc::Entr, Kc::L1,   Kc::Undf, Kc::Undf, Kc::Undf],
+        ],
     ];
 
-    for (row, col, key) in layer_keymap {
-        if let Some(_value) = layout.keymap[0].insert(KeyPos { row, col }, key) {
-            #[cfg(feature = "debug")]
-            log::info!("Value already present: {:?}", _value);
-        };
-    }
-
-    // LAYER 1 LAYOUT
-    let layer_keymap = [
-        (0, 1, HidKeys::Escape),
-        (0, 2, HidKeys::Num7),
-        (0, 3, HidKeys::Num8),
-        (0, 4, HidKeys::Num9),
-        (0, 5, HidKeys::Pscreen),
-        (0, 6, HidKeys::MacroSuperLock),
-        (0, 7, HidKeys::MacroLeftParenthesis),
-        (0, 8, HidKeys::MacroRightParenthesis),
-        (0, 9, HidKeys::Equal),
-        (0, 10, HidKeys::ForwardSlash),
-        (1, 1, HidKeys::BackSpace),
-        (1, 2, HidKeys::Num4),
-        (1, 3, HidKeys::Num5),
-        (1, 4, HidKeys::Num6),
-        (1, 5, HidKeys::Delete),
-        (1, 6, HidKeys::Minus),
-        (1, 7, HidKeys::ArrowLeft),
-        (1, 8, HidKeys::ArrowDown),
-        (1, 9, HidKeys::ArrowUp),
-        (1, 10, HidKeys::ArrowRight),
-        (2, 1, HidKeys::Num0),
-        (2, 2, HidKeys::Num1),
-        (2, 3, HidKeys::Num2),
-        (2, 4, HidKeys::Num3),
-        (2, 5, HidKeys::ModifierAlt),
-        (2, 6, HidKeys::BackSlash),
-        (2, 7, HidKeys::LeftBracket),
-        (2, 8, HidKeys::RightBracket),
-        (2, 9, HidKeys::Grave),
-        (2, 10, HidKeys::SemiColon),
-        (3, 3, HidKeys::ModifierSuper),
-        (3, 4, HidKeys::Space),
-        (3, 5, HidKeys::ModifierShift),
-        (3, 6, HidKeys::Tab),
-        (3, 7, HidKeys::Enter),
-        (3, 8, HidKeys::Layer1),
-    ];
-
-    for (row, col, key) in layer_keymap {
-        if let Some(_value) = layout.keymap[1].insert(KeyPos { row, col }, key) {
-            #[cfg(feature = "debug")]
-            log::info!("Value already present: {:?}", _value);
-        };
-    }
-
-    // return layout
     layout
 }
