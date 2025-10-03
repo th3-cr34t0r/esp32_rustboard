@@ -18,21 +18,24 @@ fn main() -> anyhow::Result<()> {
     esp_idf_svc::log::EspLogger::initialize_default();
 
     // initialize keys pressed hashmap
-    let pressed_keys: Arc<Mutex<RegisteredMatrixKeys>> =
+    let registered_matrix_keys: Arc<Mutex<RegisteredMatrixKeys>> =
         Arc::new(Mutex::new(RegisteredMatrixKeys::new(ENTER_SLEEP_DEBOUNCE)));
+
+    // layer state
+    let mut layer: Arc<Mutex<usize>> = Arc::new(Mutex::new(0));
 
     // ble connection information shared variable
     let ble_status: Arc<Mutex<BleStatus>> = Arc::new(Mutex::new(BleStatus::Connected));
 
     block_on(async {
         select3(
-            scan_grid(&pressed_keys, &ble_status),
-            calculate_debounce(&pressed_keys),
+            scan_grid(&registered_matrix_keys, &layer, &ble_status),
+            calculate_debounce(&registered_matrix_keys),
             #[cfg(not(feature = "slave"))]
-            esp32_rustboard::ble::master::ble_tx(&pressed_keys, &ble_status),
+            esp32_rustboard::ble::master::ble_tx(&registered_matrix_keys, &layer, &ble_status),
             #[cfg(feature = "split")]
             #[cfg(feature = "slave")]
-            esp32_rustboard::ble::slave::ble_tx(&pressed_keys, &ble_status),
+            esp32_rustboard::ble::slave::ble_tx(&registered_matrix_keys, &ble_status),
         )
         .await;
     });

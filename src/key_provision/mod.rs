@@ -18,7 +18,7 @@ fn add_keys_master(
     keyboard_key_report: &mut KeyboardKeyReport,
     mouse_key_report: &mut MouseKeyReport,
     hid_key: &Kc,
-    layer: &mut usize,
+    layer: &Arc<Mutex<usize>>,
 ) {
     // get the key type
     match KeyType::check_type(hid_key) {
@@ -30,7 +30,7 @@ fn add_keys_master(
         }
         KeyType::Layer => {
             // check and set the layer
-            *layer = Layout::get_layer(hid_key);
+            *layer.lock() = Layout::get_layer(hid_key);
 
             // // release all keys
             // keyboard_key_report.keys.fill(0);
@@ -66,7 +66,7 @@ fn remove_keys_master(
     keyboard_key_report: &mut KeyboardKeyReport,
     mouse_key_report: &mut MouseKeyReport,
     hid_key: &Kc,
-    layer: &mut usize,
+    layer: &Arc<Mutex<usize>>,
 ) {
     // get the key type
     match KeyType::check_type(hid_key) {
@@ -78,7 +78,7 @@ fn remove_keys_master(
         }
         KeyType::Layer => {
             // set previous layer
-            *layer -= 1;
+            *layer.lock() -= 1;
 
             // // release all keys
             // keyboard_key_report.keys.fill(0);
@@ -153,7 +153,7 @@ pub async fn key_provision(
     #[cfg(feature = "master")]
     slave_key_report: &Arc<Mutex<[u8; 6]>>,
     #[cfg(feature = "master")] layout: &Layout,
-    #[cfg(feature = "master")] mut layer: &mut usize,
+    #[cfg(feature = "master")] mut layer: &Arc<Mutex<usize>>,
     keyboard_key_report: &mut KeyboardKeyReport,
     #[cfg(feature = "master")] mut mouse_key_report: &mut MouseKeyReport,
     registered_keys_to_remove: &mut Vec<(KeyPos, usize), 12>,
@@ -163,7 +163,7 @@ pub async fn key_provision(
         #[cfg(feature = "split")]
         #[cfg(feature = "master")]
         // process slave key report
-        registered_matrix_keys.store_keys_slave(&slave_key_report);
+        registered_matrix_keys.store_keys_slave(&slave_key_report, &layer);
 
         // check if there are pressed keys
         if !registered_matrix_keys.keys.is_empty() {
@@ -175,17 +175,14 @@ pub async fn key_provision(
                         #[cfg(feature = "master")]
                         {
                             // get the pressed key from the layout
-                            let hid_key = layout.keymap[*layer][key.position.row as usize]
+                            let hid_key = layout.keymap[key.info.layer][key.position.row as usize]
                                 [key.position.col as usize];
                             add_keys_master(
                                 keyboard_key_report,
                                 &mut mouse_key_report,
                                 &hid_key,
-                                &mut layer,
+                                &layer,
                             );
-
-                            // store layer info for the given key
-                            key.info.layer = *layer;
                         }
                         #[cfg(feature = "slave")]
                         add_keys_slave(keyboard_key_report, &key.position);

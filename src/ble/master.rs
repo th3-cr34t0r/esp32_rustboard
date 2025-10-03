@@ -182,6 +182,7 @@ impl BleKeyboardMaster {
 
 pub async fn ble_tx(
     pressed_keys: &Arc<Mutex<RegisteredMatrixKeys>>,
+    layer: &Arc<Mutex<usize>>,
     ble_status: &Arc<Mutex<BleStatus>>,
 ) -> ! {
     // init ble
@@ -189,9 +190,6 @@ pub async fn ble_tx(
 
     // initialize layers
     let layout = Layout::init();
-
-    // layer state
-    let mut layer: usize = 0;
 
     // vec to store the keys needed to be removed
     let mut pressed_keys_to_remove: Vec<(KeyPos, usize), 12> = Vec::new();
@@ -238,7 +236,7 @@ pub async fn ble_tx(
                 #[cfg(feature = "split")]
                 &slave_key_report,
                 &layout,
-                &mut layer,
+                &layer,
                 &mut keyboard_key_report,
                 &mut mouse_key_report,
                 &mut pressed_keys_to_remove,
