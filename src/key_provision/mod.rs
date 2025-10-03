@@ -10,27 +10,27 @@ use crate::{
         layout::Layout,
         user_config::BIT_SHIFT,
     },
-    matrix::{Key, KeyPos, KeyState, RegisteredMatrixKeys},
+    matrix::{KeyPos, KeyState, RegisteredMatrixKeys},
     mouse::MouseKeyReport,
 };
 
 fn add_keys_master(
     keyboard_key_report: &mut KeyboardKeyReport,
     mouse_key_report: &mut MouseKeyReport,
-    valid_key: &Kc,
+    hid_key: &Kc,
     layer: &mut usize,
 ) {
     // get the key type
-    match KeyType::check_type(valid_key) {
+    match KeyType::check_type(hid_key) {
         KeyType::Macro => {
-            let macro_valid_keys = Kc::get_macro_sequence(valid_key);
+            let macro_valid_keys = Kc::get_macro_sequence(hid_key);
             for valid_key in macro_valid_keys.iter() {
                 add_keys_master(keyboard_key_report, mouse_key_report, valid_key, layer);
             }
         }
         KeyType::Layer => {
             // check and set the layer
-            *layer = Layout::get_layer(valid_key);
+            *layer = Layout::get_layer(hid_key);
 
             // // release all keys
             // keyboard_key_report.keys.fill(0);
@@ -39,15 +39,15 @@ fn add_keys_master(
             // keyboard_key_report.modifiers = 0;
         }
         KeyType::Modifier => {
-            keyboard_key_report.modifiers |= HidModifiers::get_modifier(valid_key);
+            keyboard_key_report.modifiers |= HidModifiers::get_modifier(hid_key);
         }
         KeyType::Mouse => {
             // set the mouse command to the mouse ble characteristic
-            mouse_key_report.set_command(valid_key);
+            mouse_key_report.set_command(hid_key);
         }
         KeyType::Key => {
             // check if the key count is less than 6
-            if !keyboard_key_report.keys.contains(&(*valid_key as u8)) {
+            if !keyboard_key_report.keys.contains(&(*hid_key as u8)) {
                 // find the first key slot in the array that is free
                 if let Some(index) = keyboard_key_report
                     .keys
@@ -55,7 +55,7 @@ fn add_keys_master(
                     .position(|&value| value == 0)
                 {
                     // add the new key to that position
-                    keyboard_key_report.keys[index] = *valid_key as u8
+                    keyboard_key_report.keys[index] = *hid_key as u8
                 }
             }
         }
@@ -65,19 +65,19 @@ fn add_keys_master(
 fn remove_keys_master(
     keyboard_key_report: &mut KeyboardKeyReport,
     mouse_key_report: &mut MouseKeyReport,
-    valid_key: &Kc,
+    hid_key: &Kc,
     layer: &mut usize,
 ) {
     // get the key type
-    match KeyType::check_type(valid_key) {
+    match KeyType::check_type(hid_key) {
         KeyType::Macro => {
-            let macro_valid_keys = Kc::get_macro_sequence(valid_key);
+            let macro_valid_keys = Kc::get_macro_sequence(hid_key);
             for valid_key in macro_valid_keys.iter() {
                 remove_keys_master(keyboard_key_report, mouse_key_report, valid_key, layer);
             }
         }
         KeyType::Layer => {
-            // set base layer
+            // set previous layer
             *layer -= 1;
 
             // // release all keys
@@ -89,18 +89,18 @@ fn remove_keys_master(
         }
         KeyType::Modifier => {
             // remove the modifier
-            keyboard_key_report.modifiers &= !HidModifiers::get_modifier(valid_key);
+            keyboard_key_report.modifiers &= !HidModifiers::get_modifier(hid_key);
         }
         KeyType::Mouse => {
             // remove the mouse command from the mouse ble characteristic
-            mouse_key_report.reset_keypress(valid_key);
+            mouse_key_report.reset_keypress(hid_key);
         }
         KeyType::Key => {
-            // find the key slot of the released key
+            // find the key index of the released key
             if let Some(index) = keyboard_key_report
                 .keys
                 .iter()
-                .position(|&value| value == *valid_key as u8)
+                .position(|&value| value == *hid_key as u8)
             {
                 // remove the key from the key slot
                 keyboard_key_report.keys[index] = 0
@@ -111,7 +111,7 @@ fn remove_keys_master(
 
 /// Function that transforms and adds the pressed key on the slave device
 /// to the key report which is being sent to the master device for processing
-fn add_keys_slave(key_report: &mut KeyboardKeyReport, key: &Key) {
+fn add_keys_slave(key_report: &mut KeyboardKeyReport, key_pos: &KeyPos) {
     // combine the row and the col to a single byte before sending
     //
     // row: 0 - 3; col: 0 - 11
@@ -122,7 +122,7 @@ fn add_keys_slave(key_report: &mut KeyboardKeyReport, key: &Key) {
     //
     // combined = 0010 1011
     //
-    let combined_key = (key.position.row << BIT_SHIFT) | key.position.col;
+    let combined_key = (key_pos.row << BIT_SHIFT) | key_pos.col;
 
     //check if the key count is less than 6
     if !key_report.keys.contains(&combined_key) {
@@ -134,11 +134,11 @@ fn add_keys_slave(key_report: &mut KeyboardKeyReport, key: &Key) {
     }
 }
 /// Function that removes the pressed key from the key report
-fn remove_keys_slave(keyboard_key_report: &mut KeyboardKeyReport, key: &Key) {
+fn remove_keys_slave(keyboard_key_report: &mut KeyboardKeyReport, key_pos: &KeyPos) {
     if let Some(index) = keyboard_key_report
         .keys
         .iter()
-        .position(|&element| element == (key.position.row << BIT_SHIFT) | key.position.col)
+        .position(|&element| element == (key_pos.row << BIT_SHIFT) | key_pos.col)
     {
         keyboard_key_report.keys[index] = 0;
     }
@@ -156,7 +156,7 @@ pub async fn key_provision(
     #[cfg(feature = "master")] mut layer: &mut usize,
     keyboard_key_report: &mut KeyboardKeyReport,
     #[cfg(feature = "master")] mut mouse_key_report: &mut MouseKeyReport,
-    registered_keys_to_remove: &mut Vec<KeyPos, 6>,
+    registered_keys_to_remove: &mut Vec<(KeyPos, usize), 12>,
 ) {
     // try to lock the hashmap
     if let Some(mut registered_matrix_keys) = registered_matrix_keys.try_lock() {
@@ -175,16 +175,17 @@ pub async fn key_provision(
                         #[cfg(feature = "master")]
                         {
                             // get the pressed key from the layout
-                            key.info.layer = *layer;
-                            let valid_key = layout.keymap[key.info.layer]
-                                [key.position.row as usize]
+                            let hid_key = layout.keymap[*layer][key.position.row as usize]
                                 [key.position.col as usize];
                             add_keys_master(
                                 keyboard_key_report,
                                 &mut mouse_key_report,
-                                &valid_key,
+                                &hid_key,
                                 &mut layer,
                             );
+
+                            // store layer info for the given key
+                            key.info.layer = *layer;
                         }
                         #[cfg(feature = "slave")]
                         add_keys_slave(keyboard_key_report, &key.position);
@@ -193,14 +194,13 @@ pub async fn key_provision(
                     KeyState::Released => {
                         #[cfg(feature = "master")]
                         {
-                            // get the mapped key from the hashmap
-                            let valid_key = layout.keymap[key.info.layer]
-                                [key.position.row as usize]
+                            // get the mapped key from the layout
+                            let hid_key = layout.keymap[key.info.layer][key.position.row as usize]
                                 [key.position.col as usize];
                             remove_keys_master(
                                 keyboard_key_report,
                                 &mut *mouse_key_report,
-                                &valid_key,
+                                &hid_key,
                                 &mut layer,
                             );
                         }
@@ -209,19 +209,20 @@ pub async fn key_provision(
 
                         // if key has been debounced, add it to be removed
                         registered_keys_to_remove
-                            .push(key.position)
+                            .push((key.position, key.info.layer))
                             .expect("Error adding a key to be removed!");
                     }
                 }
             }
 
             // remove the sent keys and empty the vec
-            while let Some(key) = registered_keys_to_remove.pop() {
-                if let Some(index) = registered_matrix_keys
-                    .keys
-                    .iter()
-                    .position(|element| element.position == key)
-                {
+            while let Some((key_to_remove_pos, key_to_remove_layer)) =
+                registered_keys_to_remove.pop()
+            {
+                if let Some(index) = registered_matrix_keys.keys.iter().position(|element| {
+                    (element.position == key_to_remove_pos)
+                        && (element.info.layer == key_to_remove_layer)
+                }) {
                     registered_matrix_keys.keys.remove(index);
                 }
             }

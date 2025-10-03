@@ -21,7 +21,6 @@ use esp_idf_sys::{
 use heapless::Vec;
 
 pub use crate::ble::BleStatus;
-pub use crate::debounce::{KeyInfo, KeyState};
 
 extern crate alloc;
 use alloc::sync::Arc;
@@ -267,11 +266,36 @@ impl PinMatrix<'_> {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum KeyState {
+    Released,
+    Pressed,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct KeyInfo {
+    pub pressed_time: Instant,
+    pub state: KeyState,
+    pub layer: usize,
+}
+
+impl Default for KeyInfo {
+    fn default() -> Self {
+        Self {
+            pressed_time: Instant::now(),
+            state: KeyState::Released,
+            layer: 255,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Key {
     pub position: KeyPos,
     pub info: KeyInfo,
 }
+
+#[derive(Debug)]
 pub struct RegisteredMatrixKeys {
     pub keys: Vec<Key, REGISTERED_KEYS_ARRAY_SIZE>,
     pub sleep_condition: Debounce,

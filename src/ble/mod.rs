@@ -160,6 +160,7 @@ pub enum BleStatus {
     NotConnected,
 }
 
+#[derive(Debug)]
 pub struct Debounce {
     future_instant: Instant,
     current_instant: Instant,

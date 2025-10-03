@@ -3,7 +3,7 @@ use crate::config::user_config::slave::ESP_POWER_LEVEL;
 use crate::config::user_config::*;
 use crate::delay::delay_ms;
 use crate::key_provision::key_provision;
-use crate::matrix::{KeyPos, StoredMatrixKeys};
+use crate::matrix::{KeyPos, RegisteredMatrixKeys};
 
 extern crate alloc;
 use super::{BleKeyboardSlave, BleStatus};
@@ -91,7 +91,7 @@ impl BleKeyboardSlave {
 }
 
 pub async fn ble_tx(
-    pressed_keys: &Arc<Mutex<StoredMatrixKeys>>,
+    pressed_keys: &Arc<Mutex<RegisteredMatrixKeys>>,
     ble_status: &Arc<Mutex<BleStatus>>,
 ) -> ! {
     // construct ble slave
@@ -103,7 +103,7 @@ pub async fn ble_tx(
     let mut keyboard_key_report: KeyboardKeyReport = KeyboardKeyReport::default();
 
     // vec to store the keys needed to be removed
-    let mut pressed_keys_to_remove: Vec<KeyPos, 6> = Vec::new();
+    let mut pressed_keys_to_remove: Vec<(KeyPos, usize), 12> = Vec::new();
 
     // Run the main loop
     loop {
@@ -135,7 +135,7 @@ pub async fn ble_tx(
                 ble_keyboard_slave.send_report().await;
             }
             // there must be a delay so the WDT in not triggered
-            delay_ms(5).await;
+            delay_ms(1).await;
         } else {
             // debug log
             #[cfg(feature = "debug")]

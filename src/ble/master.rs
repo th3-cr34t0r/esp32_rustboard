@@ -194,7 +194,7 @@ pub async fn ble_tx(
     let mut layer: usize = 0;
 
     // vec to store the keys needed to be removed
-    let mut pressed_keys_to_remove: Vec<KeyPos, 6> = Vec::new();
+    let mut pressed_keys_to_remove: Vec<(KeyPos, usize), 12> = Vec::new();
 
     // set ble power to lowest possible
     // ble_keyboard.set_ble_power_save();
@@ -263,7 +263,7 @@ pub async fn ble_tx(
             }
 
             // there must be a delay so the WDT in not triggered
-            delay_ms(5).await;
+            delay_ms(1).await;
         } else {
             // debug log
             #[cfg(feature = "debug")]
