@@ -65,6 +65,13 @@ pub fn provide_kb_matrix() -> PinMatrix<'static> {
     let pin_matrix;
 
     // Dvorak Layouts Start
+    #[cfg(feature = "qwerty")]
+    {
+        use crate::config::layout::qwerty;
+        pin_matrix = qwerty::provide_pin_matrix();
+    }
+
+    // Dvorak Layouts Start
     #[cfg(feature = "dvorak")]
     {
         use crate::config::layout::dvorak;

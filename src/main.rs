@@ -22,7 +22,7 @@ fn main() -> anyhow::Result<()> {
         Arc::new(Mutex::new(RegisteredMatrixKeys::new(ENTER_SLEEP_DEBOUNCE)));
 
     // layer state
-    let mut layer: Arc<Mutex<usize>> = Arc::new(Mutex::new(0));
+    let layer: Arc<Mutex<usize>> = Arc::new(Mutex::new(0));
 
     // ble connection information shared variable
     let ble_status: Arc<Mutex<BleStatus>> = Arc::new(Mutex::new(BleStatus::Connected));

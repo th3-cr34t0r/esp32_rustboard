@@ -1,4 +1,54 @@
-//
+use crate::{
+    config::{enums::*, layout::*},
+    matrix::{KeyPos, PinMatrix},
+};
+use esp_idf_hal::{
+    gpio::{IOPin, PinDriver},
+    prelude::Peripherals,
+};
+
+pub fn provide_pin_matrix() -> PinMatrix<'static> {
+    let peripherals = Peripherals::take().expect("Not able to init peripherals.");
+
+    let rows = [
+        PinDriver::output(peripherals.pins.gpio12.downgrade())
+            .expect("Not able to set port as output."),
+        PinDriver::output(peripherals.pins.gpio18.downgrade())
+            .expect("Not able to set port as output."),
+        PinDriver::output(peripherals.pins.gpio19.downgrade())
+            .expect("Not able to set port as output."),
+        PinDriver::output(peripherals.pins.gpio20.downgrade())
+            .expect("Not able to set port as output."),
+    ];
+
+    let cols = [
+        PinDriver::input(peripherals.pins.gpio4.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio5.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio7.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio6.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio10.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio3.downgrade())
+            .expect("Not able to set port as input."),
+    ];
+
+    let pressed_keys_array = [(KeyPos::new(255, 255), 255 as usize); 6];
+
+    PinMatrix {
+        rows,
+        cols,
+        pressed_keys_array,
+    }
+}
+
+#[rustfmt::skip]
+pub fn layout() -> Layout {
+    let mut layout = Layout::default();
+
 //*********************************************************************************************
 // LAYER 0:
 //
@@ -19,117 +69,32 @@
 //
 //*********************************************************************************************
 
-use crate::config::{enums::*, layout::*};
-
-pub fn layout() -> Layout {
-    let mut layout = Layout::default();
-
-    // LAYER 0 LAYOUT
-    let layer_keymap = [
-        (0, 0, HidKeys::Escape),
-        (0, 1, HidKeys::Q),
-        (0, 2, HidKeys::W),
-        (0, 3, HidKeys::E),
-        (0, 4, HidKeys::R),
-        (0, 5, HidKeys::T),
-        (0, 6, HidKeys::Y),
-        (0, 7, HidKeys::U),
-        (0, 8, HidKeys::I),
-        (0, 9, HidKeys::O),
-        (0, 10, HidKeys::P),
-        (0, 11, HidKeys::LeftBracket),
-        (1, 0, HidKeys::BackSpace),
-        (1, 1, HidKeys::A),
-        (1, 2, HidKeys::S),
-        (1, 3, HidKeys::D),
-        (1, 4, HidKeys::F),
-        (1, 5, HidKeys::G),
-        (1, 6, HidKeys::H),
-        (1, 7, HidKeys::J),
-        (1, 8, HidKeys::K),
-        (1, 9, HidKeys::L),
-        (1, 10, HidKeys::SemiColon),
-        (1, 11, HidKeys::Quote),
-        (2, 0, HidKeys::ModifierControl),
-        (2, 1, HidKeys::Z),
-        (2, 2, HidKeys::X),
-        (2, 3, HidKeys::C),
-        (2, 4, HidKeys::V),
-        (2, 5, HidKeys::B),
-        (2, 6, HidKeys::N),
-        (2, 7, HidKeys::M),
-        (2, 8, HidKeys::Comma),
-        (2, 9, HidKeys::Period),
-        (2, 10, HidKeys::ForwardSlash),
-        (2, 11, HidKeys::Minus),
-        (3, 3, HidKeys::ModifierAlt),
-        (3, 4, HidKeys::Space),
-        (3, 5, HidKeys::ModifierShift),
-        (3, 6, HidKeys::Tab),
-        (3, 7, HidKeys::Enter),
-        (3, 8, HidKeys::Layer1),
-    ];
-
-    for (row, col, key) in layer_keymap {
-        if let Some(_value) = layout.keymap[0].insert(KeyPos { row, col }, key) {
-            #[cfg(feature = "debug")]
-            log::info!("Value already present: {:?}", _value);
-        };
-    }
-
-    // LAYER 1 LAYOUT
-    let layer_keymap = [
-        (0, 0, HidKeys::Escape),
-        (0, 1, HidKeys::ModifierSuper),
-        (0, 2, HidKeys::Num7),
-        (0, 3, HidKeys::Num8),
-        (0, 4, HidKeys::Num9),
-        (0, 5, HidKeys::Pscreen),
-        (0, 6, HidKeys::MacroExclamationMark),
-        (0, 7, HidKeys::MacroAt),
-        (0, 8, HidKeys::MacroHash),
-        (0, 9, HidKeys::MacroDollar),
-        (0, 10, HidKeys::MacroModul),
-        (0, 11, HidKeys::MacroCaret),
-        (1, 0, HidKeys::BackSpace),
-        (1, 1, HidKeys::KpDot),
-        (1, 2, HidKeys::Num4),
-        (1, 3, HidKeys::Num5),
-        (1, 4, HidKeys::Num6),
-        (1, 5, HidKeys::Delete),
-        (1, 6, HidKeys::MacroAmpersand),
-        (1, 7, HidKeys::ArrowLeft),
-        (1, 8, HidKeys::ArrowDown),
-        (1, 9, HidKeys::ArrowUp),
-        (1, 10, HidKeys::ArrowRight),
-        (1, 11, HidKeys::MacroAsterix),
-        (2, 0, HidKeys::ModifierControl),
-        (2, 1, HidKeys::Num0),
-        (2, 2, HidKeys::Num1),
-        (2, 3, HidKeys::Num2),
-        (2, 4, HidKeys::Num3),
-        (2, 5, HidKeys::MacroSuperLock),
-        (2, 6, HidKeys::BackSlash),
-        (2, 7, HidKeys::LeftBracket),
-        (2, 8, HidKeys::RightBracket),
-        (2, 9, HidKeys::MacroLeftParenthesis),
-        (2, 10, HidKeys::MacroRightParenthesis),
-        (2, 11, HidKeys::Grave),
-        (3, 3, HidKeys::ModifierAlt),
-        (3, 4, HidKeys::Space),
-        (3, 5, HidKeys::ModifierShift),
-        (3, 6, HidKeys::Tab),
-        (3, 7, HidKeys::Enter),
-        (3, 8, HidKeys::Layer1),
-    ];
-
-    for (row, col, key) in layer_keymap {
-        if let Some(_value) = layout.keymap[1].insert(KeyPos { row, col }, key) {
-            #[cfg(feature = "debug")]
-            log::info!("Value already present: {:?}", _value);
-        };
-    }
-
+layout.keymap = [
+    [
+            /* LAYER 0 */  /*    COL 0          COL 1        COL 2          COL 3         COL 4         COL 5                   COL 6         COL 7         COL 8        COL 9         COL 10        COL 11   */
+        /*                 +--------------+-------------+-------------+--------------+------------+--------------+        +------------+--------------+------------+-------------+-------------+------------+*/
+        /*   ROW 0  */  [/*|*/Kc::Esc,  /*|*/Kc::Q,   /*|*/Kc::W,   /*|*/Kc::E,    /*|*/Kc::R,  /*|*/Kc::T,    /*|        |*/Kc::Y,  /*|*/Kc::U,    /*|*/Kc::I,  /*|*/Kc::O,   /*|*/Kc::P,   /*|*/Kc::Lbrk,/*|*/],
+        /*                 +--------------+-------------+-------------+--------------+------------+--------------+        +------------+--------------+------------+-------------+-------------+------------+*/
+        /*   ROW 1  */  [/*|*/Kc::Bksp, /*|*/Kc::A,   /*|*/Kc::S,   /*|*/Kc::D,    /*|*/Kc::F,  /*|*/Kc::G,    /*|        |*/Kc::H,  /*|*/Kc::J,    /*|*/Kc::K,  /*|*/Kc::L,   /*|*/Kc::Scn, /*|*/Kc::Qte /*|*/],
+        /*                 +--------------+-------------+-------------+--------------+------------+--------------+        +------------+--------------+------------+-------------+-------------+------------+*/
+        /*   ROW 2  */  [/*|*/Kc::ModCo,/*|*/Kc::Z,   /*|*/Kc::X,   /*|*/Kc::C,    /*|*/Kc::V,  /*|*/Kc::B,    /*|        |*/Kc::N,  /*|*/Kc::M,    /*|*/Kc::Com,/*|*/Kc::Per, /*|*/Kc::Fsl, /*|*/Kc::Rbrk/*|*/],
+        /*                 +--------------+-------------+-------------+--------------+------------+--------------+        +------------+--------------+------------+-------------+-------------+------------+*/
+        /*   ROW 3  */  [/*|*/Kc::Undf, /*|*/Kc::Undf,/*|*/Kc::Undf,/*|*/Kc::ModSu,/*|*/Kc::Spac,/*|*/Kc::ModSh,/*|        |*/Kc::Tab,/*|*/Kc::Entr, /*|*/Kc::L1, /*|*/Kc::Undf,/*|*/Kc::Undf,/*|*/Kc::Undf/*|*/],
+        /*                 +--------------+-------------+-------------+--------------+------------+--------------+        +------------+--------------+------------+-------------+-------------+------------+*/
+    ],
+    [
+        /*  LAYER 1 */  /*     COL 0          COL 1        COL 2          COL 3         COL 4         COL 5                   COL 6         COL 7         COL 8        COL 9         COL 10        COL 11   */
+        /*                 +--------------+----------------------------+--------------+------------+---------------+        +-------------+--------------+-------------+-------------+--------------+------------+*/
+        /*   ROW 0  */  [/*|*/Kc::Esc,  /*|*/Kc::Undf, /*|*/Kc::N7,  /*|*/Kc::N8,   /*|*/Kc::N9, /*|*/Kc::Pscr,  /*|        |*/Kc::Undf,/*|*/Kc::MaLP, /*|*/Kc::MaRP,/*|*/Kc::Undf,/*|*/Kc::Undf, /*|*/Kc::Undf/*|*/],
+        /*                 +--------------+----------------------------+--------------+------------+---------------+        +-------------+--------------+-------------+-------------+--------------+------------+*/
+        /*   ROW 1  */  [/*|*/Kc::Bksp, /*|*/Kc::ModAl,/*|*/Kc::N4,  /*|*/Kc::N5,   /*|*/Kc::N6, /*|*/Kc::Del,   /*|        |*/Kc::Undf,/*|*/Kc::ArL,  /*|*/Kc::ArD, /*|*/Kc::ArU, /*|*/Kc::ArR,  /*|*/Kc::Undf/*|*/],
+        /*                 +--------------+--------------+-------------+--------------+------------+---------------+        +-------------+--------------+-------------+-------------+--------------+------------+*/
+        /*   ROW 2  */  [/*|*/Kc::ModCo,/*|*/Kc::N0,   /*|*/Kc::N1,  /*|*/Kc::N2,   /*|*/Kc::N3, /*|*/Kc::MaSL, /*|        |*/Kc::Bksl,/*|*/Kc::Lbrk, /*|*/Kc::Rbrk,/*|*/Kc::Grav, /*|*/Kc::Undf, /*|*/Kc::Undf/*|*/],
+        /*                 +--------------+--------------+-------------+--------------+------------+---------------+        +-------------+--------------+-------------+-------------+--------------+------------+*/
+        /*   ROW 3  */  [/*|*/Kc::Undf, /*|*/Kc::Undf, /*|*/Kc::Undf,/*|*/Kc::ModSu,/*|*/Kc::Spac,/*|*/Kc::ModSh,/*|        |*/Kc::Tab, /*|*/Kc::Entr ,/*|*/Kc::L1,  /*|*/Kc::Undf,/*|*/Kc::Undf, /*|*/Kc::Undf/*|*/],
+        /*                 +--------------+--------------+-------------+--------------+------------+---------------+        +-------------+--------------+-------------+-------------+--------------+------------+*/
+    ],
+];
     // return layout
     layout
 }
