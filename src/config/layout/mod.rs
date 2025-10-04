@@ -1,5 +1,5 @@
-#[cfg(feature = "colemakdh")]
-pub mod colemakdh;
+#[cfg(feature = "qwerty")]
+pub mod qwerty;
 
 #[cfg(feature = "dvorak")]
 pub mod dvorak;
@@ -7,14 +7,8 @@ pub mod dvorak;
 #[cfg(feature = "dvorak-5x3")]
 pub mod dvorak_5x3;
 
-#[cfg(feature = "dvorak-coral")]
-pub mod dvorak_coral;
-
-#[cfg(feature = "dvorak-rosewood")]
-pub mod dvorak_rosewood;
-
-#[cfg(feature = "qwerty")]
-pub mod qwerty;
+#[cfg(feature = "colemakdh")]
+pub mod colemakdh;
 
 use crate::{
     config::{enums::*, user_config::*},
@@ -34,12 +28,6 @@ impl Layout {
 
         #[cfg(feature = "dvorak")]
         return dvorak::layout();
-
-        #[cfg(feature = "dvorak-coral")]
-        return dvorak_coral::layout();
-
-        #[cfg(feature = "dvorak-rosewood")]
-        return dvorak_rosewood::layout();
 
         #[cfg(feature = "dvorak-5x3")]
         return dvorak_5x3::layout();
@@ -76,18 +64,6 @@ pub fn provide_kb_matrix() -> PinMatrix<'static> {
     {
         use crate::config::layout::dvorak;
         pin_matrix = dvorak::provide_pin_matrix();
-    }
-
-    #[cfg(feature = "dvorak-coral")]
-    {
-        use crate::config::layout::dvorak_coral;
-        pin_matrix = dvorak_coral::provide_pin_matrix();
-    }
-
-    #[cfg(feature = "dvorak-rosewood")]
-    {
-        use crate::config::layout::dvorak_rosewood;
-        pin_matrix = dvorak_rosewood::provide_pin_matrix();
     }
 
     #[cfg(feature = "dvorak-5x3")]
