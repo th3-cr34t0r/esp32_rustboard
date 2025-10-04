@@ -45,10 +45,6 @@ pub fn provide_pin_matrix() -> PinMatrix<'static> {
     }
 }
 
-#[rustfmt::skip]
-pub fn layout() -> Layout {
-    let mut layout = Layout::default();
-
 //*********************************************************************************************
 // LAYER 0:
 //
@@ -68,6 +64,10 @@ pub fn layout() -> Layout {
 //   3                   |_ALT_|SPACE|SHIFT|              3 |_TAB_|ENTER|LYR_1|
 //
 //*********************************************************************************************
+#[rustfmt::skip]
+pub fn layout() -> Layout {
+    let mut layout = Layout::default();
+
     layout.keymap = [
         [
             /* LAYER 0 */  /*    COL 0          COL 1           COL 2          COL 3         COL 4         COL 5                   COL 6         COL 7         COL 8        COL 9         COL 10        COL 11  */
