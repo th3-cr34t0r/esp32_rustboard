@@ -1,9 +1,9 @@
-use crate::config::user_config::*;
-use crate::debounce::KeyState;
-use crate::delay::delay_ms;
-use crate::matrix::{KeyPos, StoredKeys};
-
+use crate::ble::KeyboardKeyReport;
 use crate::config::user_config::slave::ESP_POWER_LEVEL;
+use crate::config::user_config::*;
+use crate::delay::delay_ms;
+use crate::key_provision::key_provision;
+use crate::matrix::{KeyPos, RegisteredMatrixKeys};
 
 extern crate alloc;
 use super::{BleKeyboardSlave, BleStatus};
@@ -15,7 +15,6 @@ use esp_idf_sys::{
 };
 use heapless::Vec;
 use zerocopy::IntoByteSlice;
-
 
 impl BleKeyboardSlave {
     pub async fn new() -> Self {
@@ -91,45 +90,20 @@ impl BleKeyboardSlave {
     }
 }
 
-fn add_keys(ble_keyboard_slave: &mut BleKeyboardSlave, key: &KeyPos) {
-    // combine the row and the col to a single byte before sending
-    //
-    // row: 0 - 3; col: 0 - 11
-    //
-    // Example:
-    // row(2):    0000 0010 << 4bits
-    // col(11):   0000 1011
-    //
-    // combined = 0010 1011
-    //
-    let combined_key = (key.row << BIT_SHIFT) | key.col;
-
-    //check if the key count is less than 6
-    if !ble_keyboard_slave
-        .current_pressed_keys
-        .contains(&combined_key)
-    {
-        // find the first key slot in the array that is free
-        if let Some(index) = ble_keyboard_slave
-            .current_pressed_keys
-            .iter()
-            .position(|&value| value == 0)
-        {
-            //add the new key to that position
-            ble_keyboard_slave.current_pressed_keys[index] = combined_key;
-        }
-    }
-}
-
-pub async fn ble_tx(pressed_keys: &Arc<Mutex<StoredKeys>>, ble_status: &Arc<Mutex<BleStatus>>) {
+pub async fn ble_tx(
+    pressed_keys: &Arc<Mutex<RegisteredMatrixKeys>>,
+    ble_status: &Arc<Mutex<BleStatus>>,
+) -> ! {
     // construct ble slave
     let mut ble_keyboard_slave: BleKeyboardSlave = BleKeyboardSlave::new().await;
 
     // set ble power to lowest possible
     // ble_keyboard_slave.set_ble_power_save();
 
+    let mut keyboard_key_report: KeyboardKeyReport = KeyboardKeyReport::default();
+
     // vec to store the keys needed to be removed
-    let mut pressed_keys_to_remove: Vec<KeyPos, 6> = Vec::new();
+    let mut pressed_keys_to_remove: Vec<(KeyPos, usize), 12> = Vec::new();
 
     // Run the main loop
     loop {
@@ -139,51 +113,26 @@ pub async fn ble_tx(pressed_keys: &Arc<Mutex<StoredKeys>>, ble_status: &Arc<Mute
                 *ble_status = BleStatus::Connected;
             }
 
-            // try to lock the hashmap
-            if let Some(mut pressed_keys) = pressed_keys.try_lock() {
-                // check if there are pressed keys
-                if !pressed_keys.index_map.is_empty() {
-                    // iter trough the pressed keys
-                    for (key, debounce) in pressed_keys.index_map.iter_mut() {
-                        match debounce.state {
-                            KeyState::Pressed => {
-                                // if key state is keyPressed, add it to the key report
-                                add_keys(&mut ble_keyboard_slave, key);
-                            }
-                            KeyState::Released => {
-                                if let Some(index) =
-                                    ble_keyboard_slave.current_pressed_keys.iter().position(
-                                        |&element| element == (key.row << BIT_SHIFT) | key.col,
-                                    )
-                                {
-                                    ble_keyboard_slave.current_pressed_keys[index] = 0;
-                                }
+            // call the key provisioning function
+            key_provision(
+                pressed_keys,
+                &mut keyboard_key_report,
+                &mut pressed_keys_to_remove,
+            )
+            .await;
 
-                                // if key has been debounced, add it to be removed
-                                pressed_keys_to_remove
-                                    .push(*key)
-                                    .expect("Error adding a key to be removed!");
-                            }
-                        }
-                    }
+            ble_keyboard_slave.current_pressed_keys = keyboard_key_report.keys;
 
-                    // sent the new pressed keys only if they differ from the previous
-                    if ble_keyboard_slave.are_pressed_keys_changed() {
-                        // debug log
-                        #[cfg(feature = "debug")]
-                        log::info!(
-                            "ble_keyboard_slave.keys: {:?}",
-                            ble_keyboard_slave.current_pressed_keys
-                        );
-                        // sent the new report
-                        ble_keyboard_slave.send_report().await;
-                    }
-
-                    // remove the sent keys and empty the vec
-                    while let Some(key) = pressed_keys_to_remove.pop() {
-                        pressed_keys.index_map.remove(&key).unwrap();
-                    }
-                }
+            // sent the new pressed keys only if they differ from the previous
+            if ble_keyboard_slave.are_pressed_keys_changed() {
+                // debug log
+                #[cfg(feature = "debug")]
+                log::info!(
+                    "ble_keyboard_slave.keys: {:?}",
+                    ble_keyboard_slave.current_pressed_keys
+                );
+                // sent the new report
+                ble_keyboard_slave.send_report().await;
             }
             // there must be a delay so the WDT in not triggered
             delay_ms(1).await;

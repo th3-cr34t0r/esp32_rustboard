@@ -1,5 +1,5 @@
-#[cfg(feature = "colemakdh")]
-pub mod colemakdh;
+#[cfg(feature = "qwerty")]
+pub mod qwerty;
 
 #[cfg(feature = "dvorak")]
 pub mod dvorak;
@@ -7,25 +7,17 @@ pub mod dvorak;
 #[cfg(feature = "dvorak-5x3")]
 pub mod dvorak_5x3;
 
-#[cfg(feature = "dvorak-coral")]
-pub mod dvorak_coral;
-
-#[cfg(feature = "dvorak-rosewood")]
-pub mod dvorak_rosewood;
-
-#[cfg(feature = "qwerty")]
-pub mod qwerty;
-
-use std::collections::HashMap;
+#[cfg(feature = "colemakdh")]
+pub mod colemakdh;
 
 use crate::{
     config::{enums::*, user_config::*},
-    matrix::{KeyPos, PinMatrix},
+    matrix::PinMatrix,
 };
 
 #[derive(Default)]
 pub struct Layout {
-    pub keymap: [HashMap<KeyPos, HidKeys>; LAYERS],
+    pub keymap: [[[Kc; COLS * 2]; ROWS]; LAYERS],
 }
 
 impl Layout {
@@ -37,12 +29,6 @@ impl Layout {
         #[cfg(feature = "dvorak")]
         return dvorak::layout();
 
-        #[cfg(feature = "dvorak-coral")]
-        return dvorak_coral::layout();
-
-        #[cfg(feature = "dvorak-rosewood")]
-        return dvorak_rosewood::layout();
-
         #[cfg(feature = "dvorak-5x3")]
         return dvorak_5x3::layout();
 
@@ -51,13 +37,13 @@ impl Layout {
     }
 
     /// get the layer number
-    pub fn get_layer(layer: &HidKeys) -> usize {
+    pub fn get_layer(layer: &Kc) -> usize {
         match layer {
-            HidKeys::Layer1 => 1,
-            HidKeys::Layer2 => 2,
-            HidKeys::Layer3 => 3,
-            HidKeys::Layer4 => 4,
-            HidKeys::Layer5 => 5,
+            Kc::L1 => 1,
+            Kc::L2 => 2,
+            Kc::L3 => 3,
+            Kc::L4 => 4,
+            Kc::L5 => 5,
             _ => 0,
         }
     }
@@ -67,22 +53,17 @@ pub fn provide_kb_matrix() -> PinMatrix<'static> {
     let pin_matrix;
 
     // Dvorak Layouts Start
+    #[cfg(feature = "qwerty")]
+    {
+        use crate::config::layout::qwerty;
+        pin_matrix = qwerty::provide_pin_matrix();
+    }
+
+    // Dvorak Layouts Start
     #[cfg(feature = "dvorak")]
     {
         use crate::config::layout::dvorak;
         pin_matrix = dvorak::provide_pin_matrix();
-    }
-
-    #[cfg(feature = "dvorak-coral")]
-    {
-        use crate::config::layout::dvorak_coral;
-        pin_matrix = dvorak_coral::provide_pin_matrix();
-    }
-
-    #[cfg(feature = "dvorak-rosewood")]
-    {
-        use crate::config::layout::dvorak_rosewood;
-        pin_matrix = dvorak_rosewood::provide_pin_matrix();
     }
 
     #[cfg(feature = "dvorak-5x3")]

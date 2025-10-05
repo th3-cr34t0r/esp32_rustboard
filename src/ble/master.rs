@@ -3,18 +3,16 @@ extern crate alloc;
 use alloc::sync::Arc;
 
 use crate::ble::BleStatus;
-use crate::config::enums::{HidKeys, HidModifiers, KeyType};
 use crate::config::layout::Layout;
-use crate::config::user_config::{BLE_SLAVE_UUID, KB_NAME};
-use crate::debounce::KeyState;
-use crate::delay::*;
-use crate::matrix::{KeyPos, StoredKeys};
-use crate::mouse::*;
-
 use crate::config::user_config::master::ESP_POWER_LEVEL;
+use crate::config::user_config::{BLE_SLAVE_UUID, KB_NAME};
+use crate::delay::*;
+use crate::key_provision::key_provision;
+use crate::matrix::{KeyPos, RegisteredMatrixKeys};
 
 use super::{
-    BleKeyboardMaster, KeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID, MEDIA_KEYS_ID, MOUSE_ID,
+    BleKeyboardMaster, KeyboardKeyReport, MouseKeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID,
+    MEDIA_KEYS_ID, MOUSE_ID,
 };
 
 use esp32_nimble::{
@@ -101,10 +99,10 @@ impl BleKeyboardMaster {
             output_keyboard,
             input_media_keys,
             input_mouse,
-            current_keyboard_report: KeyReport::default(),
-            previous_keyboard_report: KeyReport::default(),
-            current_mouse_report: MouseReport::default(),
-            previous_mouse_report: MouseReport::default(),
+            current_keyboard_report: KeyboardKeyReport::default(),
+            previous_keyboard_report: KeyboardKeyReport::default(),
+            current_mouse_report: MouseKeyReport::default(),
+            previous_mouse_report: MouseKeyReport::default(),
         }
     }
 
@@ -182,100 +180,9 @@ impl BleKeyboardMaster {
     }
 }
 
-fn add_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer: &mut usize) {
-    // get the key type
-    match KeyType::check_type(valid_key) {
-        KeyType::Macro => {
-            let macro_valid_keys = HidKeys::get_macro_sequence(valid_key);
-            for valid_key in macro_valid_keys.iter() {
-                add_keys(ble_keyboard, valid_key, layer);
-            }
-        }
-        KeyType::Layer => {
-            // check and set the layer
-            *layer = Layout::get_layer(valid_key);
-
-            // release all keys
-            ble_keyboard.current_keyboard_report.keys.fill(0);
-
-            // release modifiers
-            ble_keyboard.current_keyboard_report.modifiers = 0;
-        }
-        KeyType::Modifier => {
-            ble_keyboard.current_keyboard_report.modifiers |= HidModifiers::get_modifier(valid_key);
-        }
-        KeyType::Mouse => {
-            // set the mouse command to the mouse ble characteristic
-            ble_keyboard.current_mouse_report.set_command(valid_key);
-        }
-        KeyType::Key => {
-            // check if the key count is less than 6
-            if !ble_keyboard
-                .current_keyboard_report
-                .keys
-                .contains(&(*valid_key as u8))
-            {
-                // find the first key slot in the array that is free
-                if let Some(index) = ble_keyboard
-                    .current_keyboard_report
-                    .keys
-                    .iter()
-                    .position(|&value| value == 0)
-                {
-                    // add the new key to that position
-                    ble_keyboard.current_keyboard_report.keys[index] = *valid_key as u8
-                }
-            }
-        }
-    }
-}
-
-fn remove_keys(ble_keyboard: &mut BleKeyboardMaster, valid_key: &HidKeys, layer: &mut usize) {
-    // get the key type
-    match KeyType::check_type(valid_key) {
-        KeyType::Macro => {
-            let macro_valid_keys = HidKeys::get_macro_sequence(valid_key);
-            for valid_key in macro_valid_keys.iter() {
-                remove_keys(ble_keyboard, valid_key, layer);
-            }
-        }
-        KeyType::Layer => {
-            // set base layer
-            *layer = 0;
-
-            // release all keys
-            ble_keyboard.current_keyboard_report.keys.fill(0);
-            ble_keyboard.current_mouse_report.reset_report();
-
-            // release modifiers
-            ble_keyboard.current_keyboard_report.modifiers = 0;
-        }
-        KeyType::Modifier => {
-            // remove the modifier
-            ble_keyboard.current_keyboard_report.modifiers &=
-                !HidModifiers::get_modifier(valid_key);
-        }
-        KeyType::Mouse => {
-            // remove the mouse command from the mouse ble characteristic
-            ble_keyboard.current_mouse_report.reset_keypress(valid_key);
-        }
-        KeyType::Key => {
-            // find the key slot of the released key
-            if let Some(index) = ble_keyboard
-                .current_keyboard_report
-                .keys
-                .iter()
-                .position(|&value| value == *valid_key as u8)
-            {
-                // remove the key from the key slot
-                ble_keyboard.current_keyboard_report.keys[index] = 0
-            }
-        }
-    }
-}
-
 pub async fn ble_tx(
-    pressed_keys: &Arc<Mutex<StoredKeys>>,
+    pressed_keys: &Arc<Mutex<RegisteredMatrixKeys>>,
+    layer: &Arc<Mutex<usize>>,
     ble_status: &Arc<Mutex<BleStatus>>,
 ) -> ! {
     // init ble
@@ -284,17 +191,19 @@ pub async fn ble_tx(
     // initialize layers
     let layout = Layout::init();
 
-    // layer state
-    let mut layer: usize = 0;
-
     // vec to store the keys needed to be removed
-    let mut pressed_keys_to_remove: Vec<KeyPos, 6> = Vec::new();
+    let mut pressed_keys_to_remove: Vec<(KeyPos, usize), 12> = Vec::new();
 
     // set ble power to lowest possible
     // ble_keyboard.set_ble_power_save();
 
+    let mut keyboard_key_report: KeyboardKeyReport = KeyboardKeyReport::default();
+    let mut mouse_key_report: MouseKeyReport = MouseKeyReport::default();
+
+    #[cfg(feature = "split")]
     let slave_key_report: Arc<Mutex<[u8; 6]>> = Arc::new(Mutex::new([0; 6]));
 
+    #[cfg(feature = "split")]
     // on_write callback
     ble_keyboard.input_slave.lock().on_write({
         let slave_key_report = Arc::clone(&slave_key_report);
@@ -321,57 +230,34 @@ pub async fn ble_tx(
                 *ble_status = BleStatus::Connected;
             }
 
-            // try to lock the hashmap
-            if let Some(mut pressed_keys) = pressed_keys.try_lock() {
-                // process slave key report
-                pressed_keys.store_keys_slave(&slave_key_report);
+            // process the keys
+            key_provision(
+                &pressed_keys,
+                #[cfg(feature = "split")]
+                &slave_key_report,
+                &layout,
+                &layer,
+                &mut keyboard_key_report,
+                &mut mouse_key_report,
+                &mut pressed_keys_to_remove,
+            )
+            .await;
 
-                // check if there are pressed keys
-                if !pressed_keys.index_map.is_empty() {
-                    // iter trough the pressed keys
-                    for (key_pos, key_info) in pressed_keys.index_map.iter_mut() {
-                        // check the key debounce state
-                        match key_info.state {
-                            KeyState::Pressed => {
-                                // get the pressed key
-                                if let Some(valid_key) = layout.keymap[layer].get(key_pos) {
-                                    add_keys(&mut ble_keyboard, valid_key, &mut layer);
-                                }
-                            }
-                            // check if the key is calculated for debounce
-                            KeyState::Released => {
-                                // get the mapped key from the hashmap
-                                if let Some(valid_key) = layout.keymap[layer].get(key_pos) {
-                                    remove_keys(&mut ble_keyboard, valid_key, &mut layer);
-                                }
+            ble_keyboard.current_keyboard_report = keyboard_key_report;
+            ble_keyboard.current_mouse_report = mouse_key_report;
 
-                                // if key has been debounced, add it to be removed
-                                pressed_keys_to_remove
-                                    .push(*key_pos)
-                                    .expect("Error adding a key to be removed!");
-                            }
-                        }
-                    }
+            // sent the new keyboard report only if it differes from the previous
+            if ble_keyboard.is_keyboard_report_changed() {
+                ble_keyboard.send_keyboard_report().await;
+            }
 
-                    // sent the new keyboard report only if it differes from the previous
-                    if ble_keyboard.is_keyboard_report_changed() {
-                        ble_keyboard.send_keyboard_report().await;
-                    }
-
-                    // in case the cursor is being moved
-                    if ble_keyboard
-                        .current_mouse_report
-                        .is_cursor_position_changed()
-                        || ble_keyboard.is_mouse_report_changed()
-                    {
-                        ble_keyboard.send_mouse_report().await;
-                    }
-
-                    // remove the sent keys and empty the vec
-                    while let Some(key) = pressed_keys_to_remove.pop() {
-                        pressed_keys.index_map.remove(&key).unwrap();
-                    }
-                }
+            // in case the cursor is being moved
+            if ble_keyboard
+                .current_mouse_report
+                .is_cursor_position_changed()
+                || ble_keyboard.is_mouse_report_changed()
+            {
+                ble_keyboard.send_mouse_report().await;
             }
 
             // there must be a delay so the WDT in not triggered

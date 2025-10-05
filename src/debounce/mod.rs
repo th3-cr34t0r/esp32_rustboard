@@ -1,4 +1,7 @@
-use crate::{delay::delay_ms, matrix::StoredKeys};
+use crate::{
+    delay::delay_ms,
+    matrix::{KeyState, RegisteredMatrixKeys},
+};
 use embassy_time::Instant;
 
 #[cfg(feature = "master")]
@@ -11,31 +14,19 @@ extern crate alloc;
 use alloc::sync::Arc;
 use esp32_nimble::utilities::mutex::Mutex;
 
-#[derive(Debug)]
-pub enum KeyState {
-    Pressed,
-    Released,
-}
-
-#[derive(Debug)]
-pub struct KeyInfo {
-    pub pressed_time: Instant,
-    pub state: KeyState,
-}
-
-pub async fn calculate_debounce(pressed_keys: &Arc<Mutex<StoredKeys>>) -> ! {
+pub async fn calculate_debounce(registered_matrix_keys: &Arc<Mutex<RegisteredMatrixKeys>>) -> ! {
     loop {
         // try to get a lock on keys_pressed
-        if let Some(mut pressed_keys) = pressed_keys.try_lock() {
+        if let Some(mut registered_matrix_keys_locked) = registered_matrix_keys.try_lock() {
             // itter throught the pressed keys
-            pressed_keys
-                .index_map
+            registered_matrix_keys_locked
+                .keys
                 .iter_mut()
-                .for_each(|(_key_pos, key_info)| {
+                .for_each(|key| {
                     // check if the key has passed the debounce delay or has been released
-                    if Instant::now() >= key_info.pressed_time + KEY_DEBOUNCE {
+                    if Instant::now() >= key.info.pressed_time + KEY_DEBOUNCE {
                         // set the key_state to RELEASED
-                        key_info.state = KeyState::Released;
+                        key.info.state = KeyState::Released;
                     }
                 });
         }

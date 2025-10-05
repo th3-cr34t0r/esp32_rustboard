@@ -2,303 +2,302 @@
 
 use heapless::Vec;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum HidKeys {
-    None = 0x00,
-    Undefined = 0x03,
-    A = 0x04,
-    B = 0x05,
-    C = 0x06,
-    D = 0x07,
-    E = 0x08,
-    F = 0x09,
-    G = 0x0A,
-    H = 0x0B,
-    I = 0x0C,
-    J = 0x0D,
-    K = 0x0E,
-    L = 0x0F,
-    M = 0x10,
-    N = 0x11,
-    O = 0x12,
-    P = 0x13,
-    Q = 0x14,
-    R = 0x15,
-    S = 0x16,
-    T = 0x17,
-    U = 0x18,
-    V = 0x19,
-    W = 0x1A,
-    X = 0x1B,
-    Y = 0x1C,
-    Z = 0x1D,
-    Num1 = 0x1E,
-    Num2 = 0x1F,
-    Num3 = 0x20,
-    Num4 = 0x21,
-    Num5 = 0x22,
-    Num6 = 0x23,
-    Num7 = 0x24,
-    Num8 = 0x25,
-    Num9 = 0x26,
-    Num0 = 0x27,
-    Enter = 0x28,
-    Escape = 0x29,
-    BackSpace = 0x2A,
-    Tab = 0x2B,
-    Space = 0x2C,
-    Minus = 0x2D,
-    Equal = 0x2E,
-    LeftBracket = 0x2F,  // [ and {
-    RightBracket = 0x30, // ] and }
-    BackSlash = 0x31,    // \ (and |)
-    NonusHash = 0x32,    // Non-US # and ~ (Typically near the Enter key)
-    SemiColon = 0x33,    //  ; (and :)
-    Quote = 0x34,        // ' and "
-    Grave = 0x35,        // Grave accent and tilde
-    Comma = 0x36,        //  =  and <
-    Period = 0x37,       // . and >
-    ForwardSlash = 0x38, // / and ?
-    Capslock = 0x39,
-    F1 = 0x3A,
-    F2 = 0x3B,
-    F3 = 0x3C,
-    F4 = 0x3D,
-    F5 = 0x3E,
-    F6 = 0x3F,
-    F7 = 0x40,
-    F8 = 0x41,
-    F9 = 0x42,
-    F10 = 0x43,
-    F11 = 0x44,
-    F12 = 0x45,
-    Pscreen = 0x46,
-    Scrolllock = 0x47,
-    Pause = 0x48,
-    Insert = 0x49,
-    Home = 0x4A,
-    Pgup = 0x4B,
-    Delete = 0x4C,
-    End = 0x4D,
-    Pgdown = 0x4E,
-    ArrowRight = 0x4F,
-    ArrowLeft = 0x50,
-    ArrowDown = 0x51,
-    ArrowUp = 0x52,
-    Numlock = 0x53,
-    KpSlash = 0x54,
-    KpAsterisk = 0x55,
-    KpMinus = 0x56,
-    KpPlus = 0x57,
-    KpEnter = 0x58,
-    Kp1 = 0x59,
-    Kp2 = 0x5A,
-    Kp3 = 0x5B,
-    Kp4 = 0x5C,
-    Kp5 = 0x5D,
-    Kp6 = 0x5E,
-    Kp7 = 0x5F,
-    Kp8 = 0x60,
-    Kp9 = 0x61,
-    Kp0 = 0x62,
-    KpDot = 0x63,
-    NonusBslash = 0x64, // Non-US \ and | (Typically near the Left-Shift key)
-    Application = 0x65,
-    Power = 0x66,
-    KpEqual = 0x67,
-    F13 = 0x68,
-    F14 = 0x69,
-    F15 = 0x6A,
-    F16 = 0x6B,
-    F17 = 0x6C,
-    F18 = 0x6D,
-    F19 = 0x6E,
-    F20 = 0x6F,
-    F21 = 0x70,
-    F22 = 0x71,
-    F23 = 0x72,
-    F24 = 0x73,
-    Execute = 0x74,
-    Help = 0x75,
-    Menu = 0x76,
-    Select = 0x77,
-    Stop = 0x78,
-    Again = 0x79,
-    Undo = 0x7A,
-    Cut = 0x7B,
-    Copy = 0x7C,
-    Paste = 0x7D,
-    Find = 0x7E,
-    Mute = 0x7F,
-    Volup = 0x80,
-    Voldown = 0x81,
-    LockingCaps = 0x82,   // locking Caps Lock
-    LockingNum = 0x83,    // locking Num Lock
-    LockingScroll = 0x84, // locking Scroll Lock
-    KpComma = 0x85,
-    KpEqualAs400 = 0x86, // equal sign on AS/400
-    Int1 = 0x87,
-    Int2 = 0x88,
-    Int3 = 0x89,
-    Int4 = 0x8A,
-    Int5 = 0x8B,
-    Int6 = 0x8C,
-    Int7 = 0x8D,
-    Int8 = 0x8E,
-    Int9 = 0x8F,
-    Lang1 = 0x90,
-    Lang2 = 0x91,
-    Lang3 = 0x92,
-    Lang4 = 0x93,
-    Lang5 = 0x94,
-    Lang6 = 0x95,
-    Lang7 = 0x96,
-    Lang8 = 0x97,
-    Lang9 = 0x98,
-    AltErase = 0x99,
-    Sysreq = 0x9A,
-    Cancel = 0x9B,
-    Clear = 0x9C,
-    Prior = 0x9D,
-    Return = 0x9E,
-    Separator = 0x9F,
-    Out = 0xA0,
-    Oper = 0xA1,
-    ClearAgain = 0xA2,
-    Crsel = 0xA3,
-    Exsel = 0xA4,
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
+pub enum Kc {
+    None = 0x00, // None
+    #[default]
+    Undf = 0x03, // Undefined
+    A = 0x04,    // A
+    B = 0x05,    // B
+    C = 0x06,    // C
+    D = 0x07,    // D
+    E = 0x08,    // E
+    F = 0x09,    // F
+    G = 0x0A,    // G
+    H = 0x0B,    // H
+    I = 0x0C,    // I
+    J = 0x0D,    // J
+    K = 0x0E,    // K
+    L = 0x0F,    // L
+    M = 0x10,    // M
+    N = 0x11,    // N
+    O = 0x12,    // O
+    P = 0x13,    // P
+    Q = 0x14,    // Q
+    R = 0x15,    // R
+    S = 0x16,    // S
+    T = 0x17,    // T
+    U = 0x18,    // U
+    V = 0x19,    // V
+    W = 0x1A,    // W
+    X = 0x1B,    // X
+    Y = 0x1C,    // Y
+    Z = 0x1D,    // Z
+    N1 = 0x1E,   // Num1
+    N2 = 0x1F,   // Num2
+    N3 = 0x20,   // Num3
+    N4 = 0x21,   // Num4
+    N5 = 0x22,   // Num5
+    N6 = 0x23,   // Num6
+    N7 = 0x24,   // Num7
+    N8 = 0x25,   // Num8
+    N9 = 0x26,   // Num9
+    N0 = 0x27,   // Num0
+    Entr = 0x28, // Enter
+    Esc = 0x29,  // Escape
+    Bksp = 0x2A, // BackSpace
+    Tab = 0x2B,  // Tab
+    Spac = 0x2C, // Space
+    Mns = 0x2D,  // Minus
+    Eq = 0x2E,   // Equal
+    Lbrk = 0x2F, // LeftBracket
+    Rbrk = 0x30, // RightBracket
+    Bksl = 0x31, // BackSlash
+    Nsh = 0x32,  // NonusHash
+    Scn = 0x33,  // SemiColon
+    Qte = 0x34,  // Quote
+    Grav = 0x35, // Grave
+    Com = 0x36,  // Comma
+    Per = 0x37,  // Period
+    Fsl = 0x38,  // ForwardSlash
+    Caps = 0x39, // Capslock
+    F1 = 0x3A,   // F1
+    F2 = 0x3B,   // F2
+    F3 = 0x3C,   // F3
+    F4 = 0x3D,   // F4
+    F5 = 0x3E,   // F5
+    F6 = 0x3F,   // F6
+    F7 = 0x40,   // F7
+    F8 = 0x41,   // F8
+    F9 = 0x42,   // F9
+    F10 = 0x43,  // F10
+    F11 = 0x44,  // F11
+    F12 = 0x45,  // F12
+    Pscr = 0x46, // Pscreen
+    Scll = 0x47, // Scrolllock
+    Pse = 0x48,  // Pause
+    Ins = 0x49,  // Insert
+    Home = 0x4A, // Home
+    Pgup = 0x4B, // Pgup
+    Del = 0x4C,  // Delete
+    End = 0x4D,  // End
+    Pgdn = 0x4E, // Pgdown
+    ArR = 0x4F,  // ArrowRight
+    ArL = 0x50,  // ArrowLeft
+    ArD = 0x51,  // ArrowDown
+    ArU = 0x52,  // ArrowUp
+    Nlk = 0x53,  // Numlock
+    KpS = 0x54,  // KpSlash
+    KpA = 0x55,  // KpAsterisk
+    KpM = 0x56,  // KpMinus
+    KpP = 0x57,  // KpPlus
+    KpE = 0x58,  // KpEnter
+    Kp1 = 0x59,  // Kp1
+    Kp2 = 0x5A,  // Kp2
+    Kp3 = 0x5B,  // Kp3
+    Kp4 = 0x5C,  // Kp4
+    Kp5 = 0x5D,  // Kp5
+    Kp6 = 0x5E,  // Kp6
+    Kp7 = 0x5F,  // Kp7
+    Kp8 = 0x60,  // Kp8
+    Kp9 = 0x61,  // Kp9
+    Kp0 = 0x62,  // Kp0
+    KpD = 0x63,  // KpDot
+    Nbl = 0x64,  // NonusBslash
+    App = 0x65,  // Application
+    Pwr = 0x66,  // Power
+    KpEql = 0x67, // KpEqual
+    F13 = 0x68,  // F13
+    F14 = 0x69,  // F14
+    F15 = 0x6A,  // F15
+    F16 = 0x6B,  // F16
+    F17 = 0x6C,  // F17
+    F18 = 0x6D,  // F18
+    F19 = 0x6E,  // F19
+    F20 = 0x6F,  // F20
+    F21 = 0x70,  // F21
+    F22 = 0x71,  // F22
+    F23 = 0x72,  // F23
+    F24 = 0x73,  // F24
+    Exe = 0x74,  // Execute
+    Help = 0x75, // Help
+    Menu = 0x76, // Menu
+    Sel = 0x77,  // Select
+    Stp = 0x78,  // Stop
+    Agn = 0x79,  // Again
+    Und = 0x7A,  // Undo
+    Cut = 0x7B,  // Cut
+    Cop = 0x7C,  // Copy
+    Pas = 0x7D,  // Paste
+    Fin = 0x7E,  // Find
+    Mute = 0x7F, // Mute
+    Vup = 0x80,  // Volup
+    Vdown = 0x81, // Voldown
+    LckC = 0x82, // LockingCaps
+    LckN = 0x83, // LockingNum
+    LckS = 0x84, // LockingScroll
+    KpC = 0x85,  // KpComma
+    KpEql400 = 0x86, // KpEqualAs400
+    Int1 = 0x87, // Int1
+    Int2 = 0x88, // Int2
+    Int3 = 0x89, // Int3
+    Int4 = 0x8A, // Int4
+    Int5 = 0x8B, // Int5
+    Int6 = 0x8C, // Int6
+    Int7 = 0x8D, // Int7
+    Int8 = 0x8E, // Int8
+    Int9 = 0x8F, // Int9
+    Lg1 = 0x90,  // Lang1
+    Lg3 = 0x92,  // Lang3
+    Lg4 = 0x93,  // Lang4
+    Lg5 = 0x94,  // Lang5
+    Lg6 = 0x95,  // Lang6
+    Lg7 = 0x96,  // Lang7
+    Lg8 = 0x97,  // Lang8
+    Lg9 = 0x98,  // Lang9
+    AltE = 0x99, // AltErase
+    Sys = 0x9A,  // Sysreq
+    Canc = 0x9B, // Cancel
+    Clr = 0x9C,  // Clear
+    Pri = 0x9D,  // Prior
+    Ret = 0x9E,  // Return
+    Sep = 0x9F,  // Separator
+    Out = 0xA0,  // Out
+    Oper = 0xA1, // Oper
+    ClrA = 0xA2, // ClearAgain
+    Crs = 0xA3,  // Crsel
+    Exs = 0xA4,  // Exsel
 
     // dummy layer
-    Layer1 = 0xA5,
-    Layer2 = 0xA6,
-    Layer3 = 0xA7,
-    Layer4 = 0xA8,
-    Layer5 = 0xA9,
+    L1 = 0xA5, // Layer1
+    L2 = 0xA6, // Layer2
+    L3 = 0xA7, // Layer3
+    L4 = 0xA8, // Layer4
+    L5 = 0xA9, // Layer5
 
     // dummy modifiers
-    ModifierShift = 0xB0,
-    ModifierControl = 0xB1,
-    ModifierAlt = 0xB2,
-    ModifierSuper = 0xB3,
+    ModSh = 0xB0, // ModifierShift
+    ModCo = 0xB1, // ModifierControl
+    ModAl = 0xB2, // ModifierAlt
+    ModSu = 0xB3, // ModifierSuper
 
     // dummy macros
-    MacroLeftParenthesis = 0xC0,
-    MacroRightParenthesis = 0xC1,
-    MacroCopy = 0xC2,
-    MacroPaste = 0xC3,
-    MacroExclamationMark = 0xC4,
-    MacroAt = 0xC5,
-    MacroHash = 0xC6,
-    MacroDollar = 0xC7,
-    MacroModul = 0xC8,
-    MacroCaret = 0xC9,
-    MacroAmpersand = 0xCA,
-    MacroAsterix = 0xCB,
-    MacroSuperLock = 0xCC,
-    MacroLeftBrace = 0xCD,
-    MacroRightBrace = 0xCE,
-    MacroPipe = 0xDD,
+    MaLP = 0xC0,   // MacroLeftParenthesis
+    MaRP = 0xC1,   // MacroRightParenthesis
+    MaCp = 0xC2,   // MacroCopy
+    MaPa = 0xC3,   // MacroPaste
+    MaEx = 0xC4,   // MacroExclamationMark
+    MaAt = 0xC5,   // MacroAt
+    MaHs = 0xC6,   // MacroHash
+    MaDl = 0xC7,   // MacroDollar
+    MaMd = 0xC8,   // MacroModul
+    MaCa = 0xC9,   // MacroCaret
+    MaAmp = 0xCA,  // MacroAmpersand
+    MaAst = 0xCB,  // MacroAsterix
+    MaSL = 0xCC,   // MacroSuperLock
+    MaLB = 0xCD,   // MacroLeftBrace
+    MaRB = 0xCE,   // MacroRightBrace
+    MaPipe = 0xDD, // MacroPipe
 
     // dummy mouse controls
-    MouseGoLeft = 0xD0,
-    MouseGoDown = 0xD1,
-    MouseGoUp = 0xD2,
-    MouseGoRight = 0xD3,
-    MouseLeftClick = 0xD4,
-    MouseRightClick = 0xD5,
-    MouseScrollLeft = 0xD6,
-    MouseScrollRight = 0xD7,
-    MouseScrollUp = 0xD8,
-    MouseScrollDown = 0xD9,
-    MouseCursorFast = 0xDA,
-    MouseCursorNormal = 0xDB,
-    MouseCursorSlow = 0xDC,
+    MoGL = 0xD0, // MouseGoLeft
+    MoGD = 0xD1, // MouseGoDown
+    MoGU = 0xD2, // MouseGoUp
+    MoGR = 0xD3, // MouseGoRight
+    MoLC = 0xD4, // MouseLeftClick
+    MoRC = 0xD5, // MouseRightClick
+    MoSL = 0xD6, // MouseScrollLeft
+    MoSR = 0xD7, // MouseScrollRight
+    MoSU = 0xD8, // MouseScrollUp
+    MoSD = 0xD9, // MouseScrollDown
+    MoCF = 0xDA, // MouseCursorFast
+    MoCN = 0xDB, // MouseCursorNormal
+    MoCS = 0xDC, // MouseCursorSlow
 }
-
-impl HidKeys {
-    pub fn get_macro_sequence(key: &HidKeys) -> Vec<HidKeys, 16> {
-        let mut vec: Vec<HidKeys, 16> = Vec::new();
+impl Kc {
+    pub fn get_macro_sequence(key: &Kc) -> Vec<Kc, 16> {
+        let mut vec: Vec<Kc, 16> = Vec::new();
 
         match key {
-            HidKeys::MacroCopy => {
-                vec.push(HidKeys::ModifierControl).unwrap();
-                vec.push(HidKeys::C).unwrap();
+            Kc::MaCp => {
+                vec.push(Kc::ModCo).unwrap();
+                vec.push(Kc::C).unwrap();
                 vec
             }
-            HidKeys::MacroPaste => {
-                vec.push(HidKeys::ModifierControl).unwrap();
-                vec.push(HidKeys::V).unwrap();
+            Kc::MaPa => {
+                vec.push(Kc::ModCo).unwrap();
+                vec.push(Kc::V).unwrap();
                 vec
             }
 
-            HidKeys::MacroRightParenthesis => {
-                vec.push(HidKeys::ModifierShift).unwrap();
-                vec.push(HidKeys::Num0).unwrap();
+            Kc::MaRP => {
+                vec.push(Kc::ModSh).unwrap();
+                vec.push(Kc::N0).unwrap();
                 vec
             }
-            HidKeys::MacroExclamationMark => {
-                vec.push(HidKeys::ModifierShift).unwrap();
-                vec.push(HidKeys::Num1).unwrap();
+            Kc::MaEx => {
+                vec.push(Kc::ModSh).unwrap();
+                vec.push(Kc::N1).unwrap();
                 vec
             }
-            HidKeys::MacroAt => {
-                vec.push(HidKeys::ModifierShift).unwrap();
-                vec.push(HidKeys::Num2).unwrap();
+            Kc::MaAt => {
+                vec.push(Kc::ModSh).unwrap();
+                vec.push(Kc::N2).unwrap();
                 vec
             }
-            HidKeys::MacroHash => {
-                vec.push(HidKeys::ModifierShift).unwrap();
-                vec.push(HidKeys::Num3).unwrap();
+            Kc::MaHs => {
+                vec.push(Kc::ModSh).unwrap();
+                vec.push(Kc::N3).unwrap();
                 vec
             }
-            HidKeys::MacroDollar => {
-                vec.push(HidKeys::ModifierShift).unwrap();
-                vec.push(HidKeys::Num4).unwrap();
+            Kc::MaDl => {
+                vec.push(Kc::ModSh).unwrap();
+                vec.push(Kc::N4).unwrap();
                 vec
             }
-            HidKeys::MacroModul => {
-                vec.push(HidKeys::ModifierShift).unwrap();
-                vec.push(HidKeys::Num5).unwrap();
+            Kc::MaMd => {
+                vec.push(Kc::ModSh).unwrap();
+                vec.push(Kc::N5).unwrap();
                 vec
             }
-            HidKeys::MacroCaret => {
-                vec.push(HidKeys::ModifierShift).unwrap();
-                vec.push(HidKeys::Num6).unwrap();
+            Kc::MaCa => {
+                vec.push(Kc::ModSh).unwrap();
+                vec.push(Kc::N6).unwrap();
                 vec
             }
-            HidKeys::MacroAmpersand => {
-                vec.push(HidKeys::ModifierShift).unwrap();
-                vec.push(HidKeys::Num7).unwrap();
+            Kc::MaAmp => {
+                vec.push(Kc::ModSh).unwrap();
+                vec.push(Kc::N7).unwrap();
                 vec
             }
-            HidKeys::MacroAsterix => {
-                vec.push(HidKeys::ModifierShift).unwrap();
-                vec.push(HidKeys::Num8).unwrap();
+            Kc::MaAst => {
+                vec.push(Kc::ModSh).unwrap();
+                vec.push(Kc::N8).unwrap();
                 vec
             }
-            HidKeys::MacroLeftParenthesis => {
-                vec.push(HidKeys::ModifierShift).unwrap();
-                vec.push(HidKeys::Num9).unwrap();
+            Kc::MaLP => {
+                vec.push(Kc::ModSh).unwrap();
+                vec.push(Kc::N9).unwrap();
                 vec
             }
-            HidKeys::MacroSuperLock => {
-                vec.push(HidKeys::ModifierSuper).unwrap();
-                vec.push(HidKeys::L).unwrap();
+            Kc::MaSL => {
+                vec.push(Kc::ModSu).unwrap();
+                vec.push(Kc::L).unwrap();
                 vec
             }
-            HidKeys::MacroLeftBrace => {
-                vec.push(HidKeys::ModifierShift).unwrap();
-                vec.push(HidKeys::LeftBracket).unwrap();
+            Kc::MaLB => {
+                vec.push(Kc::ModSh).unwrap();
+                vec.push(Kc::Lbrk).unwrap();
                 vec
             }
-            HidKeys::MacroRightBrace => {
-                vec.push(HidKeys::ModifierShift).unwrap();
-                vec.push(HidKeys::RightBracket).unwrap();
+            Kc::MaRB => {
+                vec.push(Kc::ModSh).unwrap();
+                vec.push(Kc::Rbrk).unwrap();
                 vec
             }
-            HidKeys::MacroPipe => {
-                vec.push(HidKeys::ModifierShift).unwrap();
-                vec.push(HidKeys::BackSlash).unwrap();
+            Kc::MaPipe => {
+                vec.push(Kc::ModSh).unwrap();
+                vec.push(Kc::Bksl).unwrap();
                 vec
             }
             _ => vec,
@@ -315,49 +314,42 @@ pub enum KeyType {
 }
 
 impl KeyType {
-    pub fn check_type(key: &HidKeys) -> KeyType {
+    pub fn check_type(key: &Kc) -> KeyType {
         match *key {
-            HidKeys::MacroLeftParenthesis
-            | HidKeys::MacroRightParenthesis
-            | HidKeys::MacroCopy
-            | HidKeys::MacroPaste
-            | HidKeys::MacroExclamationMark
-            | HidKeys::MacroAt
-            | HidKeys::MacroHash
-            | HidKeys::MacroDollar
-            | HidKeys::MacroModul
-            | HidKeys::MacroCaret
-            | HidKeys::MacroAmpersand
-            | HidKeys::MacroAsterix
-            | HidKeys::MacroSuperLock
-            | HidKeys::MacroLeftBrace
-            | HidKeys::MacroRightBrace
-            | HidKeys::MacroPipe => KeyType::Macro,
+            Kc::MaLP
+            | Kc::MaRP
+            | Kc::MaCp
+            | Kc::MaPa
+            | Kc::MaEx
+            | Kc::MaAt
+            | Kc::MaHs
+            | Kc::MaDl
+            | Kc::MaMd
+            | Kc::MaCa
+            | Kc::MaAmp
+            | Kc::MaAst
+            | Kc::MaSL
+            | Kc::MaLB
+            | Kc::MaRB
+            | Kc::MaPipe => KeyType::Macro,
 
-            HidKeys::Layer1
-            | HidKeys::Layer2
-            | HidKeys::Layer3
-            | HidKeys::Layer4
-            | HidKeys::Layer5 => KeyType::Layer,
+            Kc::L1 | Kc::L2 | Kc::L3 | Kc::L4 | Kc::L5 => KeyType::Layer,
 
-            HidKeys::ModifierShift
-            | HidKeys::ModifierControl
-            | HidKeys::ModifierAlt
-            | HidKeys::ModifierSuper => KeyType::Modifier,
+            Kc::ModSh | Kc::ModCo | Kc::ModAl | Kc::ModSu => KeyType::Modifier,
 
-            HidKeys::MouseGoLeft
-            | HidKeys::MouseGoDown
-            | HidKeys::MouseGoUp
-            | HidKeys::MouseGoRight
-            | HidKeys::MouseLeftClick
-            | HidKeys::MouseRightClick
-            | HidKeys::MouseScrollLeft
-            | HidKeys::MouseScrollRight
-            | HidKeys::MouseScrollUp
-            | HidKeys::MouseScrollDown
-            | HidKeys::MouseCursorFast
-            | HidKeys::MouseCursorNormal
-            | HidKeys::MouseCursorSlow => KeyType::Mouse,
+            Kc::MoGL
+            | Kc::MoGD
+            | Kc::MoGU
+            | Kc::MoGR
+            | Kc::MoLC
+            | Kc::MoRC
+            | Kc::MoSL
+            | Kc::MoSR
+            | Kc::MoSU
+            | Kc::MoSD
+            | Kc::MoCF
+            | Kc::MoCN
+            | Kc::MoCS => KeyType::Mouse,
 
             _ => KeyType::Key,
         }
@@ -372,13 +364,13 @@ pub enum HidModifiers {
     Super = 0x08,
 }
 impl HidModifiers {
-    pub fn get_modifier(key: &HidKeys) -> u8 {
+    pub fn get_modifier(key: &Kc) -> u8 {
         // set the modifier
         match *key {
-            HidKeys::ModifierShift => HidModifiers::Shift as u8,
-            HidKeys::ModifierControl => HidModifiers::Control as u8,
-            HidKeys::ModifierAlt => HidModifiers::Alt as u8,
-            HidKeys::ModifierSuper => HidModifiers::Super as u8,
+            Kc::ModSh => HidModifiers::Shift as u8,
+            Kc::ModCo => HidModifiers::Control as u8,
+            Kc::ModAl => HidModifiers::Alt as u8,
+            Kc::ModSu => HidModifiers::Super as u8,
             _ => 0,
         }
     }

@@ -18,10 +18,9 @@ use esp_idf_sys::{
     self as _, esp_bt_controller_disable, gpio_int_type_t_GPIO_INTR_HIGH_LEVEL,
     gpio_num_t_GPIO_NUM_10, gpio_num_t_GPIO_NUM_20, gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
 };
-use heapless::FnvIndexMap;
+use heapless::Vec;
 
 pub use crate::ble::BleStatus;
-pub use crate::debounce::{KeyInfo, KeyState};
 
 extern crate alloc;
 use alloc::sync::Arc;
@@ -37,10 +36,17 @@ impl KeyPos {
         KeyPos { row, col }
     }
 }
+
+impl Default for KeyPos {
+    fn default() -> Self {
+        Self { row: 255, col: 255 }
+    }
+}
+
 pub struct PinMatrix<'a> {
     pub rows: [PinDriver<'a, AnyIOPin, Output>; ROWS],
     pub cols: [PinDriver<'a, AnyIOPin, Input>; COLS],
-    pub pressed_keys_array: [KeyPos; 6],
+    pub pressed_keys_array: [(KeyPos, usize); 6],
 }
 
 impl PinMatrix<'_> {
@@ -125,7 +131,11 @@ impl PinMatrix<'_> {
     #[cfg(feature = "async-scan")]
     /// This is the standard scan mode
     /// Each row is set to high, then each col is checked if it is high or not
-    async fn async_scan(&mut self, pressed_keys: &Arc<Mutex<StoredKeys>>) {
+    async fn async_scan(
+        &mut self,
+        pressed_keys: &Arc<Mutex<RegisteredMatrixKeys>>,
+        layer: &Arc<Mutex<usize>>,
+    ) {
         // initialize counts
 
         use crate::config::user_config::ASYNC_ROW_WAIT;
@@ -173,13 +183,13 @@ impl PinMatrix<'_> {
                 // check col pins
                 for col in self.cols.iter() {
                     if col.is_high() {
-                        // store the pressed key
+                        // store the key in the buffer
                         if let Some(index) = self
                             .pressed_keys_array
                             .iter()
-                            .position(|&element| element == KeyPos::new(255, 255))
+                            .position(|&element| element.0 == KeyPos::new(255, 255))
                         {
-                            self.pressed_keys_array[index] = count;
+                            self.pressed_keys_array[index] = (count, *layer.lock());
                         }
                     }
                     // increment col
@@ -211,7 +221,11 @@ impl PinMatrix<'_> {
     #[cfg(not(feature = "async-scan"))]
     /// This is the standard scan mode
     /// Each row is set to high, then each col is checked if it is high or not
-    async fn standard_scan(&mut self, pressed_keys: &Arc<Mutex<StoredKeys>>) {
+    async fn standard_scan(
+        &mut self,
+        registered_matrix_keys: &Arc<Mutex<RegisteredMatrixKeys>>,
+        layer: &Arc<Mutex<usize>>,
+    ) {
         // initialize counts
         let mut count: KeyPos = KeyPos::new(0, COL_OFFSET);
 
@@ -231,9 +245,9 @@ impl PinMatrix<'_> {
                     if let Some(index) = self
                         .pressed_keys_array
                         .iter()
-                        .position(|&element| element == KeyPos::new(255, 255))
+                        .position(|&element| element.0 == KeyPos::new(255, 255))
                     {
-                        self.pressed_keys_array[index] = count;
+                        self.pressed_keys_array[index] = (count, *layer.lock());
                     }
                 }
                 // increment col
@@ -254,74 +268,140 @@ impl PinMatrix<'_> {
         count.row = 0;
 
         // store the local pressed keys in the shared pressed keys hashmap
-        if let Some(mut pressed_keys) = pressed_keys.try_lock() {
-            pressed_keys.store_keys_local(&mut self.pressed_keys_array);
+        if let Some(mut registered_matrix_keys) = registered_matrix_keys.try_lock() {
+            registered_matrix_keys.store_keys_local(&mut self.pressed_keys_array);
         }
     }
 }
 
-pub struct StoredKeys {
-    pub index_map: FnvIndexMap<KeyPos, KeyInfo, PRESSED_KEYS_INDEXMAP_SIZE>,
-    pub debounce: Debounce,
+#[derive(Debug, Clone, Copy)]
+pub enum KeyState {
+    Released,
+    Pressed,
 }
 
-impl StoredKeys {
-    pub fn new(debounce: Duration) -> Self {
+#[derive(Debug, Clone, Copy)]
+pub struct KeyInfo {
+    pub pressed_time: Instant,
+    pub state: KeyState,
+    pub layer: usize,
+}
+
+impl Default for KeyInfo {
+    fn default() -> Self {
         Self {
-            index_map: FnvIndexMap::new(),
-            debounce: Debounce::new(debounce),
+            pressed_time: Instant::now(),
+            state: KeyState::Released,
+            layer: 255,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Key {
+    pub position: KeyPos,
+    pub info: KeyInfo,
+}
+
+#[derive(Debug)]
+pub struct RegisteredMatrixKeys {
+    pub keys: Vec<Key, REGISTERED_KEYS_ARRAY_SIZE>,
+    pub sleep_condition: Debounce,
+}
+
+impl RegisteredMatrixKeys {
+    pub fn new(sleep_timeout: Duration) -> Self {
+        Self {
+            keys: Vec::new(),
+            sleep_condition: Debounce::new(sleep_timeout),
         }
     }
     /// The main function for stornig the registered key in to the shared pressed keys hashmap
-    pub fn store_keys_local(&mut self, pressed_keys_array: &mut [KeyPos; 6]) {
+    pub fn store_keys_local(&mut self, registered_matrix_keys: &mut [(KeyPos, usize); 6]) {
         // Inserts a key-value pair into the map.
         // If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
         // If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
-        pressed_keys_array.iter_mut().for_each(|element| {
-            if *element != KeyPos::new(255, 255) {
-                self.index_map
-                    .insert(
-                        KeyPos {
-                            row: element.row,
-                            col: element.col,
-                        },
-                        KeyInfo {
-                            pressed_time: Instant::now(),
-                            state: KeyState::Pressed,
-                        },
-                    )
-                    .expect("Not enough space to store the pressed keys.");
+        registered_matrix_keys.iter_mut().for_each(|element| {
+            if element.0 != KeyPos::default() {
+                // if the key is available in the vec, update it
+                if let Some(index) = self
+                    .keys
+                    .iter_mut()
+                    .position(|key| key.position == element.0 && key.info.layer == element.1)
+                {
+                    self.keys[index].info = KeyInfo {
+                        pressed_time: Instant::now(),
+                        state: KeyState::Pressed,
+                        layer: element.1,
+                    };
+                }
+                // else add it
+                else {
+                    self.keys
+                        .push(Key {
+                            position: element.0,
+                            info: KeyInfo {
+                                pressed_time: Instant::now(),
+                                state: KeyState::Pressed,
+                                layer: element.1,
+                            },
+                        })
+                        .expect("Registered matrix key Vec allocation full.");
+                }
 
-                *element = KeyPos::new(255, 255);
+                *element = (KeyPos::default(), 255);
 
                 // reset sleep debounce
-                self.debounce.reset_debounce(ENTER_SLEEP_DEBOUNCE);
+                self.sleep_condition.reset(ENTER_SLEEP_DEBOUNCE);
             }
         });
     }
 
     /// Store the received slave key report in the local pressed keys hashmap
-    pub fn store_keys_slave(&mut self, slave_key_report: &Arc<Mutex<[u8; 6]>>) {
+    pub fn store_keys_slave(
+        &mut self,
+        slave_key_report: &Arc<Mutex<[u8; 6]>>,
+        layer: &Arc<Mutex<usize>>,
+    ) {
         // iter trough the received key report
         slave_key_report.lock().iter().for_each(|element| {
             // we don't want to store 0s
             if *element != 0 {
-                // add the key_pos and the key_info to the hashmap
-                self.index_map
-                    .insert(
-                        KeyPos {
-                            row: *element >> BIT_SHIFT,
-                            col: *element & 0x0F,
-                        },
-                        KeyInfo {
-                            pressed_time: Instant::now(),
-                            state: KeyState::Pressed,
-                        },
-                    )
-                    .expect("Not enough space to store the slave pressed keys.");
+                let slave_element = KeyPos {
+                    row: *element >> BIT_SHIFT,
+                    col: *element & 0x0F,
+                };
+
+                let layer = layer.lock().clone();
+
+                // if the key is available in the vec, update it
+                if let Some(index) = self
+                    .keys
+                    .iter_mut()
+                    .position(|key| key.position == slave_element && key.info.layer == layer)
+                {
+                    self.keys[index].info = KeyInfo {
+                        pressed_time: Instant::now(),
+                        state: KeyState::Pressed,
+                        layer: layer,
+                    };
+                }
+                // else add it
+                else {
+                    self.keys
+                        .push(Key {
+                            position: slave_element,
+                            info: KeyInfo {
+                                pressed_time: Instant::now(),
+                                state: KeyState::Pressed,
+                                layer: layer,
+                            },
+                        })
+                        .expect("Registered matrix key Vec allocation full.");
+                }
 
                 // reset sleep debounce
-                self.debounce.reset_debounce(ENTER_SLEEP_DEBOUNCE);
+                self.sleep_condition.reset(ENTER_SLEEP_DEBOUNCE);
             }
         });
     }
@@ -329,7 +409,8 @@ impl StoredKeys {
 
 /// The main matrix scan function
 pub async fn scan_grid(
-    pressed_keys: &Arc<Mutex<StoredKeys>>,
+    registered_matrix_keys: &Arc<Mutex<RegisteredMatrixKeys>>,
+    layer: &Arc<Mutex<usize>>,
     ble_status: &Arc<Mutex<BleStatus>>,
 ) -> ! {
     // construct the matrix
@@ -343,13 +424,13 @@ pub async fn scan_grid(
 
     loop {
         // // check if sleep conditions are met
-        if let Some(mut pressed_keys) = pressed_keys.try_lock() {
-            if pressed_keys.debounce.is_debounced() {
+        if let Some(mut pressed_keys) = registered_matrix_keys.try_lock() {
+            if pressed_keys.sleep_condition.elapsed() {
                 matrix.enter_light_sleep_mode();
             }
         }
         // check and store the ble status, then release the lock
-        if ble_status_debounce.is_debounced() {
+        if ble_status_debounce.elapsed() {
             if let Some(ble_status) = ble_status.try_lock() {
                 ble_status_local = *ble_status;
             }
@@ -359,10 +440,10 @@ pub async fn scan_grid(
         match ble_status_local {
             BleStatus::Connected => {
                 #[cfg(feature = "async-scan")]
-                matrix.async_scan(pressed_keys).await;
+                matrix.async_scan(registered_matrix_keys, layer).await;
 
                 #[cfg(not(feature = "async-scan"))]
-                matrix.standard_scan(pressed_keys).await;
+                matrix.standard_scan(registered_matrix_keys, layer).await;
             }
             BleStatus::NotConnected => {
                 // sleep for 100ms

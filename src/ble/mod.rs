@@ -9,7 +9,7 @@ use esp32_nimble::BLEClient;
 use esp32_nimble::{hid::*, utilities::mutex::Mutex, BLECharacteristic, BLEServer};
 use zerocopy::{Immutable, IntoBytes};
 
-use crate::mouse::MouseReport;
+use crate::mouse::MouseKeyReport;
 
 #[cfg(feature = "master")]
 pub mod master;
@@ -129,10 +129,10 @@ const HID_REPORT_DISCRIPTOR: &[u8] = hid!(
 
 #[derive(Default, PartialEq, Clone, Copy, IntoBytes, Immutable)]
 #[repr(packed, C)]
-struct KeyReport {
-    modifiers: u8,
-    reserved: u8,
-    keys: [u8; 6],
+pub struct KeyboardKeyReport {
+    pub modifiers: u8,
+    pub reserved: u8,
+    pub keys: [u8; 6],
 }
 
 pub struct BleKeyboardMaster {
@@ -142,10 +142,10 @@ pub struct BleKeyboardMaster {
     output_keyboard: Arc<Mutex<BLECharacteristic>>,
     input_media_keys: Arc<Mutex<BLECharacteristic>>,
     input_mouse: Arc<Mutex<BLECharacteristic>>,
-    current_keyboard_report: KeyReport,
-    previous_keyboard_report: KeyReport,
-    current_mouse_report: MouseReport,
-    previous_mouse_report: MouseReport,
+    current_keyboard_report: KeyboardKeyReport,
+    previous_keyboard_report: KeyboardKeyReport,
+    current_mouse_report: MouseKeyReport,
+    previous_mouse_report: MouseKeyReport,
 }
 
 pub struct BleKeyboardSlave {
@@ -160,6 +160,7 @@ pub enum BleStatus {
     NotConnected,
 }
 
+#[derive(Debug)]
 pub struct Debounce {
     future_instant: Instant,
     current_instant: Instant,
@@ -169,17 +170,17 @@ pub struct Debounce {
 
 impl Debounce {
     // construct the struckt
-    pub fn new(debounce: Duration) -> Self {
+    pub fn new(timeout: Duration) -> Self {
         Debounce {
             future_instant: Instant::now(),
             current_instant: Instant::now(),
             previous_instant: Instant::now(),
-            debounce,
+            debounce: timeout,
         }
     }
 
-    // check if debounced
-    pub fn is_debounced(&mut self) -> bool {
+    // check if elapsed
+    pub fn elapsed(&mut self) -> bool {
         self.current_instant = Instant::now();
         self.future_instant = self.previous_instant + self.debounce;
 
@@ -192,7 +193,7 @@ impl Debounce {
     }
 
     // reset the debounce with the init duration
-    pub fn reset_debounce(&mut self, debounce_duraiton: Duration) {
+    pub fn reset(&mut self, debounce_duraiton: Duration) {
         self.previous_instant = Instant::now() + debounce_duraiton;
     }
 }

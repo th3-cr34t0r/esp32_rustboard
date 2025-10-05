@@ -1,5 +1,5 @@
 use crate::config::{
-    enums::{HidKeys, HidMouseKeys},
+    enums::{HidMouseKeys, Kc},
     user_config::{CURSOR_PARAM_FAST, CURSOR_PARAM_NORMAL, CURSOR_PARAM_SLOW},
 };
 
@@ -12,7 +12,7 @@ enum CursorSpeed {
 }
 
 #[derive(Default, Clone, Copy, PartialEq)]
-pub struct MouseReport {
+pub struct MouseKeyReport {
     buttons: u8,
     x: u8,
     y: u8,
@@ -21,42 +21,42 @@ pub struct MouseReport {
     speed: CursorSpeed,
 }
 
-impl MouseReport {
+impl MouseKeyReport {
     /// Store the struct in an array that is ready to be sent
     pub fn construct(self) -> [u8; 5] {
         [self.buttons, self.x, self.y, self.v_wheel, self.h_wheel]
     }
 
     /// Translate the HidKey to a mouse command
-    pub fn set_command(&mut self, valid_key: &HidKeys) {
+    pub fn set_command(&mut self, valid_key: &Kc) {
         match *valid_key {
-            HidKeys::MouseGoLeft => self.go_left(),
-            HidKeys::MouseGoDown => self.go_down(),
-            HidKeys::MouseGoUp => self.go_up(),
-            HidKeys::MouseGoRight => self.go_right(),
-            HidKeys::MouseLeftClick => self.click(HidMouseKeys::LeftClick),
-            HidKeys::MouseRightClick => self.click(HidMouseKeys::RightClick),
-            HidKeys::MouseScrollLeft => self.scroll_left(),
-            HidKeys::MouseScrollRight => self.scroll_right(),
-            HidKeys::MouseScrollUp => self.scroll_up(),
-            HidKeys::MouseScrollDown => self.scroll_down(),
-            HidKeys::MouseCursorFast => self.speed = CursorSpeed::Fast,
-            HidKeys::MouseCursorNormal => self.speed = CursorSpeed::Normal,
-            HidKeys::MouseCursorSlow => self.speed = CursorSpeed::Slow,
+            Kc::MoGL => self.go_left(),
+            Kc::MoGD => self.go_down(),
+            Kc::MoGU => self.go_up(),
+            Kc::MoGR => self.go_right(),
+            Kc::MoLC => self.click(HidMouseKeys::LeftClick),
+            Kc::MoRC => self.click(HidMouseKeys::RightClick),
+            Kc::MoSL => self.scroll_left(),
+            Kc::MoSR => self.scroll_right(),
+            Kc::MoSU => self.scroll_up(),
+            Kc::MoSD => self.scroll_down(),
+            Kc::MoCF => self.speed = CursorSpeed::Fast,
+            Kc::MoCN => self.speed = CursorSpeed::Normal,
+            Kc::MoCS => self.speed = CursorSpeed::Slow,
 
             _ => {} // do nothing
         }
     }
 
     /// Reset last pressed mouse key
-    pub fn reset_keypress(&mut self, valid_key: &HidKeys) {
+    pub fn reset_keypress(&mut self, valid_key: &Kc) {
         match *valid_key {
-            HidKeys::MouseGoLeft | HidKeys::MouseGoRight => self.x = 0,
-            HidKeys::MouseGoDown | HidKeys::MouseGoUp => self.y = 0,
-            HidKeys::MouseLeftClick | HidKeys::MouseRightClick => self.buttons = 0,
-            HidKeys::MouseScrollUp | HidKeys::MouseScrollDown => self.v_wheel = 0,
-            HidKeys::MouseScrollLeft | HidKeys::MouseScrollRight => self.h_wheel = 0,
-            HidKeys::MouseCursorFast | HidKeys::MouseCursorSlow => self.speed = CursorSpeed::Normal,
+            Kc::MoGL | Kc::MoGR => self.x = 0,
+            Kc::MoGD | Kc::MoGU => self.y = 0,
+            Kc::MoLC | Kc::MoRC => self.buttons = 0,
+            Kc::MoSU | Kc::MoSD => self.v_wheel = 0,
+            Kc::MoSL | Kc::MoSR => self.h_wheel = 0,
+            Kc::MoCF | Kc::MoCS => self.speed = CursorSpeed::Normal,
 
             _ => {} // do nothing
         }

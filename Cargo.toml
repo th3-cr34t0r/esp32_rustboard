@@ -4,7 +4,7 @@ version = "0.5.1"
 authors = ["th3-cr34t0r"]
 edition = "2021"
 resolver = "2"
-rust-version = "1.86"
+rust-version = "1.90"
 
 [[bin]]
 name = "esp32_rustboard"
@@ -19,15 +19,15 @@ opt-level = "z"
 
 [features]
 default = ["embassy", "esp-idf-svc/native"]
-master = [] # left half of the keyboard
-slave = [] # right half of the keyboard
+split = [] # in case of a split setup
+master = [] # main keyboard / left half of the keyboard
+slave = [] # in case of split setup - right half of the keyboard
 async-scan = [] # async wait for button press
 debug = []
-dvorak = []
-dvorak-coral = []
-dvorak-rosewood = []
-dvorak-5x3= []
+# layouts
 qwerty = []
+dvorak = []
+dvorak-5x3= []
 colemakdh = []
 
 pio = ["esp-idf-svc/pio"]

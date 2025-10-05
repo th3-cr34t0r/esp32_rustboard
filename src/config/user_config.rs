@@ -11,7 +11,7 @@ pub const MASTER_BLE_MAC: &str = "E4:B0:63:22:EB:EA"; //Rustboard_Rosewood
 pub const ROWS: usize = 4;
 pub const COLS: usize = 6;
 
-pub const LAYERS: usize = 3;
+pub const LAYERS: usize = 2;
 
 //Cursor parameters
 pub const CURSOR_PARAM_FAST: u8 = 6;
@@ -26,7 +26,7 @@ pub const ENTER_SLEEP_DEBOUNCE: Duration = Duration::from_millis(600000); //10 m
 pub const ASYNC_ROW_WAIT: u64 = 1000;
 
 //Indexmap sizes
-pub const PRESSED_KEYS_INDEXMAP_SIZE: usize = 32;
+pub const REGISTERED_KEYS_ARRAY_SIZE: usize = 12;
 pub const LAYER_INDEXMAP_SIZE: usize = 64;
 
 pub const BIT_SHIFT: u8 = 4;
