@@ -1,5 +1,6 @@
-use crate::ble::Debounce;
-use crate::config::layout::provide_kb_matrix;
+use crate::ble::{Debounce, KeyboardKeyReport};
+use crate::config::enums::Kc;
+use crate::config::layout::{provide_kb_matrix, Layout};
 use crate::config::user_config::*;
 use crate::delay::*;
 use core::pin::pin;
@@ -367,7 +368,7 @@ impl RegisteredMatrixKeys {
         slave_key_report.lock().iter().for_each(|element| {
             // we don't want to store 0s
             if *element != 0 {
-                let slave_element = KeyPos {
+                let slave_element_position = KeyPos {
                     row: *element >> BIT_SHIFT,
                     col: *element & 0x0F,
                 };
@@ -375,11 +376,9 @@ impl RegisteredMatrixKeys {
                 let layer = layer.lock().clone();
 
                 // if the key is available in the vec, update it
-                if let Some(index) = self
-                    .keys
-                    .iter_mut()
-                    .position(|key| key.position == slave_element && key.info.layer == layer)
-                {
+                if let Some(index) = self.keys.iter_mut().position(|key| {
+                    key.position == slave_element_position && key.info.layer == layer
+                }) {
                     self.keys[index].info = KeyInfo {
                         pressed_time: Instant::now(),
                         state: KeyState::Pressed,
@@ -390,7 +389,7 @@ impl RegisteredMatrixKeys {
                 else {
                     self.keys
                         .push(Key {
-                            position: slave_element,
+                            position: slave_element_position,
                             info: KeyInfo {
                                 pressed_time: Instant::now(),
                                 state: KeyState::Pressed,
@@ -404,6 +403,81 @@ impl RegisteredMatrixKeys {
                 self.sleep_condition.reset(ENTER_SLEEP_DEBOUNCE);
             }
         });
+    }
+
+    pub fn process_combos(&mut self, layout: &Layout) {
+        let mut combo_key: u8 = 0;
+        let mut hid_vec: Vec<(Kc, KeyPos, usize), 12> = Vec::new();
+
+        for key in self.keys.iter() {
+            match key.info.state {
+                KeyState::Pressed => {
+                    hid_vec
+                        .push((
+                            layout.keymap[key.info.layer][key.position.row as usize]
+                                [key.position.col as usize],
+                            key.position,
+                            key.info.layer,
+                        ))
+                        .expect("Not enough space");
+                }
+                KeyState::Released => {}
+            }
+        }
+
+        for hid_key in hid_vec.iter().cloned() {
+            combo_key |= hid_key.0 as u8;
+        }
+
+        // TODO: improve this
+        let combo_ctrl_backspace = Kc::ModCo as u8 | Kc::D as u8;
+
+        if combo_key == combo_ctrl_backspace {
+            // log::info!(
+            //     "combo_ctrl_backspace: {}; combo_key: {}",
+            //     combo_ctrl_backspace,
+            //     combo_key
+            // );
+            let mut pos_d = KeyPos { row: 255, col: 255 };
+            let mut pos_bksp = (0, 0, 0);
+
+            hid_vec.iter().for_each(|element| {
+                if element.0 == Kc::D {
+                    pos_d = element.1.clone();
+                }
+            });
+
+            // find backspace position in the layout
+            for layer in 0..LAYERS {
+                for row in 0..ROWS {
+                    for col in 0..COLS {
+                        if Kc::Bksp == layout.keymap[layer][row][col] {
+                            pos_bksp = (layer, row, col);
+                        }
+                    }
+                }
+            }
+
+            if let Some(index) = self
+                .keys
+                .iter_mut()
+                .position(|element| element.position == pos_d)
+            {
+                let original_instant = self.keys[index].info.pressed_time;
+
+                self.keys[index] = Key {
+                    position: KeyPos {
+                        row: pos_bksp.1 as u8,
+                        col: pos_bksp.2 as u8,
+                    },
+                    info: KeyInfo {
+                        pressed_time: original_instant,
+                        state: KeyState::Pressed,
+                        layer: pos_bksp.0,
+                    },
+                };
+            }
+        }
     }
 }
 

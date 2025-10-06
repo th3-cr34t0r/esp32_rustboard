@@ -165,6 +165,10 @@ pub async fn key_provision(
         // process slave key report
         registered_matrix_keys.store_keys_slave(&slave_key_report, &layer);
 
+        #[cfg(feature = "master")]
+        #[cfg(feature = "combo")]
+        registered_matrix_keys.process_combos(&layout);
+
         // check if there are pressed keys
         if !registered_matrix_keys.keys.is_empty() {
             // iter trough the pressed keys
@@ -211,6 +215,9 @@ pub async fn key_provision(
                     }
                 }
             }
+            // process combos
+            #[cfg(feature = "master")]
+            // process_combos(&mut combo_vec, keyboard_key_report);
 
             // remove the sent keys and empty the vec
             while let Some((key_to_remove_pos, key_to_remove_layer)) =
@@ -224,5 +231,26 @@ pub async fn key_provision(
                 }
             }
         }
+    }
+}
+pub fn process_combos(combo_vec: &mut Vec<Kc, 12>, keyboard_key_report: &mut KeyboardKeyReport) {
+    let mut combo_key: u8 = 0;
+    while let Some(hid_key) = combo_vec.pop() {
+        combo_key |= hid_key as u8;
+    }
+
+    let combo = Kc::ModCo as u8 | Kc::D as u8;
+
+    match combo_key {
+        combo => {
+            if let Some(index) = keyboard_key_report
+                .keys
+                .iter_mut()
+                .position(|element| *element == Kc::D as u8)
+            {
+                keyboard_key_report.keys[index] = Kc::Bksp as u8;
+            }
+        }
+        _ => {}
     }
 }

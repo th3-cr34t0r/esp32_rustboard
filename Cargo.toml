@@ -24,6 +24,7 @@ master = [] # main keyboard / left half of the keyboard
 slave = [] # in case of split setup - right half of the keyboard
 async-scan = [] # async wait for button press
 debug = []
+combo = []
 # layouts
 qwerty = []
 dvorak = []

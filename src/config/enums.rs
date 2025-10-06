@@ -359,6 +359,7 @@ impl KeyType {
 pub enum HidModifiers {
     None = 0x00,
     Control = 0x01,
+    ControlShift = 0x03,
     Shift = 0x02,
     Alt = 0x04,
     Super = 0x08,
