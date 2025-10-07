@@ -406,7 +406,6 @@ impl RegisteredMatrixKeys {
     }
 
     pub fn process_combos(&mut self, layout: &Layout) {
-        let mut combo_key: u8 = 0;
         let mut hid_vec: Vec<(Kc, KeyPos, usize), 12> = Vec::new();
 
         for key in self.keys.iter() {
@@ -425,57 +424,60 @@ impl RegisteredMatrixKeys {
             }
         }
 
-        for hid_key in hid_vec.iter().cloned() {
-            combo_key |= hid_key.0 as u8;
-        }
-
         // TODO: improve this
-        let combo_ctrl_backspace = Kc::ModCo as u8 | Kc::D as u8;
+        let mut combo_ctrl_backspace: Vec<Kc, 12> = Vec::new();
+        combo_ctrl_backspace.push(Kc::ModCo).unwrap();
+        combo_ctrl_backspace.push(Kc::D).unwrap();
 
-        if combo_key == combo_ctrl_backspace {
-            // log::info!(
-            //     "combo_ctrl_backspace: {}; combo_key: {}",
-            //     combo_ctrl_backspace,
-            //     combo_key
-            // );
-            let mut pos_d = KeyPos { row: 255, col: 255 };
-            let mut pos_bksp = (0, 0, 0);
+        let mut combo_key_req = 0;
 
-            hid_vec.iter().for_each(|element| {
-                if element.0 == Kc::D {
-                    pos_d = element.1.clone();
-                }
-            });
+        // combo is contained in the registered keys
+        for combo_key in combo_ctrl_backspace.iter() {
+            if hid_vec.contains(combo_key) {
+                combo_key_req += 1;
 
-            // find backspace position in the layout
-            for layer in 0..LAYERS {
-                for row in 0..ROWS {
-                    for col in 0..COLS {
-                        if Kc::Bksp == layout.keymap[layer][row][col] {
-                            pos_bksp = (layer, row, col);
+                if combo_key_req > combo_ctrl_backspace.len() {
+                    let mut pos_d = KeyPos { row: 255, col: 255 };
+                    let mut pos_bksp = (0, 0, 0);
+
+                    hid_vec.iter().for_each(|element| {
+                        if element.0 == Kc::D {
+                            pos_d = element.1.clone();
+                        }
+                    });
+
+                    // find backspace position in the layout
+                    for layer in 0..LAYERS {
+                        for row in 0..ROWS {
+                            for col in 0..COLS {
+                                if Kc::Bksp == layout.keymap[layer][row][col] {
+                                    pos_bksp = (layer, row, col);
+                                }
+                            }
                         }
                     }
+
+                    if let Some(index) = self
+                        .keys
+                        .iter_mut()
+                        .position(|element| element.position == pos_d)
+                    {
+                        let original_instant = self.keys[index].info.pressed_time;
+
+                        self.keys[index] = Key {
+                            position: KeyPos {
+                                row: pos_bksp.1 as u8,
+                                col: pos_bksp.2 as u8,
+                            },
+                            info: KeyInfo {
+                                pressed_time: original_instant,
+                                state: KeyState::Pressed,
+                                layer: pos_bksp.0,
+                            },
+                        };
+                    }
+                    break;
                 }
-            }
-
-            if let Some(index) = self
-                .keys
-                .iter_mut()
-                .position(|element| element.position == pos_d)
-            {
-                let original_instant = self.keys[index].info.pressed_time;
-
-                self.keys[index] = Key {
-                    position: KeyPos {
-                        row: pos_bksp.1 as u8,
-                        col: pos_bksp.2 as u8,
-                    },
-                    info: KeyInfo {
-                        pressed_time: original_instant,
-                        state: KeyState::Pressed,
-                        layer: pos_bksp.0,
-                    },
-                };
             }
         }
     }
