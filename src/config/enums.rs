@@ -213,6 +213,9 @@ pub enum Kc {
     MoCF = 0xDA, // MouseCursorFast
     MoCN = 0xDB, // MouseCursorNormal
     MoCS = 0xDC, // MouseCursorSlow
+
+    // dummy combos
+    ComboCtrlD = 0xF0, // ComboControlD = ctrl+backspace
 }
 impl Kc {
     pub fn get_macro_sequence(key: &Kc) -> Vec<Kc, 16> {
@@ -303,9 +306,27 @@ impl Kc {
             _ => vec,
         }
     }
+
+    pub fn get_combo(combo: &Kc) -> (Vec<Kc, 12>, Vec<Kc, 12>) {
+        let mut combo_vec: Vec<Kc, 12> = Vec::new();
+        let mut keys_to_change: Vec<Kc, 12> = Vec::new();
+
+        match combo {
+            Kc::ComboCtrlD => {
+                keys_to_change.push(Kc::ModCo).unwrap();
+                keys_to_change.push(Kc::D).unwrap();
+
+                combo_vec.push(Kc::ModCo).unwrap();
+                combo_vec.push(Kc::Bksp).unwrap();
+                (combo_vec, keys_to_change)
+            }
+            _ => (combo_vec, keys_to_change),
+        }
+    }
 }
 
 pub enum KeyType {
+    Combo,
     Macro,
     Modifier,
     Mouse,
@@ -316,6 +337,7 @@ pub enum KeyType {
 impl KeyType {
     pub fn check_type(key: &Kc) -> KeyType {
         match *key {
+            // return Macro key type
             Kc::MaLP
             | Kc::MaRP
             | Kc::MaCp
@@ -333,10 +355,13 @@ impl KeyType {
             | Kc::MaRB
             | Kc::MaPipe => KeyType::Macro,
 
+            // return Layer key type
             Kc::L1 | Kc::L2 | Kc::L3 | Kc::L4 | Kc::L5 => KeyType::Layer,
 
+            // return Modifier key type
             Kc::ModSh | Kc::ModCo | Kc::ModAl | Kc::ModSu => KeyType::Modifier,
 
+            // return Mouse key type
             Kc::MoGL
             | Kc::MoGD
             | Kc::MoGU
@@ -350,6 +375,9 @@ impl KeyType {
             | Kc::MoCF
             | Kc::MoCN
             | Kc::MoCS => KeyType::Mouse,
+
+            // return Combo key type
+            Kc::ComboCtrlD => KeyType::Combo,
 
             _ => KeyType::Key,
         }

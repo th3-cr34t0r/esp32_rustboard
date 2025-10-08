@@ -20,13 +20,13 @@ pub async fn calculate_debounce(registered_matrix_keys: &Arc<Mutex<RegisteredMat
         if let Some(mut registered_matrix_keys_locked) = registered_matrix_keys.try_lock() {
             // itter throught the pressed keys
             registered_matrix_keys_locked
-                .keys
+                .hid_keys
                 .iter_mut()
                 .for_each(|key| {
                     // check if the key has passed the debounce delay or has been released
-                    if Instant::now() >= key.info.pressed_time + KEY_DEBOUNCE {
+                    if Instant::now() >= key.1.pressed_time + KEY_DEBOUNCE {
                         // set the key_state to RELEASED
-                        key.info.state = KeyState::Released;
+                        key.1.state = KeyState::Released;
                     }
                 });
         }

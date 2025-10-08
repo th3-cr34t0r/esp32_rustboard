@@ -22,6 +22,12 @@ fn add_keys_master(
 ) {
     // get the key type
     match KeyType::check_type(hid_key) {
+        KeyType::Combo => {
+            let (combo_valid_keys, _keys_to_remove) = Kc::get_combo(hid_key);
+            for valid_key in combo_valid_keys.iter() {
+                add_keys_master(keyboard_key_report, mouse_key_report, valid_key, layer);
+            }
+        }
         KeyType::Macro => {
             let macro_valid_keys = Kc::get_macro_sequence(hid_key);
             for valid_key in macro_valid_keys.iter() {
@@ -70,6 +76,13 @@ fn remove_keys_master(
 ) {
     // get the key type
     match KeyType::check_type(hid_key) {
+        KeyType::Combo => {
+            let (combo_valid_keys, _keys_to_change) = Kc::get_combo(hid_key);
+            for valid_key in combo_valid_keys.iter() {
+                remove_keys_master(keyboard_key_report, mouse_key_report, valid_key, layer);
+            }
+        }
+
         KeyType::Macro => {
             let macro_valid_keys = Kc::get_macro_sequence(hid_key);
             for valid_key in macro_valid_keys.iter() {
@@ -156,7 +169,7 @@ pub async fn key_provision(
     #[cfg(feature = "master")] mut layer: &Arc<Mutex<usize>>,
     keyboard_key_report: &mut KeyboardKeyReport,
     #[cfg(feature = "master")] mut mouse_key_report: &mut MouseKeyReport,
-    registered_keys_to_remove: &mut Vec<(KeyPos, usize), 12>,
+    registered_keys_to_remove: &mut Vec<Kc, 12>,
 ) {
     // try to lock the hashmap
     if let Some(mut registered_matrix_keys) = registered_matrix_keys.try_lock() {
@@ -165,26 +178,31 @@ pub async fn key_provision(
         // process slave key report
         registered_matrix_keys.store_keys_slave(&slave_key_report, &layer);
 
+        // transform matrix key to hid key
         #[cfg(feature = "master")]
-        #[cfg(feature = "combo")]
-        registered_matrix_keys.process_combos(&layout);
+        registered_matrix_keys.transform_matrix_to_hid(&layout);
 
         // check if there are pressed keys
-        if !registered_matrix_keys.keys.is_empty() {
+        if !registered_matrix_keys.hid_keys.is_empty() {
+            // process combos
+            #[cfg(feature = "master")]
+            #[cfg(feature = "combo")]
+            registered_matrix_keys.process_combos();
+
             // iter trough the pressed keys
-            for key in registered_matrix_keys.keys.iter_mut() {
+            for key in registered_matrix_keys.hid_keys.iter_mut() {
                 // check the key debounce state
-                match key.info.state {
+                match key.1.state {
                     KeyState::Pressed => {
                         #[cfg(feature = "master")]
                         {
-                            // get the pressed key from the layout
-                            let hid_key = layout.keymap[key.info.layer][key.position.row as usize]
-                                [key.position.col as usize];
+                            // // get the pressed key from the layout
+                            // let hid_key = layout.keymap[key.info.layer][key.position.row as usize]
+                            //     [key.position.col as usize];
                             add_keys_master(
                                 keyboard_key_report,
                                 &mut mouse_key_report,
-                                &hid_key,
+                                &key.0,
                                 &layer,
                             );
                         }
@@ -196,12 +214,12 @@ pub async fn key_provision(
                         #[cfg(feature = "master")]
                         {
                             // get the mapped key from the layout
-                            let hid_key = layout.keymap[key.info.layer][key.position.row as usize]
-                                [key.position.col as usize];
+                            // let hid_key = layout.keymap[key.info.layer][key.position.row as usize]
+                            //     [key.position.col as usize];
                             remove_keys_master(
                                 keyboard_key_report,
                                 &mut *mouse_key_report,
-                                &hid_key,
+                                &key.0,
                                 &mut layer,
                             );
                         }
@@ -210,47 +228,22 @@ pub async fn key_provision(
 
                         // if key has been debounced, add it to be removed
                         registered_keys_to_remove
-                            .push((key.position, key.info.layer))
+                            .push(key.0)
                             .expect("Error adding a key to be removed!");
                     }
                 }
             }
-            // process combos
-            #[cfg(feature = "master")]
-            // process_combos(&mut combo_vec, keyboard_key_report);
 
             // remove the sent keys and empty the vec
-            while let Some((key_to_remove_pos, key_to_remove_layer)) =
-                registered_keys_to_remove.pop()
-            {
-                if let Some(index) = registered_matrix_keys.keys.iter().position(|element| {
-                    (element.position == key_to_remove_pos)
-                        && (element.info.layer == key_to_remove_layer)
-                }) {
-                    registered_matrix_keys.keys.remove(index);
+            while let Some(key) = registered_keys_to_remove.pop() {
+                if let Some(index) = registered_matrix_keys
+                    .hid_keys
+                    .iter()
+                    .position(|element| element.0 == key)
+                {
+                    let _removed_key = registered_matrix_keys.hid_keys.remove(index);
                 }
             }
         }
-    }
-}
-pub fn process_combos(combo_vec: &mut Vec<Kc, 12>, keyboard_key_report: &mut KeyboardKeyReport) {
-    let mut combo_key: u8 = 0;
-    while let Some(hid_key) = combo_vec.pop() {
-        combo_key |= hid_key as u8;
-    }
-
-    let combo = Kc::ModCo as u8 | Kc::D as u8;
-
-    match combo_key {
-        combo => {
-            if let Some(index) = keyboard_key_report
-                .keys
-                .iter_mut()
-                .position(|element| *element == Kc::D as u8)
-            {
-                keyboard_key_report.keys[index] = Kc::Bksp as u8;
-            }
-        }
-        _ => {}
     }
 }

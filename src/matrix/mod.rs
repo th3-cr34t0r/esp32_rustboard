@@ -298,7 +298,7 @@ impl Default for KeyInfo {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Key {
     pub position: KeyPos,
     pub info: KeyInfo,
@@ -306,17 +306,39 @@ pub struct Key {
 
 #[derive(Debug)]
 pub struct RegisteredMatrixKeys {
-    pub keys: Vec<Key, REGISTERED_KEYS_ARRAY_SIZE>,
+    pub matrix_keys: Vec<Key, REGISTERED_KEYS_ARRAY_SIZE>,
+    pub hid_keys: Vec<(Kc, KeyInfo), REGISTERED_KEYS_ARRAY_SIZE>,
     pub sleep_condition: Debounce,
 }
 
 impl RegisteredMatrixKeys {
     pub fn new(sleep_timeout: Duration) -> Self {
         Self {
-            keys: Vec::new(),
+            matrix_keys: Vec::new(),
+            hid_keys: Vec::new(),
             sleep_condition: Debounce::new(sleep_timeout),
         }
     }
+    /// Transform from Matrix to Hid keys
+    pub fn transform_matrix_to_hid(&mut self, layout: &Layout) {
+        // pop all the matrix_keys, as they will be transfered to hid_keys
+        while let Some(matrix_key) = self.matrix_keys.pop() {
+            let hid_key = layout.keymap[matrix_key.info.layer][matrix_key.position.row as usize]
+                [matrix_key.position.col as usize];
+
+            // check if the key is contained, and update it
+            if let Some(index) = self.hid_keys.iter().position(|contained_hid_key| {
+                contained_hid_key.0 == hid_key && contained_hid_key.1.layer == matrix_key.info.layer
+            }) {
+                self.hid_keys[index].1 = matrix_key.info;
+            }
+            // else add it to the hid_vec
+            else {
+                self.hid_keys.push((hid_key, matrix_key.info)).unwrap();
+            }
+        }
+    }
+
     /// The main function for stornig the registered key in to the shared pressed keys hashmap
     pub fn store_keys_local(&mut self, registered_matrix_keys: &mut [(KeyPos, usize); 6]) {
         // Inserts a key-value pair into the map.
@@ -326,11 +348,11 @@ impl RegisteredMatrixKeys {
             if element.0 != KeyPos::default() {
                 // if the key is available in the vec, update it
                 if let Some(index) = self
-                    .keys
+                    .matrix_keys
                     .iter_mut()
                     .position(|key| key.position == element.0 && key.info.layer == element.1)
                 {
-                    self.keys[index].info = KeyInfo {
+                    self.matrix_keys[index].info = KeyInfo {
                         pressed_time: Instant::now(),
                         state: KeyState::Pressed,
                         layer: element.1,
@@ -338,7 +360,7 @@ impl RegisteredMatrixKeys {
                 }
                 // else add it
                 else {
-                    self.keys
+                    self.matrix_keys
                         .push(Key {
                             position: element.0,
                             info: KeyInfo {
@@ -376,10 +398,10 @@ impl RegisteredMatrixKeys {
                 let layer = layer.lock().clone();
 
                 // if the key is available in the vec, update it
-                if let Some(index) = self.keys.iter_mut().position(|key| {
+                if let Some(index) = self.matrix_keys.iter_mut().position(|key| {
                     key.position == slave_element_position && key.info.layer == layer
                 }) {
-                    self.keys[index].info = KeyInfo {
+                    self.matrix_keys[index].info = KeyInfo {
                         pressed_time: Instant::now(),
                         state: KeyState::Pressed,
                         layer: layer,
@@ -387,7 +409,7 @@ impl RegisteredMatrixKeys {
                 }
                 // else add it
                 else {
-                    self.keys
+                    self.matrix_keys
                         .push(Key {
                             position: slave_element_position,
                             info: KeyInfo {
@@ -405,80 +427,36 @@ impl RegisteredMatrixKeys {
         });
     }
 
-    pub fn process_combos(&mut self, layout: &Layout) {
-        let mut hid_vec: Vec<(Kc, KeyPos, usize), 12> = Vec::new();
+    pub fn process_combos(&mut self) {
+        let (_combo_vec, keys_to_change) = Kc::get_combo(&Kc::ComboCtrlD);
+        let mut registered_hid_keys: Vec<Kc, 12> = Vec::new();
 
-        for key in self.keys.iter() {
-            match key.info.state {
-                KeyState::Pressed => {
-                    hid_vec
-                        .push((
-                            layout.keymap[key.info.layer][key.position.row as usize]
-                                [key.position.col as usize],
-                            key.position,
-                            key.info.layer,
-                        ))
-                        .expect("Not enough space");
-                }
-                KeyState::Released => {}
-            }
+        self.hid_keys
+            .iter()
+            .for_each(|element| registered_hid_keys.push(element.0).unwrap());
+
+        #[cfg(feature = "debug")]
+        {
+            log::info!("registered_hid_keys: {:?}", registered_hid_keys);
+            log::info!("combo_ver: {:?}", keys_to_change);
         }
 
-        // TODO: improve this
-        let mut combo_ctrl_backspace: Vec<Kc, 12> = Vec::new();
-        combo_ctrl_backspace.push(Kc::ModCo).unwrap();
-        combo_ctrl_backspace.push(Kc::D).unwrap();
+        // check if the key combination matches
+        if registered_hid_keys == keys_to_change {
+            // clear hid keys
+            self.hid_keys.clear();
 
-        let mut combo_key_req = 0;
-
-        // combo is contained in the registered keys
-        for combo_key in combo_ctrl_backspace.iter() {
-            if hid_vec.contains(combo_key) {
-                combo_key_req += 1;
-
-                if combo_key_req > combo_ctrl_backspace.len() {
-                    let mut pos_d = KeyPos { row: 255, col: 255 };
-                    let mut pos_bksp = (0, 0, 0);
-
-                    hid_vec.iter().for_each(|element| {
-                        if element.0 == Kc::D {
-                            pos_d = element.1.clone();
-                        }
-                    });
-
-                    // find backspace position in the layout
-                    for layer in 0..LAYERS {
-                        for row in 0..ROWS {
-                            for col in 0..COLS {
-                                if Kc::Bksp == layout.keymap[layer][row][col] {
-                                    pos_bksp = (layer, row, col);
-                                }
-                            }
-                        }
-                    }
-
-                    if let Some(index) = self
-                        .keys
-                        .iter_mut()
-                        .position(|element| element.position == pos_d)
-                    {
-                        let original_instant = self.keys[index].info.pressed_time;
-
-                        self.keys[index] = Key {
-                            position: KeyPos {
-                                row: pos_bksp.1 as u8,
-                                col: pos_bksp.2 as u8,
-                            },
-                            info: KeyInfo {
-                                pressed_time: original_instant,
-                                state: KeyState::Pressed,
-                                layer: pos_bksp.0,
-                            },
-                        };
-                    }
-                    break;
-                }
-            }
+            // store the Combo Kc in keyboard key report
+            self.hid_keys
+                .push((
+                    Kc::ComboCtrlD,
+                    KeyInfo {
+                        pressed_time: Instant::now(),
+                        state: KeyState::Pressed,
+                        layer: 0,
+                    },
+                ))
+                .unwrap();
         }
     }
 }
