@@ -346,9 +346,7 @@ impl RegisteredMatrixKeys {
 
     /// The main function for stornig the registered key in to the shared pressed keys hashmap
     pub fn store_keys_local(&mut self, registered_local_matrix_keys: &mut [KeyPos; 6]) {
-        // Inserts a key-value pair into the map.
-        // If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
-        // If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
+        // store local registered keys, to globally available vec
         registered_local_matrix_keys.iter_mut().for_each(|element| {
             if *element != KeyPos::default() {
                 // if the key is available in the vec, update it

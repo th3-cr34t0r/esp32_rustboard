@@ -37,12 +37,6 @@ fn add_keys_master(
         KeyType::Layer => {
             // check and set the layer
             *layer.lock() = Layout::get_layer(hid_key);
-
-            // // release all keys
-            // keyboard_key_report.keys.fill(0);
-
-            // // release modifiers
-            // keyboard_key_report.modifiers = 0;
         }
         KeyType::Modifier => {
             keyboard_key_report.modifiers |= HidModifiers::get_modifier(hid_key);
@@ -92,13 +86,6 @@ fn remove_keys_master(
         KeyType::Layer => {
             // set previous layer
             *layer.lock() -= 1;
-
-            // // release all keys
-            // keyboard_key_report.keys.fill(0);
-            // mouse_key_report.reset_report();
-
-            // // release modifiers
-            // keyboard_key_report.modifiers = 0;
         }
         KeyType::Modifier => {
             // remove the modifier
@@ -198,8 +185,6 @@ pub async fn key_provision(
                         #[cfg(feature = "master")]
                         {
                             // // get the pressed key from the layout
-                            // let hid_key = layout.keymap[key.info.layer][key.position.row as usize]
-                            //     [key.position.col as usize];
                             add_keys_master(
                                 keyboard_key_report,
                                 &mut mouse_key_report,
@@ -215,8 +200,6 @@ pub async fn key_provision(
                         #[cfg(feature = "master")]
                         {
                             // get the mapped key from the layout
-                            // let hid_key = layout.keymap[key.info.layer][key.position.row as usize]
-                            //     [key.position.col as usize];
                             remove_keys_master(
                                 keyboard_key_report,
                                 &mut *mouse_key_report,

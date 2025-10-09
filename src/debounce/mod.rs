@@ -18,7 +18,7 @@ pub async fn calculate_debounce(registered_matrix_keys: &Arc<Mutex<RegisteredMat
     loop {
         // try to get a lock on keys_pressed
         if let Some(mut registered_matrix_keys_locked) = registered_matrix_keys.try_lock() {
-            // itter throught the pressed keys
+            // iter throught the pressed keys
             registered_matrix_keys_locked
                 .keys
                 .iter_mut()
