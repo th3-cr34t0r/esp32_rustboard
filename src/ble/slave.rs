@@ -103,7 +103,7 @@ pub async fn ble_tx(
     let mut keyboard_key_report: KeyboardKeyReport = KeyboardKeyReport::default();
 
     // vec to store the keys needed to be removed
-    let mut pressed_keys_to_remove: Vec<(KeyPos, usize), 12> = Vec::new();
+    let mut pressed_keys_to_remove: Vec<KeyPos, 12> = Vec::new();
 
     // Run the main loop
     loop {

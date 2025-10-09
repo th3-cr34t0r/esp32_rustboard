@@ -169,7 +169,8 @@ pub async fn key_provision(
     #[cfg(feature = "master")] mut layer: &Arc<Mutex<usize>>,
     keyboard_key_report: &mut KeyboardKeyReport,
     #[cfg(feature = "master")] mut mouse_key_report: &mut MouseKeyReport,
-    registered_keys_to_remove: &mut Vec<Kc, 12>,
+    #[cfg(feature = "master")] registered_keys_to_remove: &mut Vec<Kc, 12>,
+    #[cfg(feature = "slave")] registered_keys_to_remove: &mut Vec<KeyPos, 12>,
 ) {
     // try to lock the hashmap
     if let Some(mut registered_matrix_keys) = registered_matrix_keys.try_lock() {
@@ -183,16 +184,16 @@ pub async fn key_provision(
         registered_matrix_keys.transform_matrix_to_hid(&layout);
 
         // check if there are pressed keys
-        if !registered_matrix_keys.hid_keys.is_empty() {
+        if !registered_matrix_keys.keys.is_empty() {
             // process combos
             #[cfg(feature = "master")]
             #[cfg(feature = "combo")]
             registered_matrix_keys.process_combos();
 
             // iter trough the pressed keys
-            for key in registered_matrix_keys.hid_keys.iter_mut() {
+            for key in registered_matrix_keys.keys.iter_mut() {
                 // check the key debounce state
-                match key.1.state {
+                match key.info.state {
                     KeyState::Pressed => {
                         #[cfg(feature = "master")]
                         {
@@ -202,7 +203,7 @@ pub async fn key_provision(
                             add_keys_master(
                                 keyboard_key_report,
                                 &mut mouse_key_report,
-                                &key.0,
+                                &key.keycode,
                                 &layer,
                             );
                         }
@@ -219,29 +220,48 @@ pub async fn key_provision(
                             remove_keys_master(
                                 keyboard_key_report,
                                 &mut *mouse_key_report,
-                                &key.0,
+                                &key.keycode,
                                 &mut layer,
                             );
+
+                            // if key has been debounced, add it to be removed
+                            registered_keys_to_remove
+                                .push(key.keycode)
+                                .expect("Error adding a key to be removed!");
                         }
                         #[cfg(feature = "slave")]
-                        remove_keys_slave(keyboard_key_report, &key.position);
+                        {
+                            remove_keys_slave(keyboard_key_report, &key.position);
 
-                        // if key has been debounced, add it to be removed
-                        registered_keys_to_remove
-                            .push(key.0)
-                            .expect("Error adding a key to be removed!");
+                            // if key has been debounced, add it to be removed
+                            registered_keys_to_remove
+                                .push(key.position)
+                                .expect("Error adding a key to be removed!");
+                        }
                     }
                 }
             }
 
+            #[cfg(feature = "master")]
             // remove the sent keys and empty the vec
             while let Some(key) = registered_keys_to_remove.pop() {
                 if let Some(index) = registered_matrix_keys
-                    .hid_keys
+                    .keys
                     .iter()
-                    .position(|element| element.0 == key)
+                    .position(|element| element.keycode == key)
                 {
-                    let _removed_key = registered_matrix_keys.hid_keys.remove(index);
+                    let _removed_key = registered_matrix_keys.keys.remove(index);
+                }
+            }
+            #[cfg(feature = "slave")]
+            // remove the sent keys and empty the vec
+            while let Some(key) = registered_keys_to_remove.pop() {
+                if let Some(index) = registered_matrix_keys
+                    .keys
+                    .iter()
+                    .position(|element| element.position == key)
+                {
+                    let _removed_key = registered_matrix_keys.keys.remove(index);
                 }
             }
         }

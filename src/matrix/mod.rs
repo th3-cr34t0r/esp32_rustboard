@@ -1,5 +1,5 @@
-use crate::ble::{Debounce, KeyboardKeyReport};
-use crate::config::enums::Kc;
+use crate::ble::Debounce;
+use crate::config::enums::{Kc, KeyType};
 use crate::config::layout::{provide_kb_matrix, Layout};
 use crate::config::user_config::*;
 use crate::delay::*;
@@ -26,28 +26,33 @@ pub use crate::ble::BleStatus;
 extern crate alloc;
 use alloc::sync::Arc;
 
-#[derive(PartialOrd, Ord, Eq, Hash, PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub struct KeyPos {
     pub row: u8,
     pub col: u8,
+    pub layer: usize,
 }
 
 impl KeyPos {
-    pub fn new(row: u8, col: u8) -> KeyPos {
-        KeyPos { row, col }
+    pub fn new(row: u8, col: u8, layer: usize) -> KeyPos {
+        KeyPos { row, col, layer }
     }
 }
 
 impl Default for KeyPos {
     fn default() -> Self {
-        Self { row: 255, col: 255 }
+        KeyPos {
+            row: 255,
+            col: 255,
+            layer: 255,
+        }
     }
 }
 
 pub struct PinMatrix<'a> {
     pub rows: [PinDriver<'a, AnyIOPin, Output>; ROWS],
     pub cols: [PinDriver<'a, AnyIOPin, Input>; COLS],
-    pub pressed_keys_array: [(KeyPos, usize); 6],
+    pub registered_local_keys_array: [KeyPos; 6],
 }
 
 impl PinMatrix<'_> {
@@ -143,7 +148,7 @@ impl PinMatrix<'_> {
         use embassy_futures::select::{select, select_slice, Either};
         use heapless::Vec;
 
-        let mut count: KeyPos = KeyPos::new(0, COL_OFFSET);
+        let mut count: KeyPos = KeyPos::new(0, COL_OFFSET, 255);
         let mut is_pressed: bool = false;
 
         // check rows and cols
@@ -186,11 +191,15 @@ impl PinMatrix<'_> {
                     if col.is_high() {
                         // store the key in the buffer
                         if let Some(index) = self
-                            .pressed_keys_array
+                            .registered_local_keys_array
                             .iter()
-                            .position(|&element| element.0 == KeyPos::new(255, 255))
+                            .position(|&element| element == KeyPos::default())
                         {
-                            self.pressed_keys_array[index] = (count, *layer.lock());
+                            self.registered_local_keys_array[index] = KeyPos {
+                                row: count.row,
+                                col: count.col,
+                                layer: *layer.lock(),
+                            };
                         }
                     }
                     // increment col
@@ -215,7 +224,7 @@ impl PinMatrix<'_> {
 
         // store the local pressed keys in the shared pressed keys hashmap
         if let Some(mut pressed_keys) = pressed_keys.try_lock() {
-            pressed_keys.store_keys_local(&mut self.pressed_keys_array);
+            pressed_keys.store_keys_local(&mut self.registered_local_keys_array);
         }
     }
 
@@ -228,7 +237,7 @@ impl PinMatrix<'_> {
         layer: &Arc<Mutex<usize>>,
     ) {
         // initialize counts
-        let mut count: KeyPos = KeyPos::new(0, COL_OFFSET);
+        let mut count: KeyPos = KeyPos::new(0, COL_OFFSET, 255);
 
         // check rows and cols
         for row in self.rows.iter_mut() {
@@ -244,11 +253,15 @@ impl PinMatrix<'_> {
                 if col.is_high() {
                     // store the key in the buffer
                     if let Some(index) = self
-                        .pressed_keys_array
+                        .registered_local_keys_array
                         .iter()
-                        .position(|&element| element.0 == KeyPos::new(255, 255))
+                        .position(|&element| element == KeyPos::default())
                     {
-                        self.pressed_keys_array[index] = (count, *layer.lock());
+                        self.registered_local_keys_array[index] = KeyPos {
+                            row: count.row,
+                            col: count.row,
+                            layer: *layer.lock(),
+                        };
                     }
                 }
                 // increment col
@@ -270,7 +283,7 @@ impl PinMatrix<'_> {
 
         // store the local pressed keys in the shared pressed keys hashmap
         if let Some(mut registered_matrix_keys) = registered_matrix_keys.try_lock() {
-            registered_matrix_keys.store_keys_local(&mut self.pressed_keys_array);
+            registered_matrix_keys.store_keys_local(&mut self.registered_local_keys_array);
         }
     }
 }
@@ -285,7 +298,6 @@ pub enum KeyState {
 pub struct KeyInfo {
     pub pressed_time: Instant,
     pub state: KeyState,
-    pub layer: usize,
 }
 
 impl Default for KeyInfo {
@@ -293,86 +305,78 @@ impl Default for KeyInfo {
         Self {
             pressed_time: Instant::now(),
             state: KeyState::Released,
-            layer: 255,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct Key {
+    pub keycode: Kc,
     pub position: KeyPos,
     pub info: KeyInfo,
 }
 
 #[derive(Debug)]
 pub struct RegisteredMatrixKeys {
-    pub matrix_keys: Vec<Key, REGISTERED_KEYS_ARRAY_SIZE>,
-    pub hid_keys: Vec<(Kc, KeyInfo), REGISTERED_KEYS_ARRAY_SIZE>,
+    pub keys: Vec<Key, REGISTERED_KEYS_ARRAY_SIZE>,
     pub sleep_condition: Debounce,
 }
 
 impl RegisteredMatrixKeys {
     pub fn new(sleep_timeout: Duration) -> Self {
         Self {
-            matrix_keys: Vec::new(),
-            hid_keys: Vec::new(),
+            keys: Vec::new(),
             sleep_condition: Debounce::new(sleep_timeout),
         }
     }
     /// Transform from Matrix to Hid keys
     pub fn transform_matrix_to_hid(&mut self, layout: &Layout) {
-        // pop all the matrix_keys, as they will be transfered to hid_keys
-        while let Some(matrix_key) = self.matrix_keys.pop() {
-            let hid_key = layout.keymap[matrix_key.info.layer][matrix_key.position.row as usize]
-                [matrix_key.position.col as usize];
-
-            // check if the key is contained, and update it
-            if let Some(index) = self.hid_keys.iter().position(|contained_hid_key| {
-                contained_hid_key.0 == hid_key && contained_hid_key.1.layer == matrix_key.info.layer
-            }) {
-                self.hid_keys[index].1 = matrix_key.info;
+        // get the keycode for every keytype, except for combo keytype
+        self.keys.iter_mut().for_each(|key| {
+            match KeyType::check_type(&key.keycode) {
+                KeyType::Combo => { //skip this type
+                }
+                _ => {
+                    key.keycode = layout.keymap[key.position.layer][key.position.row as usize]
+                        [key.position.col as usize];
+                }
             }
-            // else add it to the hid_vec
-            else {
-                self.hid_keys.push((hid_key, matrix_key.info)).unwrap();
-            }
-        }
+        });
     }
 
     /// The main function for stornig the registered key in to the shared pressed keys hashmap
-    pub fn store_keys_local(&mut self, registered_matrix_keys: &mut [(KeyPos, usize); 6]) {
+    pub fn store_keys_local(&mut self, registered_local_matrix_keys: &mut [KeyPos; 6]) {
         // Inserts a key-value pair into the map.
         // If an equivalent key already exists in the map: the key remains and retains in its place in the order, its corresponding value is updated with value and the older value is returned inside Some(_).
         // If no equivalent key existed in the map: the new key-value pair is inserted, last in order, and None is returned.
-        registered_matrix_keys.iter_mut().for_each(|element| {
-            if element.0 != KeyPos::default() {
+        registered_local_matrix_keys.iter_mut().for_each(|element| {
+            if *element != KeyPos::default() {
                 // if the key is available in the vec, update it
                 if let Some(index) = self
-                    .matrix_keys
+                    .keys
                     .iter_mut()
-                    .position(|key| key.position == element.0 && key.info.layer == element.1)
+                    .position(|registered_key| registered_key.position == *element)
                 {
-                    self.matrix_keys[index].info = KeyInfo {
+                    self.keys[index].info = KeyInfo {
                         pressed_time: Instant::now(),
                         state: KeyState::Pressed,
-                        layer: element.1,
                     };
                 }
                 // else add it
                 else {
-                    self.matrix_keys
+                    self.keys
                         .push(Key {
-                            position: element.0,
+                            keycode: Kc::Undf,
+                            position: *element,
                             info: KeyInfo {
                                 pressed_time: Instant::now(),
                                 state: KeyState::Pressed,
-                                layer: element.1,
                             },
                         })
                         .expect("Registered matrix key Vec allocation full.");
                 }
 
-                *element = (KeyPos::default(), 255);
+                *element = KeyPos::default();
 
                 // reset sleep debounce
                 self.sleep_condition.reset(ENTER_SLEEP_DEBOUNCE);
@@ -393,29 +397,29 @@ impl RegisteredMatrixKeys {
                 let slave_element_position = KeyPos {
                     row: *element >> BIT_SHIFT,
                     col: *element & 0x0F,
+                    layer: *layer.lock(),
                 };
 
-                let layer = layer.lock().clone();
-
                 // if the key is available in the vec, update it
-                if let Some(index) = self.matrix_keys.iter_mut().position(|key| {
-                    key.position == slave_element_position && key.info.layer == layer
-                }) {
-                    self.matrix_keys[index].info = KeyInfo {
+                if let Some(index) = self
+                    .keys
+                    .iter_mut()
+                    .position(|key| key.position == slave_element_position)
+                {
+                    self.keys[index].info = KeyInfo {
                         pressed_time: Instant::now(),
                         state: KeyState::Pressed,
-                        layer: layer,
                     };
                 }
                 // else add it
                 else {
-                    self.matrix_keys
+                    self.keys
                         .push(Key {
+                            keycode: Kc::Undf,
                             position: slave_element_position,
                             info: KeyInfo {
                                 pressed_time: Instant::now(),
                                 state: KeyState::Pressed,
-                                layer: layer,
                             },
                         })
                         .expect("Registered matrix key Vec allocation full.");
@@ -426,36 +430,30 @@ impl RegisteredMatrixKeys {
             }
         });
     }
-
+    /// Method for processing of combo keys - if feature enabled
     pub fn process_combos(&mut self) {
         let (_combo_vec, keys_to_change) = Kc::get_combo(&Kc::ComboCtrlD);
         let mut registered_hid_keys: Vec<Kc, 12> = Vec::new();
 
-        self.hid_keys
+        self.keys
             .iter()
-            .for_each(|element| registered_hid_keys.push(element.0).unwrap());
-
-        #[cfg(feature = "debug")]
-        {
-            log::info!("registered_hid_keys: {:?}", registered_hid_keys);
-            log::info!("combo_ver: {:?}", keys_to_change);
-        }
+            .for_each(|element| registered_hid_keys.push(element.keycode).unwrap());
 
         // check if the key combination matches
         if registered_hid_keys == keys_to_change {
             // clear hid keys
-            self.hid_keys.clear();
+            self.keys.clear();
 
             // store the Combo Kc in keyboard key report
-            self.hid_keys
-                .push((
-                    Kc::ComboCtrlD,
-                    KeyInfo {
+            self.keys
+                .push(Key {
+                    keycode: Kc::ComboCtrlD,
+                    position: KeyPos::default(),
+                    info: KeyInfo {
                         pressed_time: Instant::now(),
                         state: KeyState::Pressed,
-                        layer: 0,
                     },
-                ))
+                })
                 .unwrap();
         }
     }

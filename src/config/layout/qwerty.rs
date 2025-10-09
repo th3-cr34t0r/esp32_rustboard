@@ -36,12 +36,12 @@ pub fn provide_pin_matrix() -> PinMatrix<'static> {
             .expect("Not able to set port as input."),
     ];
 
-    let pressed_keys_array = [(KeyPos::new(255, 255), 255 as usize); 6];
+    let registered_local_keys_array = [KeyPos::default(); 6];
 
     PinMatrix {
         rows,
         cols,
-        pressed_keys_array,
+        registered_local_keys_array,
     }
 }
 

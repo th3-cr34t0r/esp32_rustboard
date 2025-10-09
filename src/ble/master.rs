@@ -13,7 +13,7 @@ use crate::config::user_config::master::ESP_POWER_LEVEL;
 use crate::config::user_config::{BLE_SLAVE_UUID, KB_NAME};
 use crate::delay::*;
 use crate::key_provision::key_provision;
-use crate::matrix::{KeyPos, RegisteredMatrixKeys};
+use crate::matrix::RegisteredMatrixKeys;
 
 use esp32_nimble::{
     enums::*, utilities::mutex::Mutex, uuid128, BLEAdvertisementData, BLEDevice, BLEHIDDevice,
