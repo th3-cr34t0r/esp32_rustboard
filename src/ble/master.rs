@@ -42,7 +42,7 @@ impl BleKeyboardMaster {
 
         // ------------------ SLAVE CHARACTERISTIC INIT ----------------------
         server.on_connect(|server, desc| {
-            log::info!("Client connected: {:?}", desc);
+            log::info!("Client connected: {desc:?}");
 
             if server.connected_count() < (esp_idf_svc::sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS as _)
             {
@@ -232,11 +232,11 @@ pub async fn ble_tx(
 
             // process the keys
             key_provision(
-                &pressed_keys,
+                pressed_keys,
                 #[cfg(feature = "split")]
                 &slave_key_report,
                 &layout,
-                &layer,
+                layer,
                 &mut keyboard_key_report,
                 &mut mouse_key_report,
                 &mut pressed_keys_to_remove,

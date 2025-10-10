@@ -5,15 +5,22 @@ use heapless::Vec;
 
 use crate::{
     ble::KeyboardKeyReport,
+    matrix::{KeyState, RegisteredMatrixKeys},
+};
+
+#[cfg(feature = "slave")]
+use crate::{config::user_config::BIT_SHIFT, matrix::KeyPos};
+
+#[cfg(feature = "master")]
+use crate::{
     config::{
         enums::{HidModifiers, Kc, KeyType},
         layout::Layout,
-        user_config::BIT_SHIFT,
     },
-    matrix::{KeyPos, KeyState, RegisteredMatrixKeys},
     mouse::MouseKeyReport,
 };
 
+#[cfg(feature = "master")]
 fn add_keys_master(
     keyboard_key_report: &mut KeyboardKeyReport,
     mouse_key_report: &mut MouseKeyReport,
@@ -62,6 +69,7 @@ fn add_keys_master(
     }
 }
 
+#[cfg(feature = "master")]
 fn remove_keys_master(
     keyboard_key_report: &mut KeyboardKeyReport,
     mouse_key_report: &mut MouseKeyReport,
@@ -109,6 +117,7 @@ fn remove_keys_master(
     }
 }
 
+#[cfg(feature = "slave")]
 /// Function that transforms and adds the pressed key on the slave device
 /// to the key report which is being sent to the master device for processing
 fn add_keys_slave(key_report: &mut KeyboardKeyReport, key_pos: &KeyPos) {
@@ -133,6 +142,7 @@ fn add_keys_slave(key_report: &mut KeyboardKeyReport, key_pos: &KeyPos) {
         }
     }
 }
+#[cfg(feature = "slave")]
 /// Function that removes the pressed key from the key report
 fn remove_keys_slave(keyboard_key_report: &mut KeyboardKeyReport, key_pos: &KeyPos) {
     if let Some(index) = keyboard_key_report
@@ -153,9 +163,9 @@ pub async fn key_provision(
     #[cfg(feature = "master")]
     slave_key_report: &Arc<Mutex<[u8; 6]>>,
     #[cfg(feature = "master")] layout: &Layout,
-    #[cfg(feature = "master")] mut layer: &Arc<Mutex<usize>>,
+    #[cfg(feature = "master")] layer: &Arc<Mutex<usize>>,
     keyboard_key_report: &mut KeyboardKeyReport,
-    #[cfg(feature = "master")] mut mouse_key_report: &mut MouseKeyReport,
+    #[cfg(feature = "master")] mouse_key_report: &mut MouseKeyReport,
     #[cfg(feature = "master")] registered_keys_to_remove: &mut Vec<Kc, 12>,
     #[cfg(feature = "slave")] registered_keys_to_remove: &mut Vec<KeyPos, 12>,
 ) {
@@ -164,14 +174,14 @@ pub async fn key_provision(
         #[cfg(feature = "split")]
         #[cfg(feature = "master")]
         // process slave key report
-        registered_matrix_keys.store_keys_slave(&slave_key_report, &layer);
-
-        // transform matrix key to hid key
-        #[cfg(feature = "master")]
-        registered_matrix_keys.transform_matrix_to_hid(&layout);
+        registered_matrix_keys.store_keys_slave(slave_key_report, layer);
 
         // check if there are pressed keys
         if !registered_matrix_keys.keys.is_empty() {
+            // transform matrix key to hid key
+            #[cfg(feature = "master")]
+            registered_matrix_keys.transform_matrix_to_hid(layout);
+
             // process combos
             #[cfg(feature = "master")]
             #[cfg(feature = "combo")]
@@ -187,9 +197,9 @@ pub async fn key_provision(
                             // // get the pressed key from the layout
                             add_keys_master(
                                 keyboard_key_report,
-                                &mut mouse_key_report,
+                                mouse_key_report,
                                 &key.keycode,
-                                &layer,
+                                layer,
                             );
                         }
                         #[cfg(feature = "slave")]
@@ -204,7 +214,7 @@ pub async fn key_provision(
                                 keyboard_key_report,
                                 &mut *mouse_key_report,
                                 &key.keycode,
-                                &mut layer,
+                                layer,
                             );
 
                             // if key has been debounced, add it to be removed
