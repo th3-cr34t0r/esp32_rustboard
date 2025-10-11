@@ -288,7 +288,7 @@ impl PinMatrix<'_> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum KeyState {
     Released,
     Pressed,
@@ -430,25 +430,35 @@ impl RegisteredMatrixKeys {
     }
     /// Method for processing of combo keys - if feature enabled
     pub fn process_combos(&mut self) {
-        let (_combo_vec, keys_to_change) = Kc::get_combo(&Kc::ComboCtrlD);
-        let mut registered_hid_keys: Vec<Kc, 12> = Vec::new();
-
-        self.keys
-            .iter()
-            .for_each(|element| registered_hid_keys.push(element.keycode).unwrap());
+        let (_combo_vec, combo_keys) = Kc::get_combo(&Kc::ComboCtrlD);
+        let combo_kc = Kc::ComboCtrlD;
 
         // check if the key combination matches
-        if registered_hid_keys == keys_to_change {
-            // clear hid keys
-            self.keys.clear();
+        if combo_keys.iter().all(|combo_key| {
+            self.keys
+                .iter()
+                .any(|key| key.keycode == *combo_key && key.info.state == KeyState::Pressed)
+        }) {
+            let mut pressed_time = Instant::now();
 
-            // store the Combo Kc in keyboard key report
+            // find the keycodes and set them to released
+            combo_keys.iter().for_each(|combo_key| {
+                if let Some(key) = self
+                    .keys
+                    .iter_mut()
+                    .find(|element| element.keycode == *combo_key)
+                {
+                    key.info.state = KeyState::Released;
+                    pressed_time = key.info.pressed_time;
+                }
+            });
+
             self.keys
                 .push(Key {
-                    keycode: Kc::ComboCtrlD,
+                    keycode: combo_kc,
                     position: KeyPos::default(),
                     info: KeyInfo {
-                        pressed_time: Instant::now(),
+                        pressed_time: pressed_time,
                         state: KeyState::Pressed,
                     },
                 })

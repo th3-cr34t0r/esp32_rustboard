@@ -127,7 +127,7 @@ const HID_REPORT_DISCRIPTOR: &[u8] = hid!(
     (END_COLLECTION),        //   END_COLLECTION
 );
 
-#[derive(Default, PartialEq, Clone, Copy, IntoBytes, Immutable)]
+#[derive(Debug, Default, PartialEq, Clone, Copy, IntoBytes, Immutable)]
 #[repr(packed, C)]
 pub struct KeyboardKeyReport {
     pub modifiers: u8,

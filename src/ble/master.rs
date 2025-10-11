@@ -116,8 +116,8 @@ impl BleKeyboardMaster {
         // log
         #[cfg(feature = "debug")]
         log::info!(
-            "ble_keyboard.current_keyboard_report.keys: {:?}",
-            self.current_keyboard_report.keys
+            "ble_keyboard.current_keyboard_report: {:?}",
+            self.current_keyboard_report
         );
         self.input_keyboard
             .lock()
