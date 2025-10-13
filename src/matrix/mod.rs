@@ -429,55 +429,56 @@ impl RegisteredMatrixKeys {
         });
     }
     /// Method for processing of combo keys - if feature enabled
-    pub fn process_combos(&mut self) {
-        let (_combo_vec, combo_keys) = Kc::get_combo(&Kc::ComboCtrlD);
-        let combo_dummy_kc = Kc::ComboCtrlD;
+    pub fn process_combos(&mut self, layout: &Layout) {
+        for combo_dummy_keycode in layout.combos.iter() {
+            let (_combo_vec, combo_keys) = Kc::get_combo(combo_dummy_keycode);
 
-        let current_keys = self
-            .keys
-            .iter()
-            .map(|key| key.keycode)
-            .collect::<Vec<Kc, 12>>();
-
-        // check if the key combination matches
-        if combo_keys.iter().all(|combo_key| {
-            self.keys
+            let current_keys = self
+                .keys
                 .iter()
-                .any(|key| key.keycode == *combo_key && key.info.state == KeyState::Pressed)
-        }) {
-            let mut pressed_time = Instant::now();
-            let mut to_remove: Vec<usize, 12> = Vec::new();
+                .map(|key| key.keycode)
+                .collect::<Vec<Kc, 12>>();
 
-            // find the keycodes and add them to be removed from the originally pressed keys
-            for (index, keycode) in current_keys.iter().enumerate() {
-                if combo_keys.contains(keycode) {
-                    pressed_time = self.keys[index].info.pressed_time;
-                    to_remove.push(index).unwrap();
+            // check if the key combination matches
+            if combo_keys.iter().all(|combo_key| {
+                self.keys
+                    .iter()
+                    .any(|key| key.keycode == *combo_key && key.info.state == KeyState::Pressed)
+            }) {
+                let mut pressed_time = Instant::now();
+                let mut to_remove: Vec<usize, 12> = Vec::new();
+
+                // find the keycodes and add them to be removed from the originally pressed keys
+                for (index, keycode) in current_keys.iter().enumerate() {
+                    if combo_keys.contains(keycode) {
+                        pressed_time = self.keys[index].info.pressed_time;
+                        to_remove.push(index).unwrap();
+                    }
                 }
-            }
-            // sort them
-            to_remove.sort();
+                // sort them
+                to_remove.sort();
 
-            // remove reversed
-            for index in to_remove.iter().rev() {
-                let _ = self.keys.remove(*index);
-            }
+                // remove reversed
+                for index in to_remove.iter().rev() {
+                    let _ = self.keys.remove(*index);
+                }
 
-            // add new combo key to be processed
-            self.keys
-                .push(Key {
-                    keycode: combo_dummy_kc,
-                    position: KeyPos::default(),
-                    info: KeyInfo {
-                        pressed_time: pressed_time,
-                        state: KeyState::Pressed,
-                    },
-                })
-                .unwrap();
-        } else if current_keys.contains(&combo_dummy_kc) {
-            for (index, keycode) in current_keys.iter().enumerate() {
-                if *keycode != combo_dummy_kc {
-                    self.keys.remove(index);
+                // add new combo key to be processed
+                self.keys
+                    .push(Key {
+                        keycode: *combo_dummy_keycode,
+                        position: KeyPos::default(),
+                        info: KeyInfo {
+                            pressed_time,
+                            state: KeyState::Pressed,
+                        },
+                    })
+                    .unwrap();
+            } else if current_keys.contains(&combo_dummy_keycode) {
+                for (index, keycode) in current_keys.iter().enumerate() {
+                    if keycode != combo_dummy_keycode {
+                        self.keys.remove(index);
+                    }
                 }
             }
         }

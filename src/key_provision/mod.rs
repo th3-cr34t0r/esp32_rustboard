@@ -171,21 +171,19 @@ pub async fn key_provision(
 ) {
     // try to lock the hashmap
     if let Some(mut registered_matrix_keys) = registered_matrix_keys.try_lock() {
-        #[cfg(feature = "split")]
-        #[cfg(feature = "master")]
+        #[cfg(all(feature = "split", feature = "master"))]
         // process slave key report
         registered_matrix_keys.store_keys_slave(slave_key_report, layer);
 
         // check if there are pressed keys
         if !registered_matrix_keys.keys.is_empty() {
-            // transform matrix key to hid key
             #[cfg(feature = "master")]
+            // transform matrix key to hid key
             registered_matrix_keys.transform_matrix_to_hid(layout);
 
+            #[cfg(all(feature = "master", feature = "combo"))]
             // process combos
-            #[cfg(feature = "master")]
-            #[cfg(feature = "combo")]
-            registered_matrix_keys.process_combos();
+            registered_matrix_keys.process_combos(layout);
 
             // iter trough the pressed keys
             for key in registered_matrix_keys.keys.iter_mut() {

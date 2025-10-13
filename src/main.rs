@@ -31,10 +31,9 @@ fn main() -> anyhow::Result<()> {
         select3(
             scan_grid(&registered_matrix_keys, &layer, &ble_status),
             calculate_debounce(&registered_matrix_keys),
-            #[cfg(not(feature = "slave"))]
+            #[cfg(feature = "master")]
             esp32_rustboard::ble::master::ble_tx(&registered_matrix_keys, &layer, &ble_status),
-            #[cfg(feature = "split")]
-            #[cfg(feature = "slave")]
+            #[cfg(all(feature = "split", feature = "slave"))]
             esp32_rustboard::ble::slave::ble_tx(&registered_matrix_keys, &ble_status),
         )
         .await;

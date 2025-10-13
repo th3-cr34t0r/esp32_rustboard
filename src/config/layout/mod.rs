@@ -18,6 +18,7 @@ use crate::{
 #[derive(Default)]
 pub struct Layout {
     pub keymap: [[[Kc; COLS * 2]; ROWS]; LAYERS],
+    pub combos: [Kc; USER_SET_COMBO_NUMBER],
 }
 
 impl Layout {

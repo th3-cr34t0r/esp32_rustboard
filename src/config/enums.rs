@@ -307,6 +307,7 @@ impl Kc {
         }
     }
 
+    /// Get combos information
     pub fn get_combo(combo: &Kc) -> (Vec<Kc, 12>, Vec<Kc, 12>) {
         let mut combo_vec: Vec<Kc, 12> = Vec::new();
         let mut keys_to_change: Vec<Kc, 12> = Vec::new();

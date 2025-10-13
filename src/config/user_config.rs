@@ -13,6 +13,9 @@ pub const COLS: usize = 6;
 
 pub const LAYERS: usize = 2;
 
+// Set the number of combo keys
+pub const USER_SET_COMBO_NUMBER: usize = 1;
+
 //Cursor parameters
 pub const CURSOR_PARAM_FAST: u8 = 6;
 pub const CURSOR_PARAM_NORMAL: u8 = 2;
