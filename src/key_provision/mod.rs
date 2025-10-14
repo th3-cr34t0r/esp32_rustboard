@@ -5,15 +5,22 @@ use heapless::Vec;
 
 use crate::{
     ble::KeyboardKeyReport,
+    matrix::{KeyState, RegisteredMatrixKeys},
+};
+
+#[cfg(feature = "slave")]
+use crate::{config::user_config::BIT_SHIFT, matrix::KeyPos};
+
+#[cfg(feature = "master")]
+use crate::{
     config::{
         enums::{HidModifiers, Kc, KeyType},
         layout::Layout,
-        user_config::BIT_SHIFT,
     },
-    matrix::{KeyPos, KeyState, RegisteredMatrixKeys},
     mouse::MouseKeyReport,
 };
 
+#[cfg(feature = "master")]
 fn add_keys_master(
     keyboard_key_report: &mut KeyboardKeyReport,
     mouse_key_report: &mut MouseKeyReport,
@@ -22,6 +29,12 @@ fn add_keys_master(
 ) {
     // get the key type
     match KeyType::check_type(hid_key) {
+        KeyType::Combo => {
+            let (combo_valid_keys, _keys_to_remove) = Kc::get_combo(hid_key);
+            for valid_key in combo_valid_keys.iter() {
+                add_keys_master(keyboard_key_report, mouse_key_report, valid_key, layer);
+            }
+        }
         KeyType::Macro => {
             let macro_valid_keys = Kc::get_macro_sequence(hid_key);
             for valid_key in macro_valid_keys.iter() {
@@ -31,12 +44,6 @@ fn add_keys_master(
         KeyType::Layer => {
             // check and set the layer
             *layer.lock() = Layout::get_layer(hid_key);
-
-            // // release all keys
-            // keyboard_key_report.keys.fill(0);
-
-            // // release modifiers
-            // keyboard_key_report.modifiers = 0;
         }
         KeyType::Modifier => {
             keyboard_key_report.modifiers |= HidModifiers::get_modifier(hid_key);
@@ -62,6 +69,7 @@ fn add_keys_master(
     }
 }
 
+#[cfg(feature = "master")]
 fn remove_keys_master(
     keyboard_key_report: &mut KeyboardKeyReport,
     mouse_key_report: &mut MouseKeyReport,
@@ -70,6 +78,13 @@ fn remove_keys_master(
 ) {
     // get the key type
     match KeyType::check_type(hid_key) {
+        KeyType::Combo => {
+            let (combo_valid_keys, _keys_to_change) = Kc::get_combo(hid_key);
+            for valid_key in combo_valid_keys.iter() {
+                remove_keys_master(keyboard_key_report, mouse_key_report, valid_key, layer);
+            }
+        }
+
         KeyType::Macro => {
             let macro_valid_keys = Kc::get_macro_sequence(hid_key);
             for valid_key in macro_valid_keys.iter() {
@@ -79,13 +94,6 @@ fn remove_keys_master(
         KeyType::Layer => {
             // set previous layer
             *layer.lock() -= 1;
-
-            // // release all keys
-            // keyboard_key_report.keys.fill(0);
-            // mouse_key_report.reset_report();
-
-            // // release modifiers
-            // keyboard_key_report.modifiers = 0;
         }
         KeyType::Modifier => {
             // remove the modifier
@@ -109,6 +117,7 @@ fn remove_keys_master(
     }
 }
 
+#[cfg(feature = "slave")]
 /// Function that transforms and adds the pressed key on the slave device
 /// to the key report which is being sent to the master device for processing
 fn add_keys_slave(key_report: &mut KeyboardKeyReport, key_pos: &KeyPos) {
@@ -133,6 +142,7 @@ fn add_keys_slave(key_report: &mut KeyboardKeyReport, key_pos: &KeyPos) {
         }
     }
 }
+#[cfg(feature = "slave")]
 /// Function that removes the pressed key from the key report
 fn remove_keys_slave(keyboard_key_report: &mut KeyboardKeyReport, key_pos: &KeyPos) {
     if let Some(index) = keyboard_key_report
@@ -153,20 +163,28 @@ pub async fn key_provision(
     #[cfg(feature = "master")]
     slave_key_report: &Arc<Mutex<[u8; 6]>>,
     #[cfg(feature = "master")] layout: &Layout,
-    #[cfg(feature = "master")] mut layer: &Arc<Mutex<usize>>,
+    #[cfg(feature = "master")] layer: &Arc<Mutex<usize>>,
     keyboard_key_report: &mut KeyboardKeyReport,
-    #[cfg(feature = "master")] mut mouse_key_report: &mut MouseKeyReport,
-    registered_keys_to_remove: &mut Vec<(KeyPos, usize), 12>,
+    #[cfg(feature = "master")] mouse_key_report: &mut MouseKeyReport,
+    #[cfg(feature = "master")] registered_keys_to_remove: &mut Vec<Kc, 12>,
+    #[cfg(feature = "slave")] registered_keys_to_remove: &mut Vec<KeyPos, 12>,
 ) {
     // try to lock the hashmap
     if let Some(mut registered_matrix_keys) = registered_matrix_keys.try_lock() {
-        #[cfg(feature = "split")]
-        #[cfg(feature = "master")]
+        #[cfg(all(feature = "split", feature = "master"))]
         // process slave key report
-        registered_matrix_keys.store_keys_slave(&slave_key_report, &layer);
+        registered_matrix_keys.store_keys_slave(slave_key_report, layer);
 
         // check if there are pressed keys
         if !registered_matrix_keys.keys.is_empty() {
+            #[cfg(feature = "master")]
+            // transform matrix key to hid key
+            registered_matrix_keys.transform_matrix_to_hid(layout);
+
+            #[cfg(all(feature = "master", feature = "combo"))]
+            // process combos
+            registered_matrix_keys.process_combos(layout);
+
             // iter trough the pressed keys
             for key in registered_matrix_keys.keys.iter_mut() {
                 // check the key debounce state
@@ -174,14 +192,12 @@ pub async fn key_provision(
                     KeyState::Pressed => {
                         #[cfg(feature = "master")]
                         {
-                            // get the pressed key from the layout
-                            let hid_key = layout.keymap[key.info.layer][key.position.row as usize]
-                                [key.position.col as usize];
+                            // // get the pressed key from the layout
                             add_keys_master(
                                 keyboard_key_report,
-                                &mut mouse_key_report,
-                                &hid_key,
-                                &layer,
+                                mouse_key_report,
+                                &key.keycode,
+                                layer,
                             );
                         }
                         #[cfg(feature = "slave")]
@@ -192,35 +208,51 @@ pub async fn key_provision(
                         #[cfg(feature = "master")]
                         {
                             // get the mapped key from the layout
-                            let hid_key = layout.keymap[key.info.layer][key.position.row as usize]
-                                [key.position.col as usize];
                             remove_keys_master(
                                 keyboard_key_report,
                                 &mut *mouse_key_report,
-                                &hid_key,
-                                &mut layer,
+                                &key.keycode,
+                                layer,
                             );
+
+                            // if key has been debounced, add it to be removed
+                            registered_keys_to_remove
+                                .push(key.keycode)
+                                .expect("Error adding a key to be removed!");
                         }
                         #[cfg(feature = "slave")]
-                        remove_keys_slave(keyboard_key_report, &key.position);
+                        {
+                            remove_keys_slave(keyboard_key_report, &key.position);
 
-                        // if key has been debounced, add it to be removed
-                        registered_keys_to_remove
-                            .push((key.position, key.info.layer))
-                            .expect("Error adding a key to be removed!");
+                            // if key has been debounced, add it to be removed
+                            registered_keys_to_remove
+                                .push(key.position)
+                                .expect("Error adding a key to be removed!");
+                        }
                     }
                 }
             }
 
+            #[cfg(feature = "master")]
             // remove the sent keys and empty the vec
-            while let Some((key_to_remove_pos, key_to_remove_layer)) =
-                registered_keys_to_remove.pop()
-            {
-                if let Some(index) = registered_matrix_keys.keys.iter().position(|element| {
-                    (element.position == key_to_remove_pos)
-                        && (element.info.layer == key_to_remove_layer)
-                }) {
-                    registered_matrix_keys.keys.remove(index);
+            while let Some(key) = registered_keys_to_remove.pop() {
+                if let Some(index) = registered_matrix_keys
+                    .keys
+                    .iter()
+                    .position(|element| element.keycode == key)
+                {
+                    let _removed_key = registered_matrix_keys.keys.remove(index);
+                }
+            }
+            #[cfg(feature = "slave")]
+            // remove the sent keys and empty the vec
+            while let Some(key) = registered_keys_to_remove.pop() {
+                if let Some(index) = registered_matrix_keys
+                    .keys
+                    .iter()
+                    .position(|element| element.position == key)
+                {
+                    let _removed_key = registered_matrix_keys.keys.remove(index);
                 }
             }
         }

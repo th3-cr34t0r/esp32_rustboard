@@ -2,18 +2,18 @@ extern crate alloc;
 
 use alloc::sync::Arc;
 
+use super::{
+    BleKeyboardMaster, KeyboardKeyReport, MouseKeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID,
+    MEDIA_KEYS_ID, MOUSE_ID,
+};
 use crate::ble::BleStatus;
+use crate::config::enums::Kc;
 use crate::config::layout::Layout;
 use crate::config::user_config::master::ESP_POWER_LEVEL;
 use crate::config::user_config::{BLE_SLAVE_UUID, KB_NAME};
 use crate::delay::*;
 use crate::key_provision::key_provision;
-use crate::matrix::{KeyPos, RegisteredMatrixKeys};
-
-use super::{
-    BleKeyboardMaster, KeyboardKeyReport, MouseKeyReport, HID_REPORT_DISCRIPTOR, KEYBOARD_ID,
-    MEDIA_KEYS_ID, MOUSE_ID,
-};
+use crate::matrix::RegisteredMatrixKeys;
 
 use esp32_nimble::{
     enums::*, utilities::mutex::Mutex, uuid128, BLEAdvertisementData, BLEDevice, BLEHIDDevice,
@@ -33,7 +33,7 @@ impl BleKeyboardMaster {
         // creating server
         device
             .security()
-            .set_auth(AuthReq::all())
+            .set_auth(AuthReq::Bond)
             .set_io_cap(SecurityIOCap::NoInputNoOutput)
             .resolve_rpa();
 
@@ -42,7 +42,7 @@ impl BleKeyboardMaster {
 
         // ------------------ SLAVE CHARACTERISTIC INIT ----------------------
         server.on_connect(|server, desc| {
-            log::info!("Client connected: {:?}", desc);
+            log::info!("Client connected: {desc:?}");
 
             if server.connected_count() < (esp_idf_svc::sys::CONFIG_BT_NIMBLE_MAX_CONNECTIONS as _)
             {
@@ -116,8 +116,8 @@ impl BleKeyboardMaster {
         // log
         #[cfg(feature = "debug")]
         log::info!(
-            "ble_keyboard.current_keyboard_report.keys: {:?}",
-            self.current_keyboard_report.keys
+            "ble_keyboard.current_keyboard_report: {:?}",
+            self.current_keyboard_report
         );
         self.input_keyboard
             .lock()
@@ -192,7 +192,7 @@ pub async fn ble_tx(
     let layout = Layout::init();
 
     // vec to store the keys needed to be removed
-    let mut pressed_keys_to_remove: Vec<(KeyPos, usize), 12> = Vec::new();
+    let mut pressed_keys_to_remove: Vec<Kc, 12> = Vec::new();
 
     // set ble power to lowest possible
     // ble_keyboard.set_ble_power_save();
@@ -232,11 +232,11 @@ pub async fn ble_tx(
 
             // process the keys
             key_provision(
-                &pressed_keys,
+                pressed_keys,
                 #[cfg(feature = "split")]
                 &slave_key_report,
                 &layout,
-                &layer,
+                layer,
                 &mut keyboard_key_report,
                 &mut mouse_key_report,
                 &mut pressed_keys_to_remove,
