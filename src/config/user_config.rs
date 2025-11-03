@@ -26,7 +26,7 @@ pub const BLE_STATUS_DEBOUNCE: Duration = Duration::from_millis(500); //0.5 sec
 pub const ENTER_SLEEP_DEBOUNCE: Duration = Duration::from_millis(600000); //10 minutes
 
 #[cfg(feature = "async-scan")]
-pub const ASYNC_ROW_WAIT: u64 = 1000;
+pub const ASYNC_ROW_WAIT: u64 = 2;
 
 //Indexmap sizes
 pub const REGISTERED_KEYS_ARRAY_SIZE: usize = 12;

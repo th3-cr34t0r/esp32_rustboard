@@ -148,11 +148,8 @@ impl PinMatrix<'_> {
         use embassy_futures::select::{select, select_slice, Either};
         use heapless::Vec;
 
-        let mut count: KeyPos = KeyPos::new(0, COL_OFFSET, 255);
-        let mut is_pressed: bool = false;
-
         // check rows and cols
-        for row in self.rows.iter_mut() {
+        for (row_count, row) in self.rows.iter_mut().enumerate() {
             // set row to high
             row.set_high().unwrap();
 
@@ -169,58 +166,43 @@ impl PinMatrix<'_> {
 
                 match select(
                     select_slice(pin!(futures.as_mut_slice())),
-                    delay_us(ASYNC_ROW_WAIT),
+                    delay_ms(ASYNC_ROW_WAIT),
                 )
                 .await
                 {
-                    Either::First((Ok(_), _)) => {
-                        // set flag in case a col pin is interupted
-                        is_pressed = true;
+                    Either::First(_) => {
+                        // key is pressed, check all cols
                     }
-                    Either::First((Err(_), _)) => {}
                     Either::Second(()) => {
+                        // set row to low
+                        row.set_low().unwrap();
                         // time is up, continue with the next row
+                        continue;
                     }
                 }
             }
 
-            // check flag
-            if is_pressed {
-                // check col pins
-                for col in self.cols.iter() {
-                    if col.is_high() {
-                        // store the key in the buffer
-                        if let Some(index) = self
-                            .registered_local_keys_array
-                            .iter()
-                            .position(|&element| element == KeyPos::default())
-                        {
-                            self.registered_local_keys_array[index] = KeyPos {
-                                row: count.row,
-                                col: count.col,
-                                layer: *layer.lock(),
-                            };
-                        }
+            // check col pins
+            for (col_count, col) in self.cols.iter().enumerate() {
+                if col.is_high() {
+                    // store the key in the buffer
+                    if let Some(index) = self
+                        .registered_local_keys_array
+                        .iter()
+                        .position(|&element| element == KeyPos::default())
+                    {
+                        self.registered_local_keys_array[index] = KeyPos {
+                            row: row_count as u8,
+                            col: col_count as u8 + COL_OFFSET,
+                            layer: *layer.lock(),
+                        };
                     }
-                    // increment col
-                    count.col += 1;
                 }
-                // reset flag
-                is_pressed = false;
             }
 
             // set row to low
             row.set_low().unwrap();
-
-            // increment row
-            count.row += 1;
-
-            // reset col count
-            count.col = COL_OFFSET;
         }
-
-        // reset row count
-        count.row = 0;
 
         // store the local pressed keys in the shared pressed keys hashmap
         if let Some(mut pressed_keys) = pressed_keys.try_lock() {
