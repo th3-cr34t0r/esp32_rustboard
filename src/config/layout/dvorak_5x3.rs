@@ -11,28 +11,28 @@ pub fn provide_pin_matrix() -> PinMatrix<'static> {
     let peripherals = Peripherals::take().expect("Not able to init peripherals.");
 
     let rows = [
-        PinDriver::output(peripherals.pins.gpio12.downgrade())
+        PinDriver::output(peripherals.pins.gpio0.downgrade())
             .expect("Not able to set port as output."),
-        PinDriver::output(peripherals.pins.gpio18.downgrade())
+        PinDriver::output(peripherals.pins.gpio1.downgrade())
             .expect("Not able to set port as output."),
-        PinDriver::output(peripherals.pins.gpio19.downgrade())
+        PinDriver::output(peripherals.pins.gpio2.downgrade())
             .expect("Not able to set port as output."),
-        PinDriver::output(peripherals.pins.gpio20.downgrade())
+        PinDriver::output(peripherals.pins.gpio3.downgrade())
             .expect("Not able to set port as output."),
     ];
 
     let cols = [
-        PinDriver::input(peripherals.pins.gpio4.downgrade())
+        PinDriver::input(peripherals.pins.gpio21.downgrade())
             .expect("Not able to set port as input."),
-        PinDriver::input(peripherals.pins.gpio5.downgrade())
+        PinDriver::input(peripherals.pins.gpio20.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio10.downgrade())
             .expect("Not able to set port as input."),
         PinDriver::input(peripherals.pins.gpio7.downgrade())
             .expect("Not able to set port as input."),
         PinDriver::input(peripherals.pins.gpio6.downgrade())
             .expect("Not able to set port as input."),
-        PinDriver::input(peripherals.pins.gpio10.downgrade())
-            .expect("Not able to set port as input."),
-        PinDriver::input(peripherals.pins.gpio3.downgrade())
+        PinDriver::input(peripherals.pins.gpio5.downgrade())
             .expect("Not able to set port as input."),
     ];
 
@@ -76,7 +76,7 @@ pub fn layout() -> Layout {
                 /*               +-------------+--------------+--------------+--------------+-------------+--------------+        +------------+--------------+------------+-------------+-------------+------------+*/
                 /*  ROW 2  */ [/*|*/Kc::Undf,/*|*/Kc::ModCo,/*|*/ Kc::Q,   /*|*/Kc::J,    /*|*/Kc::K,   /*|*/Kc::X,    /*|        |*/Kc::B,  /*|*/ Kc::M,   /*|*/ Kc::W, /*|*/Kc::V,   /*|*/Kc::Z,   /*|*/Kc::Undf/*|*/],
                 /*               +-------------+--------------+--------------+--------------+-------------+--------------+        +------------+--------------+------------+-------------+-------------+------------+*/
-                /*  ROW 3  */ [/*|*/Kc::Undf,/*|*/Kc::Undf, /*|*/ Kc::Undf,/*|*/Kc::ModSu,/*|*/Kc::Spac,/*|*/Kc::ModSh,/*|        |*/Kc::Tab,/*|*/ Kc::Entr,/*|*/ Kc::L1,/*|*/Kc::Undf,/*|*/Kc::Undf,/*|*/Kc::Undf/*|*/],
+                /*  ROW 3  */ [/*|*/Kc::Undf,/*|*/Kc::Undf, /*|*/ Kc::Undf,/*|*/Kc::ModAl,/*|*/Kc::Spac,/*|*/Kc::ModSh,/*|        |*/Kc::Tab,/*|*/ Kc::Entr,/*|*/ Kc::L1,/*|*/Kc::Undf,/*|*/Kc::Undf,/*|*/Kc::Undf/*|*/],
                 /*               +-------------+--------------+--------------+--------------+-------------+--------------+        +------------+--------------+------------+-------------+-------------+------------+*/
 
             ],
@@ -87,9 +87,9 @@ pub fn layout() -> Layout {
                 /*               +-------------+---------------+--------------+--------------+-------------+--------------+          +-------------+--------------+-------------+-------------+-------------+------------+*/
                 /*  ROW 1  */ [/*|*/Kc::Undf,/*|*/Kc::Bksp,  /*|*/Kc::N4,   /*|*/Kc::N5,   /*|*/Kc::N6,  /*|*/Kc::Del,  /*|          |*/Kc::Mns, /*|*/Kc::ArL,  /*|*/Kc::ArD, /*|*/Kc::ArU, /*|*/Kc::ArR, /*|*/Kc::Undf/*|*/],
                 /*               +-------------+---------------+--------------+--------------+-------------+--------------+          +-------------+--------------+-------------+-------------+-------------+------------+*/
-                /*  ROW 2  */ [/*|*/Kc::Undf,/*|*/Kc::N0,    /*|*/Kc::N1,   /*|*/Kc::N2,   /*|*/Kc::N3,  /*|*/Kc::ModAl,/*|          |*/Kc::Bksl,/*|*/Kc::Lbrk, /*|*/Kc::Rbrk,/*|*/Kc::Grav,/*|*/Kc::Scn, /*|*/Kc::Undf/*|*/],
+                /*  ROW 2  */ [/*|*/Kc::Undf,/*|*/Kc::N0,    /*|*/Kc::N1,   /*|*/Kc::N2,   /*|*/Kc::N3,  /*|*/Kc::ModSu,/*|          |*/Kc::Bksl,/*|*/Kc::Lbrk, /*|*/Kc::Rbrk,/*|*/Kc::Grav,/*|*/Kc::Scn, /*|*/Kc::Undf/*|*/],
                 /*               +-------------+---------------+--------------+--------------+-------------+--------------+          +-------------+--------------+-------------+-------------+-------------+------------+*/
-                /*  ROW 3  */ [/*|*/Kc::Undf,/*|*/Kc::Undf,  /*|*/Kc::Undf, /*|*/Kc::ModSu,/*|*/Kc::Spac,/*|*/Kc::ModSh,/*|          |*/Kc::Tab, /*|*/Kc::Entr, /*|*/Kc::L1,  /*|*/Kc::Undf,/*|*/Kc::Undf,/*|*/Kc::Undf/*|*/],
+                /*  ROW 3  */ [/*|*/Kc::Undf,/*|*/Kc::Undf,  /*|*/Kc::Undf, /*|*/Kc::ModAl,/*|*/Kc::Spac,/*|*/Kc::ModSh,/*|          |*/Kc::Tab, /*|*/Kc::Entr, /*|*/Kc::L1,  /*|*/Kc::Undf,/*|*/Kc::Undf,/*|*/Kc::Undf/*|*/],
                 /*               +-------------+---------------+--------------+--------------+-------------+--------------+          +-------------+--------------+-------------+-------------+-------------+------------+*/
             ],
         ],
