@@ -11,28 +11,28 @@ pub fn provide_pin_matrix() -> PinMatrix<'static> {
     let peripherals = Peripherals::take().expect("Not able to init peripherals.");
 
     let rows = [
-        PinDriver::output(peripherals.pins.gpio0.downgrade())
+        PinDriver::output(peripherals.pins.gpio12.downgrade())
             .expect("Not able to set port as output."),
-        PinDriver::output(peripherals.pins.gpio1.downgrade())
+        PinDriver::output(peripherals.pins.gpio18.downgrade())
             .expect("Not able to set port as output."),
-        PinDriver::output(peripherals.pins.gpio2.downgrade())
+        PinDriver::output(peripherals.pins.gpio19.downgrade())
             .expect("Not able to set port as output."),
-        PinDriver::output(peripherals.pins.gpio3.downgrade())
+        PinDriver::output(peripherals.pins.gpio20.downgrade())
             .expect("Not able to set port as output."),
     ];
 
     let cols = [
-        PinDriver::input(peripherals.pins.gpio21.downgrade())
+        PinDriver::input(peripherals.pins.gpio4.downgrade())
             .expect("Not able to set port as input."),
-        PinDriver::input(peripherals.pins.gpio20.downgrade())
-            .expect("Not able to set port as input."),
-        PinDriver::input(peripherals.pins.gpio10.downgrade())
+        PinDriver::input(peripherals.pins.gpio5.downgrade())
             .expect("Not able to set port as input."),
         PinDriver::input(peripherals.pins.gpio7.downgrade())
             .expect("Not able to set port as input."),
         PinDriver::input(peripherals.pins.gpio6.downgrade())
             .expect("Not able to set port as input."),
-        PinDriver::input(peripherals.pins.gpio5.downgrade())
+        PinDriver::input(peripherals.pins.gpio10.downgrade())
+            .expect("Not able to set port as input."),
+        PinDriver::input(peripherals.pins.gpio3.downgrade())
             .expect("Not able to set port as input."),
     ];
 
