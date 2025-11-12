@@ -309,25 +309,25 @@ impl Kc {
 
     /// Get combos information
     pub fn get_combo(combo: &Kc) -> (Vec<Kc, 12>, Vec<Kc, 12>) {
-        let mut combo_vec: Vec<Kc, 12> = Vec::new();
-        let mut keys_to_change: Vec<Kc, 12> = Vec::new();
+        let mut keys_to_store: Vec<Kc, 12> = Vec::new();
+        let mut keys_to_remove: Vec<Kc, 12> = Vec::new();
 
         match combo {
             Kc::ComboCtrlD => {
-                keys_to_change.push(Kc::ModCo).unwrap();
-                keys_to_change.push(Kc::D).unwrap();
+                keys_to_store.push(Kc::ModCo).unwrap();
+                keys_to_store.push(Kc::Bksp).unwrap();
 
-                combo_vec.push(Kc::ModCo).unwrap();
-                combo_vec.push(Kc::Bksp).unwrap();
-                (combo_vec, keys_to_change)
+                keys_to_remove.push(Kc::ModCo).unwrap();
+                keys_to_remove.push(Kc::D).unwrap();
+
+                (keys_to_store, keys_to_remove)
             }
-            _ => (combo_vec, keys_to_change),
+            _ => (keys_to_store, keys_to_remove),
         }
     }
 }
 
 pub enum KeyType {
-    Combo,
     Macro,
     Modifier,
     Mouse,
@@ -376,9 +376,6 @@ impl KeyType {
             | Kc::MoCF
             | Kc::MoCN
             | Kc::MoCS => KeyType::Mouse,
-
-            // return Combo key type
-            Kc::ComboCtrlD => KeyType::Combo,
 
             _ => KeyType::Key,
         }

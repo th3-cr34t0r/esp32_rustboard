@@ -29,12 +29,6 @@ fn add_keys_master(
 ) {
     // get the key type
     match KeyType::check_type(hid_key) {
-        KeyType::Combo => {
-            let (combo_valid_keys, _keys_to_remove) = Kc::get_combo(hid_key);
-            for valid_key in combo_valid_keys.iter() {
-                add_keys_master(keyboard_key_report, mouse_key_report, valid_key, layer);
-            }
-        }
         KeyType::Macro => {
             let macro_valid_keys = Kc::get_macro_sequence(hid_key);
             for valid_key in macro_valid_keys.iter() {
@@ -78,13 +72,6 @@ fn remove_keys_master(
 ) {
     // get the key type
     match KeyType::check_type(hid_key) {
-        KeyType::Combo => {
-            let (combo_valid_keys, _keys_to_change) = Kc::get_combo(hid_key);
-            for valid_key in combo_valid_keys.iter() {
-                remove_keys_master(keyboard_key_report, mouse_key_report, valid_key, layer);
-            }
-        }
-
         KeyType::Macro => {
             let macro_valid_keys = Kc::get_macro_sequence(hid_key);
             for valid_key in macro_valid_keys.iter() {

@@ -1,5 +1,5 @@
 use crate::ble::Debounce;
-use crate::config::enums::{Kc, KeyType};
+use crate::config::enums::Kc;
 use crate::config::layout::{provide_kb_matrix, Layout};
 use crate::config::user_config::*;
 use crate::delay::*;
@@ -20,6 +20,7 @@ use esp_idf_sys::{
     gpio_num_t_GPIO_NUM_10, gpio_num_t_GPIO_NUM_20, gpio_num_t_GPIO_NUM_6, gpio_num_t_GPIO_NUM_7,
 };
 use heapless::Vec;
+use log::info;
 
 pub use crate::ble::BleStatus;
 
@@ -53,6 +54,8 @@ pub struct PinMatrix<'a> {
     pub rows: [PinDriver<'a, AnyIOPin, Output>; ROWS],
     pub cols: [PinDriver<'a, AnyIOPin, Input>; COLS],
     pub registered_local_keys_array: [KeyPos; 6],
+    pub last_registered_key_time: Instant,
+    pub enter_sleep: bool,
 }
 
 impl PinMatrix<'_> {
@@ -134,7 +137,7 @@ impl PinMatrix<'_> {
         }
     }
 
-    #[cfg(feature = "async-scan")]
+    // #[cfg(feature = "async-scan")]
     /// This is the standard scan mode
     /// Each row is set to high, then each col is checked if it is high or not
     async fn async_scan(
@@ -144,17 +147,14 @@ impl PinMatrix<'_> {
     ) {
         // initialize counts
 
-        use crate::config::user_config::ASYNC_ROW_WAIT;
         use embassy_futures::select::{select, select_slice, Either};
         use heapless::Vec;
 
-        // check rows and cols
-        for (row_count, row) in self.rows.iter_mut().enumerate() {
-            // set row to high
-            row.set_high().unwrap();
-
-            // delay so pin can propagate
-            delay_us(1).await;
+        if Instant::now() >= self.last_registered_key_time + Duration::from_millis(1) {
+            for row in self.rows.iter_mut() {
+                row.set_high().unwrap();
+                delay_us(1).await;
+            }
 
             // new scope so cols are accessable as mut
             {
@@ -164,23 +164,32 @@ impl PinMatrix<'_> {
                     .map(|col| col.wait_for_high())
                     .collect();
 
-                match select(
-                    select_slice(pin!(futures.as_mut_slice())),
-                    delay_ms(ASYNC_ROW_WAIT),
-                )
-                .await
-                {
+                match select(select_slice(pin!(futures.as_mut_slice())), delay_ms(600000)).await {
                     Either::First(_) => {
                         // key is pressed, check all cols
+                        for row in self.rows.iter_mut() {
+                            row.set_low().unwrap();
+                            delay_us(1).await;
+                        }
                     }
                     Either::Second(()) => {
-                        // set row to low
-                        row.set_low().unwrap();
-                        // time is up, continue with the next row
-                        continue;
+                        self.enter_sleep = true;
                     }
                 }
             }
+        }
+
+        if self.enter_sleep {
+            self.enter_light_sleep_mode();
+        }
+
+        // check rows and cols
+        for (row_count, row) in self.rows.iter_mut().enumerate() {
+            // set row to high
+            row.set_high().unwrap();
+
+            // delay so pin can propagate
+            delay_us(1).await;
 
             // check col pins
             for (col_count, col) in self.cols.iter().enumerate() {
@@ -315,13 +324,9 @@ impl RegisteredMatrixKeys {
     pub fn transform_matrix_to_hid(&mut self, layout: &Layout) {
         // get the keycode for every keytype, except for combo keytype
         self.keys.iter_mut().for_each(|key| {
-            match KeyType::check_type(&key.keycode) {
-                KeyType::Combo => { //skip this type
-                }
-                _ => {
-                    key.keycode = layout.keymap[key.position.layer][key.position.row as usize]
-                        [key.position.col as usize];
-                }
+            if key.keycode == Kc::Undf {
+                key.keycode = layout.keymap[key.position.layer][key.position.row as usize]
+                    [key.position.col as usize];
             }
         });
     }
@@ -393,16 +398,19 @@ impl RegisteredMatrixKeys {
                 }
                 // else add it
                 else {
-                    self.keys
-                        .push(Key {
-                            keycode: Kc::Undf,
-                            position: slave_element_position,
-                            info: KeyInfo {
-                                pressed_time: Instant::now(),
-                                state: KeyState::Pressed,
-                            },
-                        })
-                        .expect("Registered matrix key Vec allocation full.");
+                    if let Err(key) = self.keys.push(Key {
+                        keycode: Kc::Undf,
+                        position: slave_element_position,
+                        info: KeyInfo {
+                            pressed_time: Instant::now(),
+                            state: KeyState::Pressed,
+                        },
+                    }) {
+                        info!(
+                            "[store_keys_slave] error adding key at postion: {:?}",
+                            key.position
+                        );
+                    }
                 }
 
                 // reset sleep debounce
@@ -413,56 +421,41 @@ impl RegisteredMatrixKeys {
     /// Method for processing of combo keys - if feature enabled
     pub fn process_combos(&mut self, layout: &Layout) {
         for combo_dummy_keycode in layout.combos.iter() {
-            let (_combo_vec, combo_keys) = Kc::get_combo(combo_dummy_keycode);
-
-            let current_keys = self
-                .keys
-                .iter()
-                .map(|key| key.keycode)
-                .collect::<Vec<Kc, 12>>();
+            let (keys_to_store, keys_to_remove) = Kc::get_combo(combo_dummy_keycode);
+            // let current_keys = self
+            //     .keys
+            //     .iter()
+            //     .map(|key| key.keycode)
+            //     .collect::<Vec<Kc, 12>>();
 
             // check if the key combination matches
-            if combo_keys.iter().all(|combo_key| {
-                self.keys
-                    .iter()
-                    .any(|key| key.keycode == *combo_key && key.info.state == KeyState::Pressed)
-            }) {
-                let mut pressed_time = Instant::now();
-                let mut to_remove: Vec<usize, 12> = Vec::new();
-
-                // find the keycodes and add them to be removed from the originally pressed keys
-                for (index, keycode) in current_keys.iter().enumerate() {
-                    if combo_keys.contains(keycode) {
-                        pressed_time = self.keys[index].info.pressed_time;
-                        to_remove.push(index).unwrap();
-                    }
-                }
-                // sort them
-                to_remove.sort();
-
-                // remove reversed
-                for index in to_remove.iter().rev() {
-                    let _ = self.keys.remove(*index);
-                }
+            if keys_to_remove
+                .iter()
+                .all(|combo_key| self.keys.iter().any(|key| key.keycode == *combo_key))
+            {
+                self.keys.clear();
 
                 // add new combo key to be processed
-                self.keys
-                    .push(Key {
-                        keycode: *combo_dummy_keycode,
-                        position: KeyPos::default(),
-                        info: KeyInfo {
-                            pressed_time,
-                            state: KeyState::Pressed,
-                        },
-                    })
-                    .unwrap();
-            } else if current_keys.contains(&combo_dummy_keycode) {
-                for (index, keycode) in current_keys.iter().enumerate() {
-                    if keycode != combo_dummy_keycode {
-                        self.keys.remove(index);
-                    }
+                for key_code in keys_to_store {
+                    self.keys
+                        .push(Key {
+                            keycode: key_code,
+                            position: KeyPos::default(),
+                            info: KeyInfo {
+                                pressed_time: Instant::now(),
+                                state: KeyState::Pressed,
+                            },
+                        })
+                        .expect("[process_combos] error adding key in the vec");
                 }
             }
+            //  else if current_keys.contains(&combo_dummy_keycode) {
+            //     for (index, keycode) in current_keys.iter().enumerate() {
+            //         if keycode != combo_dummy_keycode {
+            //             self.keys.remove(index);
+            //         }
+            //     }
+            // }
         }
     }
 }

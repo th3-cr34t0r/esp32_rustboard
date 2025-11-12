@@ -2,6 +2,7 @@ use crate::{
     config::{enums::*, layout::*},
     matrix::{KeyPos, PinMatrix},
 };
+use embassy_time::Instant;
 use esp_idf_hal::{
     gpio::{IOPin, PinDriver},
     prelude::Peripherals,
@@ -42,6 +43,8 @@ pub fn provide_pin_matrix() -> PinMatrix<'static> {
         rows,
         cols,
         registered_local_keys_array,
+        last_registered_key_time: Instant::now(),
+        enter_sleep: false,
     }
 }
 //*********************************************************************************************
